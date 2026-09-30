@@ -11,49 +11,44 @@ You can reach us at the email `seer[at]comp.nus.edu.sg`
 
 ## Project team
 
-### John Doe
-
-<img src="images/johndoe.png" width="200px">
-
-[[homepage](http://www.comp.nus.edu.sg/~damithch)]
-[[github](https://github.com/johndoe)]
-[[portfolio](team/johndoe.md)]
-
-* Role: Project Advisor
-
-### Jane Doe
-
-<img src="images/johndoe.png" width="200px">
-
-[[github](http://github.com/johndoe)]
-[[portfolio](team/johndoe.md)]
-
-* Role: Team Lead
-* Responsibilities: UI
-
-### Johnny Doe
-
-<img src="images/johndoe.png" width="200px">
-
-[[github](http://github.com/johndoe)] [[portfolio](team/johndoe.md)]
-
-* Role: Developer
-* Responsibilities: Data
-
-### Jean Doe
-
-<img src="images/johndoe.png" width="200px">
-
-[[github](http://github.com/johndoe)]
-[[portfolio](team/johndoe.md)]
-
-* Role: Developer
-* Responsibilities: Dev Ops + Threading
-
 ### Marcus
 
 <img src="images/jamestorivor.png" width="200px">
 
 [[github](https://github.com/jamestorivor)]
+
+### Clarence Lau
+
+<img src="images/unknownflow.png" width="200px">
+
+[[github](http://github.com/Unknownflow)]
+
+* Role: Team Lead
+* Responsibilities: UI
+
+### Eddrick Livando
+
+<img src="images/eddrick-23.png" width="200px">
+
+[[github](http://github.com/eddrick-23)]
+
+* Role: Developer
+* Responsibilities: Data
+
+### Hong Yu
+
+<img src="images/hongyuuuu.png" width="200px">
+
+[[github](http://github.com/hongyuuuu)]
+
+
+* Role: Developer
+* Responsibilities: Dev Ops + Threading
+
+### Nguyen Phuc Truong
+
+<img src="images/bany-nguyen.png" width="200px">
+
+[[github](https://github.com/bany-nguyen)]
 
 * Role: Developer
