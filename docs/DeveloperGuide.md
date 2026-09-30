@@ -270,13 +270,15 @@ _{Explain here how the data archiving feature will be implemented}_
 
 **Target user profile**:
 
-* has a need to manage a significant number of contacts
-* prefers desktop apps over other types of applications
-* can type fast
-* prefers typing to mouse interactions
-* is reasonably comfortable using CLI apps
+Secretary of an NUS student society who
 
-**Value proposition**: Manage contacts faster than with a typical mouse-driven GUI application.
+* has to manage the contact details of 50 to 300 active and former members
+* currently juggles spreadsheets and chat histories to look up members
+* prefers desktop apps over other types of applications
+* can type fast, and prefers typing to mouse interactions
+* is comfortable using CLI apps
+
+**Value proposition**: Help NUS society secretaries keep member contact details, roles, committees, and membership status accurate and instantly searchable, so routine membership administration takes seconds instead of searching across spreadsheets and chat histories.
 
 
 ### User stories
