@@ -311,18 +311,18 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 ### Use cases
 
-(For all use cases below, the **System** is the `AddressBook` and the **Actor** is the `user`, unless specified otherwise)
+(For all use cases below, the **System** is `NUSocietyDesk` and the **Actor** is the `Secretary`, unless specified otherwise.)
 
-**Use case: Delete a person**
+**Use case: UC01 - Delete a member**
 
 **MSS**
 
-1.  User requests to list persons
-2.  AddressBook shows a list of persons
-3.  User requests to delete a specific person in the list
-4.  AddressBook deletes the person
+1. Secretary requests to list members.
+2. NUSocietyDesk shows a list of members.
+3. Secretary requests to delete a specific member in the list.
+4. NUSocietyDesk deletes the member and confirms the deletion.
 
-    Use case ends.
+   Use case ends.
 
 **Extensions**
 
@@ -330,13 +330,58 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
   Use case ends.
 
-* 3a. The given index is invalid.
+* 3a. The specified member is not in the list.
 
-    * 3a1. AddressBook shows an error message.
+  * 3a1. NUSocietyDesk shows an error message.
 
-      Use case resumes at step 2.
+    Use case resumes at step 2.
 
-*{More to be added}*
+**Use case: UC02 - Add a member**
+
+**MSS**
+
+1. Secretary requests to add a member, providing a name, phone number, email address, address, and any tags.
+2. NUSocietyDesk adds the member and displays a confirmation with the member's details.
+
+   Use case ends.
+
+**Extensions**
+
+* 1a. Required details are missing, or a provided detail is invalid.
+
+  * 1a1. NUSocietyDesk shows an error message and does not add the member.
+
+    Use case ends.
+
+* 1b. A member with the same name already exists.
+
+  * 1b1. NUSocietyDesk shows a duplicate member error and does not add the member.
+
+    Use case ends.
+
+**Use case: UC03 - Find and inspect a member**
+
+**MSS**
+
+1. Secretary requests to find members using one or more name keywords.
+2. NUSocietyDesk displays members whose names contain at least one of the keywords as a whole word, regardless of letter case, together with their contact details.
+3. Secretary inspects the displayed details to identify the intended member.
+
+   Use case ends.
+
+**Extensions**
+
+* 1a. Secretary provides no name keywords.
+
+  * 1a1. NUSocietyDesk shows an error message with the required format.
+
+    Use case ends.
+
+* 2a. No members match the name keywords.
+
+  * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
+
+    Use case ends.
 
 ### Non-Functional Requirements
 
