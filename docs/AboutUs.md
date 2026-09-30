@@ -11,15 +11,11 @@ You can reach us at the email `seer[at]comp.nus.edu.sg`
 
 ## Project team
 
-### John Doe
+### Marcus
 
-<img src="images/johndoe.png" width="200px">
+<img src="images/jamestorivor.png" width="200px">
 
-[[homepage](http://www.comp.nus.edu.sg/~damithch)]
-[[github](https://github.com/johndoe)]
-[[portfolio](team/johndoe.md)]
-
-* Role: Project Advisor
+[[github](https://github.com/jamestorivor)]
 
 ### Clarence Lau
 
@@ -56,4 +52,3 @@ You can reach us at the email `seer[at]comp.nus.edu.sg`
 [[github](https://github.com/bany-nguyen)]
 
 * Role: Developer
-* Responsibilities: UI
