@@ -325,11 +325,29 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
 
 ### Non-Functional Requirements
 
-1.  Should work on any _mainstream OS_ as long as it has Java `25` or above installed.
-2.  Should be able to hold up to 1000 persons without noticeable sluggishness in performance for typical usage.
-3.  A user with above average typing speed for regular English text (i.e. not code, not system admin commands) should be able to accomplish most of the tasks faster using commands than using the mouse.
+1. **Performance:** NUSocietyDesk should respond to typical commands within 1 second when managing up to 300 member records.
 
-*{More to be added}*
+2. **Capacity:** NUSocietyDesk should support at least 1,000 active and former member records without noticeable sluggishness during typical usage.
+
+3. **Usability:** A secretary who is familiar with the available commands and has above-average typing speed should be able to complete common tasks—such as adding, updating, and finding a member—faster using commands than with a conventional mouse-driven interface.
+
+4. **Keyboard accessibility:** All core membership-management features should be usable without requiring a mouse.
+
+5. **Reliability:** After a command that modifies member data completes successfully, the updated data should remain available after the application is restarted.
+
+6. **Data integrity:** Invalid commands or member information should be rejected with an informative error message without altering previously stored valid data.
+
+7. **Privacy:** Member information should be stored only on the user's local computer and should not be transmitted to any remote server.
+
+8. **Offline availability:** All core features should remain usable without an Internet connection.
+
+9. **Human-editable storage:** Application data should be stored locally in a human-editable text format, with at least the same level of support for manual file editing as the original AB3 application.
+
+10. **Platform independence:** NUSocietyDesk should work on Windows, Linux, and macOS on a computer with Java 25 installed, without relying on OS-specific features.
+
+11. **Portability:** The application should run without an installer and should be distributed as a single JAR file of no more than 100 MB.
+
+12. **Display compatibility:** The GUI should work well at resolutions of 1920×1080 or higher at 100% and 125% scaling, and remain fully usable at resolutions of 1280×720 or higher at 150% scaling.
 
 ### Glossary
 
