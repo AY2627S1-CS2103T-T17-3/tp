@@ -353,9 +353,9 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-* 1b. A member with the same name already exists.
+* 1b. A member record with the same phone number already exists.
 
-  * 1b1. NUSocietyDesk shows a duplicate member error and does not add the member.
+  * 1b1. NUSocietyDesk shows a duplicate member record error and does not add the member.
 
     Use case ends.
 
@@ -411,8 +411,20 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 ### Glossary
 
-* **Mainstream OS**: Windows, Linux, Unix, or macOS
-* **Private contact detail**: A contact detail that is not meant to be shared with others
+* **Active member**: A member whose record is included in routine membership results
+* **Archived member record**: A retained former member's record that is excluded from routine membership results without being permanently deleted
+* **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
+* **Contact details**: A member's name, phone number, email address, and address
+* **Duplicate member record**: A member record with the same phone number as an existing member record. Members with the same name but different phone numbers are not considered duplicates
+* **Former member**: A member who is no longer active in the society but whose record is retained
+* **Incomplete member record**: A member record containing only some normally expected details, but enough information to identify the member according to the application's rules
+* **Member**: A person whose contact and society-related information is stored in NUSocietyDesk
+* **Member directory**: The complete collection of member records stored in NUSocietyDesk
+* **Member record**: The information stored for one member, including their contact details and any society-related tags
+* **Membership status**: A classification indicating a member's current relationship with the society, such as active or former
+* **Rejected record**: A record that is not imported because it contains invalid, missing, or conflicting information
+* **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
+* **Tag**: A label attached to a member record to represent information such as a committee, role, or membership status
 
 --------------------------------------------------------------------------------------------------------------------
 
