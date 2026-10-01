@@ -340,9 +340,9 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 ### Non-Functional Requirements
 
-1. **Performance:** NUSocietyDesk should respond to typical commands within 1 second when managing up to 300 member records.
+1. **Performance:** NUSocietyDesk should respond to typical commands within 2 second when managing up to 100 member records.
 
-2. **Capacity:** NUSocietyDesk should support at least 1,000 active and former member records without noticeable sluggishness during typical usage.
+2. **Capacity:** NUSocietyDesk should support at least 200 active and former member records without noticeable sluggishness during typical usage.
 
 3. **Usability:** A secretary who is familiar with the available commands and has above-average typing speed should be able to complete common tasks—such as adding, updating, and finding a member—faster using commands than with a conventional mouse-driven interface.
 
