@@ -12,6 +12,9 @@ import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 import static seedu.address.testutil.TypicalPersons.BOB;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.address.testutil.PersonBuilder;
@@ -92,6 +95,19 @@ public class PersonTest {
         // different tags -> returns false
         editedAlice = new PersonBuilder(ALICE).withTags(VALID_TAG_HUSBAND).build();
         assertFalse(ALICE.equals(editedAlice));
+    }
+
+    @Test
+    public void hashCode_equalPersonsMatchAndDifferentRemarksRemainDistinct() {
+        Person aliceCopy = new PersonBuilder(ALICE).build();
+        Person aliceWithRemark = new PersonBuilder(ALICE).withRemark("Likes baseball").build();
+
+        assertEquals(ALICE.hashCode(), aliceCopy.hashCode());
+        Set<Person> persons = new HashSet<>();
+        persons.add(ALICE);
+        persons.add(aliceCopy);
+        persons.add(aliceWithRemark);
+        assertEquals(2, persons.size());
     }
 
     @Test
