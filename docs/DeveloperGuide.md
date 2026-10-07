@@ -371,21 +371,33 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to find members using one or more name keywords.
-2. NUSocietyDesk displays members whose names contain at least one of the keywords as a whole word, regardless of letter case, together with their contact details.
+1. Secretary requests to find members using one search field: name keywords or a single phone number substring.
+2. NUSocietyDesk displays matching members with their contact details and the number of matches.
 3. Secretary inspects the displayed details to identify the intended member.
 
    Use case ends.
 
 **Extensions**
 
-* 1a. Secretary provides no name keywords.
+* 1a. Secretary provides no search value.
 
   * 1a1. NUSocietyDesk shows an error message with the required format.
 
     Use case ends.
 
-* 2a. No members match the name keywords.
+* 1b. Secretary selects more than one search field or repeats a field selection.
+
+  * 1b1. NUSocietyDesk shows an error message explaining the invalid field selection.
+
+    Use case ends.
+
+* 1c. Secretary provides multiple phone number substrings in one search.
+
+  * 1c1. NUSocietyDesk shows an error message explaining that a phone search accepts only one substring.
+
+    Use case ends.
+
+* 2a. No members match the search.
 
   * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
 
