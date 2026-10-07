@@ -49,6 +49,15 @@ public class AddCommandParserTest {
     private AddCommandParser parser = new AddCommandParser();
 
     @Test
+    public void parse_caseVariantTags_returnsDeduplicatedTags() {
+        Person expectedPerson = new PersonBuilder(BOB).withTags("publicity", "exco").build();
+        String userInput = NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + ADDRESS_DESC_BOB
+                + " t/Publicity t/publicity t/PUBLICITY t/Exco";
+
+        assertParseSuccess(parser, userInput, new AddCommand(expectedPerson));
+    }
+
+    @Test
     public void parse_allFieldsPresent_success() {
         Person expectedPerson = new PersonBuilder(BOB).withTags(VALID_TAG_FRIEND).build();
 

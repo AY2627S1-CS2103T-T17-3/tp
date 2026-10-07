@@ -8,6 +8,7 @@ import static seedu.address.testutil.TypicalIndexes.INDEX_FIRST_PERSON;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -167,6 +168,21 @@ public class ParserUtilTest {
         String tagWithWhitespace = WHITESPACE + VALID_TAG_1 + WHITESPACE;
         Tag expectedTag = new Tag(VALID_TAG_1);
         assertEquals(expectedTag, ParserUtil.parseTag(tagWithWhitespace));
+    }
+
+    @Test
+    public void parseTag_mixedCaseWithWhitespace_returnsLowercaseTag() throws Exception {
+        Tag tag = ParserUtil.parseTag(WHITESPACE + "PuBliCiTy" + WHITESPACE);
+        assertEquals("publicity", tag.tagName);
+    }
+
+    @Test
+    public void parseTags_caseVariants_returnsDeduplicatedLowercaseTags() throws Exception {
+        Set<Tag> tags = ParserUtil.parseTags(List.of("Publicity", "publicity", "PUBLICITY", "Exco"));
+
+        assertEquals(Set.of(new Tag("publicity"), new Tag("exco")), tags);
+        assertEquals(Set.of("publicity", "exco"), tags.stream()
+                .map(tag -> tag.tagName).collect(Collectors.toSet()));
     }
 
     @Test

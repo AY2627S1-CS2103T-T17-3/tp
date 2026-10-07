@@ -129,6 +129,14 @@ The `Model` component,
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
 * does not depend on any of the other three components (as the `Model` represents data entities of the domain, they should make sense on their own without depending on other components)
 
+`Tag` validates its input and stores the name in lowercase using `Locale.ROOT`. Equality and hash codes use this
+canonical name, so each person's `Set<Tag>` treats case variants as one tag. Command parsing and JSON loading both
+construct `Tag` objects and therefore share this identity rule. Saving writes the canonical lowercase names.
+
+`EditCommand` preserves the existing tag set and its descriptor contains only name, phone, email, and address.
+`EditCommandParser` still tokenizes `t/` so it can reject tag arguments explicitly instead of including them in another
+field's value. Dedicated tag commands should use the same `Tag` identity rule when adding or removing tags.
+
 
 <box type="info" seamless>
 
@@ -472,6 +480,32 @@ testers are expected to do more *exploratory* testing.
       Expected: Similar to previous.
 
 1. _{ more test cases … }_
+
+### Tag identity and editing
+
+1. Add a person with case variants of a tag.
+
+   1. Test case: `add n/Tag Test p/91234567 e/tagtest@example.com a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
+      Expected: The card displays exactly two tags, `exco` and `publicity`, in lowercase.
+
+   1. Run `list` and note the displayed index of Tag Test. In the following commands, replace `INDEX` with that index.
+
+   1. Test case: `edit INDEX p/98765432`<br>
+      Expected: The phone number changes and both tags remain.
+
+   1. Test cases: `edit INDEX t/Publicity`, `edit INDEX t/`, and `edit INDEX a/New Address t/Publicity`<br>
+      Expected: Each command is rejected with guidance to use `tagadd` or `tagremove`. All person details remain
+      unchanged. These dedicated commands are being implemented separately and are not available in this change.
+
+1. Load tags from an existing saved record.
+
+   1. Close the app in a disposable test directory. Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`.
+
+   1. Relaunch the app.<br>
+      Expected: The card displays only `exco` and `publicity`.
+
+   1. Execute `list` and inspect the saved record.<br>
+      Expected: It contains exactly two tag names, `exco` and `publicity`, regardless of their order in the file.
 
 ### Saving data
 

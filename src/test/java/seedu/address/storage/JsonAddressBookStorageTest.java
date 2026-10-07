@@ -9,13 +9,20 @@ import static seedu.address.testutil.TypicalPersons.IDA;
 import static seedu.address.testutil.TypicalPersons.getTypicalAddressBook;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import seedu.address.commons.exceptions.DataLoadingException;
+import seedu.address.commons.util.JsonUtil;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ReadOnlyAddressBook;
 
@@ -58,6 +65,37 @@ public class JsonAddressBookStorageTest {
     @Test
     public void readAddressBook_invalidAndValidPersonAddressBook_throwDataLoadingException() {
         assertThrows(DataLoadingException.class, () -> readAddressBook("invalidAndValidPersonAddressBook.json"));
+    }
+
+    @Test
+    public void readAndSaveAddressBook_caseVariantTags_normalizesAndDeduplicatesTags() throws Exception {
+        Path filePath = testFolder.resolve("MixedCaseTags.json");
+        Files.writeString(filePath, """
+                {
+                  "persons": [ {
+                    "name": "Alice",
+                    "phone": "91234567",
+                    "email": "alice@example.com",
+                    "address": "Kent Ridge",
+                    "tags": [ "Publicity", "publicity", "PUBLICITY", "Exco" ]
+                  } ]
+                }
+                """);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+        ReadOnlyAddressBook loaded = storage.readAddressBook().get();
+
+        assertEquals(Set.of("publicity", "exco"), loaded.getPersonList().get(0).getTags().stream()
+                .map(tag -> tag.tagName).collect(Collectors.toSet()));
+        assertEquals(2, loaded.getPersonList().get(0).getTags().size());
+
+        storage.saveAddressBook(loaded);
+        JsonNode savedTags = JsonUtil.fromJsonString(Files.readString(filePath), JsonNode.class)
+                .get("persons").get(0).get("tags");
+        Set<String> savedNames = new HashSet<>();
+        savedTags.forEach(tag -> savedNames.add(tag.asText()));
+        assertEquals(Set.of("publicity", "exco"), savedNames);
+        assertEquals(2, savedTags.size());
+        assertEquals(loaded, storage.readAddressBook().get());
     }
 
     @Test

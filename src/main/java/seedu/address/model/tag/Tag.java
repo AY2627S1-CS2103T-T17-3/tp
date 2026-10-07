@@ -3,9 +3,12 @@ package seedu.address.model.tag;
 import static java.util.Objects.requireNonNull;
 import static seedu.address.commons.util.AppUtil.checkArgument;
 
+import java.util.Locale;
+
 /**
  * Represents a Tag in the address book.
- * Guarantees: immutable; name is valid as declared in {@link #isValidTagName(String)}
+ * Guarantees: immutable; name is lowercase and valid as declared in {@link #isValidTagName(String)}.
+ * Tag identity is case-insensitive.
  */
 public class Tag {
 
@@ -15,14 +18,14 @@ public class Tag {
     public final String tagName;
 
     /**
-     * Constructs a {@code Tag}.
+     * Constructs a {@code Tag} with a lowercase name, independent of the default locale.
      *
      * @param tagName A valid tag name.
      */
     public Tag(String tagName) {
         requireNonNull(tagName);
         checkArgument(isValidTagName(tagName), MESSAGE_CONSTRAINTS);
-        this.tagName = tagName;
+        this.tagName = tagName.toLowerCase(Locale.ROOT);
     }
 
     /**
