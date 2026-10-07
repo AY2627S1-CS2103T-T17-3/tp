@@ -2,12 +2,14 @@ package seedu.address.logic.parser;
 
 import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 
 import java.util.List;
 
 import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
+import seedu.address.model.person.PhoneContainsSubstringPredicate;
 
 /**
  * Parses input arguments and creates a new FindCommand object.
@@ -15,7 +17,7 @@ import seedu.address.model.person.NameContainsKeywordsPredicate;
 public class FindCommandParser implements Parser<FindCommand> {
 
     /**
-     * Parses name keywords with an optional {@code n/} prefix and returns a FindCommand for execution.
+     * Parses name keywords or a {@code p/} phone substring and returns a FindCommand for execution.
      *
      * @throws ParseException if the user input does not conform to the expected format.
      */
@@ -23,20 +25,31 @@ public class FindCommandParser implements Parser<FindCommand> {
         String trimmedArgs = args.trim();
         // Normalize whitespace so prefixes after tabs and newlines are recognized by the tokenizer.
         ArgumentMultimap argMultimap =
-                ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "), PREFIX_NAME);
-        argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME);
+                ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "), PREFIX_NAME, PREFIX_PHONE);
+        argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME, PREFIX_PHONE);
 
-        if (argMultimap.getValue(PREFIX_NAME).isPresent()) {
+        boolean hasNamePrefix = argMultimap.getValue(PREFIX_NAME).isPresent();
+        boolean hasPhonePrefix = argMultimap.getValue(PREFIX_PHONE).isPresent();
+        if (hasNamePrefix && hasPhonePrefix) {
+            throw new ParseException(FindCommand.MESSAGE_MULTIPLE_FIELDS);
+        }
+
+        if (hasNamePrefix || hasPhonePrefix) {
             if (!argMultimap.getPreamble().isEmpty()) {
                 throw new ParseException(
                         String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
             }
-            trimmedArgs = argMultimap.getValue(PREFIX_NAME).get();
+            Prefix searchPrefix = hasNamePrefix ? PREFIX_NAME : PREFIX_PHONE;
+            trimmedArgs = argMultimap.getValue(searchPrefix).get();
         }
 
         if (trimmedArgs.isEmpty()) {
             throw new ParseException(
                     String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
+        }
+
+        if (hasPhonePrefix) {
+            return new FindCommand(new PhoneContainsSubstringPredicate(trimmedArgs));
         }
 
         String[] nameKeywords = trimmedArgs.split("\\s+");
