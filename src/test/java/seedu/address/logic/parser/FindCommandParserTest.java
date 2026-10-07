@@ -92,6 +92,17 @@ public class FindCommandParserTest {
     }
 
     @Test
+    public void parse_multiplePhoneSubstrings_throwsParseException() {
+        String expectedMessage = "Phone searches accept only one substring. "
+                + "Search each substring in a separate find command.";
+        assertParseFailure(parser, "p/9123 1234", expectedMessage);
+        assertParseFailure(parser, "p/9123  1234", expectedMessage);
+        assertParseFailure(parser, "p/9123\t1234", expectedMessage);
+        assertParseFailure(parser, "p/9123\n1234", expectedMessage);
+        assertParseFailure(parser, " p/ \t9123 \n1234 \t", expectedMessage);
+    }
+
+    @Test
     public void parse_repeatedPhonePrefix_throwsParseException() {
         String expectedMessage = Messages.getErrorMessageForDuplicatePrefixes(PREFIX_PHONE);
         assertParseFailure(parser, "p/9123 p/4567", expectedMessage);

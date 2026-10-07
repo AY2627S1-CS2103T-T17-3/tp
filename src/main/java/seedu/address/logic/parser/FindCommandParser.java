@@ -49,6 +49,9 @@ public class FindCommandParser implements Parser<FindCommand> {
         }
 
         if (hasPhonePrefix) {
+            if (trimmedArgs.split("\\s+").length > 1) {
+                throw new ParseException(FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS);
+            }
             return new FindCommand(new PhoneContainsSubstringPredicate(trimmedArgs));
         }
 

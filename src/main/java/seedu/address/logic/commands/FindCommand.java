@@ -18,13 +18,17 @@ public class FindCommand extends Command {
 
     public static final String MESSAGE_USAGE = COMMAND_WORD + ": Finds persons by name keywords or a phone substring "
             + "and displays them as a list with index numbers.\n"
-            + "Name searches match whole words, ignoring case. Phone searches match a substring.\n"
+            + "Name searches match whole words, ignoring case. "
+            + "Phone searches match one substring without spaces.\n"
             + "Parameters: [n/]KEYWORD [MORE_KEYWORDS]... OR p/PHONE_SUBSTRING\n"
             + "Specify only one search field.\n"
             + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " n/alice bob; "
             + COMMAND_WORD + " p/9123";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
+
+    public static final String MESSAGE_MULTIPLE_PHONE_SUBSTRINGS = "Phone searches accept only one substring. "
+            + "Search each substring in a separate find command.";
 
     private final Predicate<Person> predicate;
 
