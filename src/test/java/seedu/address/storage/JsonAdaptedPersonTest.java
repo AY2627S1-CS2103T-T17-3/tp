@@ -15,7 +15,9 @@ import seedu.address.commons.exceptions.IllegalValueException;
 import seedu.address.model.person.Address;
 import seedu.address.model.person.Email;
 import seedu.address.model.person.Name;
+import seedu.address.model.person.Person;
 import seedu.address.model.person.Phone;
+import seedu.address.model.person.Status;
 
 public class JsonAdaptedPersonTest {
     private static final String INVALID_NAME = "R@chel";
@@ -36,6 +38,28 @@ public class JsonAdaptedPersonTest {
     public void toModelType_validPersonDetails_returnsPerson() throws Exception {
         JsonAdaptedPerson person = new JsonAdaptedPerson(BENSON);
         assertEquals(BENSON, person.toModelType());
+    }
+
+    @Test
+    public void toModelType_missingStatus_defaultsToActive() throws Exception {
+        JsonAdaptedPerson person = new JsonAdaptedPerson(
+                VALID_NAME, VALID_PHONE, VALID_EMAIL, VALID_ADDRESS, VALID_TAGS);
+        assertEquals(Status.ACTIVE, person.toModelType().getStatus());
+    }
+
+    @Test
+    public void toModelType_archivedStatus_preservesStatus() throws Exception {
+        Person archivedPerson = new Person(BENSON.getName(), BENSON.getPhone(), BENSON.getEmail(),
+                BENSON.getAddress(), Status.ARCHIVED, BENSON.getTags());
+        JsonAdaptedPerson person = new JsonAdaptedPerson(archivedPerson);
+        assertEquals(archivedPerson, person.toModelType());
+    }
+
+    @Test
+    public void toModelType_invalidStatus_throwsIllegalValueException() {
+        JsonAdaptedPerson person = new JsonAdaptedPerson(
+                VALID_NAME, VALID_PHONE, VALID_EMAIL, VALID_ADDRESS, "former", VALID_TAGS);
+        assertThrows(IllegalValueException.class, Status.MESSAGE_CONSTRAINTS, person::toModelType);
     }
 
     @Test
