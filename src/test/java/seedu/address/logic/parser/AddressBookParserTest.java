@@ -76,6 +76,12 @@ public class AddressBookParserTest {
     }
 
     @Test
+    public void parseCommand_multiplePhoneSubstrings_throwsParseException() {
+        assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS, () ->
+                parser.parseCommand("find p/9123 1234"));
+    }
+
+    @Test
     public void parseCommand_help() throws Exception {
         assertTrue(parser.parseCommand(HelpCommand.COMMAND_WORD) instanceof HelpCommand);
         assertTrue(parser.parseCommand(HelpCommand.COMMAND_WORD + " 3") instanceof HelpCommand);

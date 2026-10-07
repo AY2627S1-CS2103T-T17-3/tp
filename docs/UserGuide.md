@@ -117,20 +117,50 @@ Examples:
 *  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
 *  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
 
-### Locating persons by name: `find`
+### Locating members by name or phone: `find`
 
-Finds persons whose names contain any of the given keywords.
+Finds members by name keywords or a phone number substring. Matching members are displayed in a list with index numbers,
+together with the number of matches.
 
-Format: `find KEYWORD [MORE_KEYWORDS]`
+Formats:
 
-* The search is case-insensitive; for example, `hans` matches `Hans`.
+* `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
+* `find p/PHONE_SUBSTRING` for phone searches.
+
+**Name searches**
+
+* The `n/` prefix is optional: `find Alice Bob` and `find n/Alice Bob` return the same results.
+* Name matching is case-insensitive; for example, `hans` matches `Hans`.
 * Keyword order does not matter; for example, `Hans Bo` matches `Bo Hans`.
-* The search considers only names.
+* Unprefixed searches and `n/` searches consider only names.
 * Only full words match; for example, `Han` does not match `Hans`.
-* Persons matching at least one keyword are returned (an `OR` search); for example, `Hans Bo` returns `Hans Gruber` and `Bo Yang`.
+* Members matching at least one keyword are returned (an `OR` search); for example, `Hans Bo` returns
+  `Hans Gruber` and `Bo Yang`.
+
+**Phone searches**
+
+* The search considers only phone numbers and matches a consecutive sequence of digits anywhere in the number.
+  For example, `find p/9103` matches the phone number `91031282`.
+* Phone searches support only one substring. Commands such as `find p/9123 1234` are rejected with an error.
+  The same applies to substrings separated by tabs or line breaks.
+  Search separately with `find p/9123` and `find p/1234`.
+* Both partial and full phone numbers are accepted. Even one or two digits can be used, such as `find p/9` or `find p/91`.
+* Include `p/` to search phone numbers: `find 9103` searches names, while `find p/9103` searches phone numbers.
+
+**Search rules**
+
+* Search one field per command. Combining fields, such as `find n/Alice p/9123`, is rejected.
+* Use each prefix only once. Commands such as `find n/Alice n/Bob` and `find p/9123 p/4567` are rejected.
+* Provide a nonempty search value. Commands such as `find`, `find n/` and `find p/` are rejected.
+* In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
+* If no members match, the list is empty and the result count is zero.
 
 Examples:
-* `find John` returns `john` and `John Doe`
+
+* `find John` returns members named `john` and `John Doe`.
+* `find n/alex david` returns the same members as `find alex david`.
+* `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
+* `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
 
@@ -203,6 +233,6 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@example.com`
-**Find**   | `find KEYWORD [MORE_KEYWORDS]`<br> e.g., `find James Jake`
+**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find p/PHONE_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`
 **List**   | `list`
 **Help**   | `help`
