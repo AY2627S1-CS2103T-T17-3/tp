@@ -64,7 +64,8 @@
         "launch-and-shutdown": "Launch and shutdown",
         "deleting-a-person": "Deleting a person",
         "tag-identity-and-editing": "Tag identity and editing",
-        "saving-data": "Saving data"
+        "saving-data": "Saving data",
+        "email-identity": "Email identity"
       },
       "headingKeywords": {}
     },
