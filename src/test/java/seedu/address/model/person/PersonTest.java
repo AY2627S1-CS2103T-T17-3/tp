@@ -88,6 +88,17 @@ public class PersonTest {
         // different tags -> returns false
         editedAlice = new PersonBuilder(ALICE).withTags(VALID_TAG_HUSBAND).build();
         assertFalse(ALICE.equals(editedAlice));
+
+        // different status -> returns false
+        editedAlice = new Person(ALICE.getName(), ALICE.getPhone(), ALICE.getEmail(), ALICE.getAddress(),
+                Status.ARCHIVED, ALICE.getTags());
+        assertFalse(ALICE.equals(editedAlice));
+    }
+
+    @Test
+    public void hashCode_equalPersons_haveSameHashCode() {
+        Person aliceCopy = new PersonBuilder(ALICE).build();
+        assertEquals(ALICE.hashCode(), aliceCopy.hashCode());
     }
 
     @Test
