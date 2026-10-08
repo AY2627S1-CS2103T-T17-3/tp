@@ -8,16 +8,20 @@ import static seedu.address.logic.commands.CommandTestUtil.assertCommandSuccess;
 import static seedu.address.testutil.TypicalPersons.CARL;
 import static seedu.address.testutil.TypicalPersons.ELLE;
 import static seedu.address.testutil.TypicalPersons.FIONA;
+import static seedu.address.testutil.TypicalPersons.GEORGE;
 import static seedu.address.testutil.TypicalPersons.getTypicalAddressBook;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import seedu.address.logic.parser.FindCommandParser;
+import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
+import seedu.address.model.person.PhoneContainsSubstringPredicate;
 
 /**
  * Contains integration tests (interaction with the Model) for {@code FindCommand}.
@@ -71,6 +75,51 @@ public class FindCommandTest {
         expectedModel.updateFilteredPersonList(predicate);
         assertCommandSuccess(command, model, expectedMessage, expectedModel);
         assertEquals(List.of(CARL, ELLE, FIONA), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_prefixedNameKeywords_multiplePersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("n/kUrZ eLLe NoMatch");
+        expectedModel.updateFilteredPersonList(preparePredicate("kUrZ eLLe NoMatch"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 2);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(CARL, ELLE), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_prefixedPartialNameKeyword_noPersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("n/Kur");
+        expectedModel.updateFilteredPersonList(preparePredicate("Kur"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 0);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_phoneSubstring_multiplePersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("p/948");
+        expectedModel.updateFilteredPersonList(new PhoneContainsSubstringPredicate("948"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 3);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(ELLE, FIONA, GEORGE), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_fullPhoneNumber_onePersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("p/95352563");
+        expectedModel.updateFilteredPersonList(new PhoneContainsSubstringPredicate("95352563"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(CARL), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_nonMatchingPhoneSubstring_noPersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("p/0000");
+        expectedModel.updateFilteredPersonList(new PhoneContainsSubstringPredicate("0000"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 0);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(), model.getFilteredPersonList());
     }
 
     @Test

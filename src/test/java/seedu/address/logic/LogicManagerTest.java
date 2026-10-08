@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.logic.commands.AddCommand;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.EditCommand;
 import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
@@ -68,6 +69,16 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_editWithTagArguments_throwsParseExceptionAndPreservesPerson() {
+        model.addPerson(new PersonBuilder(AMY).withTags("Publicity", "Exco").build());
+
+        assertParseException("edit 1 t/Publicity", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
+        assertParseException("edit 1 t/", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
+        assertParseException("edit 1 a/Kent Ridge t/Publicity", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
+        assertParseException("edit 1 t/Publicity a/Kent Ridge", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
     }
 
     @Test
