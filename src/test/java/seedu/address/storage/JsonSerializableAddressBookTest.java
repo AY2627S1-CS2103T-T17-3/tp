@@ -5,6 +5,7 @@ import static seedu.address.testutil.Assert.assertThrows;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,14 @@ public class JsonSerializableAddressBookTest {
         JsonAdaptedPerson invalid = new JsonAdaptedPerson("Alex Tan", "91234567", null, "Kent Ridge", List.of());
         JsonSerializableAddressBook data = new JsonSerializableAddressBook(List.of(invalid, invalid));
         assertThrows(IllegalValueException.class, "Record 1: Person's Email field is missing!", data::toModelType);
+    }
+
+    @Test
+    public void toModelType_nullRecord_reportsRecordPosition() {
+        JsonAdaptedPerson valid = new JsonAdaptedPerson(new PersonBuilder().build());
+        JsonSerializableAddressBook data = new JsonSerializableAddressBook(Arrays.asList(valid, null));
+
+        assertThrows(IllegalValueException.class, "Record 2: Member record must not be null.", data::toModelType);
     }
 
     @Test
