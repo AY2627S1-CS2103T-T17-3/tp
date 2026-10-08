@@ -46,7 +46,6 @@ public class EditCommand extends Command {
     public static final String MESSAGE_NOT_EDITED = "At least one field to edit must be provided.";
     public static final String MESSAGE_TAG_EDIT_NOT_SUPPORTED =
             "Tags cannot be edited with edit. Use tagadd or tagremove instead.";
-    public static final String MESSAGE_DUPLICATE_PERSON = "This person already exists in the address book.";
 
     private final Index index;
     private final EditPersonDescriptor editPersonDescriptor;
@@ -76,7 +75,9 @@ public class EditCommand extends Command {
         Person editedPerson = createEditedPerson(personToEdit, editPersonDescriptor);
 
         if (!personToEdit.isSamePerson(editedPerson) && model.hasPerson(editedPerson)) {
-            throw new CommandException(MESSAGE_DUPLICATE_PERSON);
+            Person existingPerson = model.getAddressBook().getPersonList().stream()
+                    .filter(editedPerson::isSamePerson).findFirst().orElseThrow();
+            throw new CommandException(Messages.formatDuplicatePerson(existingPerson));
         }
 
         model.setPerson(personToEdit, editedPerson);

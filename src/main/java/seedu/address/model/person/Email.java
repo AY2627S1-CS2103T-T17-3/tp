@@ -3,8 +3,11 @@ package seedu.address.model.person;
 import static java.util.Objects.requireNonNull;
 import static seedu.address.commons.util.AppUtil.checkArgument;
 
+import java.util.Locale;
+
 /**
- * Represents a Person's email in the address book.
+ * Represents a Person's canonical email in the address book.
+ * Stores lowercase using {@link Locale#ROOT} without trimming whitespace.
  * Guarantees: immutable; is valid as declared in {@link #isValidEmail(String)}
  */
 public class Email {
@@ -41,14 +44,18 @@ public class Email {
     public Email(String email) {
         requireNonNull(email);
         checkArgument(isValidEmail(email), MESSAGE_CONSTRAINTS);
-        value = email;
+        value = normalize(email);
     }
 
     /**
-     * Returns true if a given string is a valid email.
+     * Returns true if a given string is a valid email after normalization.
      */
     public static boolean isValidEmail(String test) {
-        return test.matches(VALIDATION_REGEX);
+        return normalize(test).matches(VALIDATION_REGEX);
+    }
+
+    private static String normalize(String email) {
+        return email.toLowerCase(Locale.ROOT);
     }
 
     @Override

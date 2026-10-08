@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,6 +56,18 @@ public class JsonAddressBookStorageTest {
     @Test
     public void read_notJsonFormat_exceptionThrown() {
         assertThrows(DataLoadingException.class, () -> readAddressBook("notJsonFormatAddressBook.json"));
+    }
+
+    @Test
+    public void readAddressBook_invalidJsonStructure_throwsDataLoadingException() throws IOException {
+        List<String> invalidJsonStructures = List.of("null", "{}", "{\"persons\":null}", "{\"persons\":{}}");
+        Path filePath = testFolder.resolve("InvalidJsonStructure.json");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+
+        for (String invalidJsonStructure : invalidJsonStructures) {
+            Files.writeString(filePath, invalidJsonStructure);
+            assertThrows(DataLoadingException.class, storage::readAddressBook);
+        }
     }
 
     @Test
