@@ -82,10 +82,28 @@ Adds a person to the address book.
 
 Format: `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... `
 
+Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
+lowercase. General email addresses are accepted; `@u.nus.edu` is not required. Different aliases, such as
+`alex@example.com` and `alex+society@example.com`, count as different addresses. Command parsing trims
+surrounding argument whitespace, but email values in the data file cannot contain surrounding whitespace.
+
+Members may share a name or phone number if their emails differ. For example, both commands are valid:
+
+* `add n/Alex Tan p/91234567 e/Alex.One@Example.com a/Kent Ridge`
+* `add n/Alex Tan p/91234567 e/alex.two@example.com a/Clementi`
+
+Reusing `ALEX.ONE@EXAMPLE.COM` for another member is rejected with:
+`Email "alex.one@example.com" is already used by "Alex Tan". No changes were made.`
+The check includes members outside the current search results.
+
 <box type="tip" seamless>
 
 **Tip:** A person can have any number of tags, including zero.
 </box>
+
+Tag names are alphanumeric and case-insensitive. They are stored and displayed in lowercase.
+For example, `t/Publicity t/publicity` adds one tag named `publicity`.
+Tags in existing saved records follow the same rule when loaded; case variants are merged.
 
 Examples:
 * `add n/John Doe p/98765432 e/johnd@example.com a/John street, block 123, #01-01`
@@ -101,32 +119,64 @@ Format: `list`
 
 Edits an existing person in the address book.
 
-Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS] [t/TAG]... `
+Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
 
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, ...
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
-* When editing tags, all of the person's existing tags are removed; adding tags is not cumulative.
-* To remove all of a person's tags, enter `t/` without a tag after it.
+* Existing tags are preserved. The `edit` command rejects `t/` arguments, including an empty `t/`.
+* Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
+  address for reuse. The new email cannot belong to another member, including one outside the displayed list.
 
 Examples:
 *  `edit 1 p/91234567 e/johndoe@example.com` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@example.com` respectively.
-*  `edit 2 n/Betsy Crower t/` Edits the name of the 2nd person to be `Betsy Crower` and clears all existing tags.
+*  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
+*  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
 
-### Locating persons by name: `find`
+### Locating members by name or phone: `find`
 
-Finds persons whose names contain any of the given keywords.
+Finds members by name keywords or a phone number substring. Matching members are displayed in a list with index numbers,
+together with the number of matches.
 
-Format: `find KEYWORD [MORE_KEYWORDS]`
+Formats:
 
-* The search is case-insensitive; for example, `hans` matches `Hans`.
+* `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
+* `find p/PHONE_SUBSTRING` for phone searches.
+
+**Name searches**
+
+* The `n/` prefix is optional: `find Alice Bob` and `find n/Alice Bob` return the same results.
+* Name matching is case-insensitive; for example, `hans` matches `Hans`.
 * Keyword order does not matter; for example, `Hans Bo` matches `Bo Hans`.
-* The search considers only names.
+* Unprefixed searches and `n/` searches consider only names.
 * Only full words match; for example, `Han` does not match `Hans`.
-* Persons matching at least one keyword are returned (an `OR` search); for example, `Hans Bo` returns `Hans Gruber` and `Bo Yang`.
+* Members matching at least one keyword are returned (an `OR` search); for example, `Hans Bo` returns
+  `Hans Gruber` and `Bo Yang`.
+
+**Phone searches**
+
+* The search considers only phone numbers and matches a consecutive sequence of digits anywhere in the number.
+  For example, `find p/9103` matches the phone number `91031282`.
+* Phone searches support only one substring. Commands such as `find p/9123 1234` are rejected with an error.
+  The same applies to substrings separated by tabs or line breaks.
+  Search separately with `find p/9123` and `find p/1234`.
+* Both partial and full phone numbers are accepted. Even one or two digits can be used, such as `find p/9` or `find p/91`.
+* Include `p/` to search phone numbers: `find 9103` searches names, while `find p/9103` searches phone numbers.
+
+**Search rules**
+
+* Search one field per command. Combining fields, such as `find n/Alice p/9123`, is rejected.
+* Use each prefix only once. Commands such as `find n/Alice n/Bob` and `find p/9123 p/4567` are rejected.
+* Provide a nonempty search value. Commands such as `find`, `find n/` and `find p/` are rejected.
+* In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
+* If no members match, the list is empty and the result count is zero.
 
 Examples:
-* `find John` returns `john` and `John Doe`
+
+* `find John` returns members named `john` and `John Doe`.
+* `find n/alex david` returns the same members as `find alex david`.
+* `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
+* `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
 
@@ -167,9 +217,16 @@ AddressBook data is saved automatically as a JSON file `[JAR file location]/data
 <box type="warning" seamless>
 
 **Caution:**
-If your changes make the data file invalid, AddressBook starts with an empty address book at the next run. The invalid file remains on disk until you run a command (AddressBook saves after every command). Still, we recommend backing up the file before editing it.<br>
+If your changes make the data file invalid, AddressBook opens with an empty address book at the next run. This
+includes files with duplicate emails that differ only in letter case. Loading alone leaves the invalid file
+unchanged, but the next successful command, including `list`, saves the current in-memory address book over it.
+Back up the file and correct it before running commands.<br>
 Furthermore, certain edits can cause the AddressBook to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </box>
+
+Valid mixed-case emails appear in lowercase when loaded and are saved in lowercase after the next successful
+command. Older versions of the app may reject same-name records saved by this version, so back up the data file
+before switching versions.
 
 ### Archiving data files `[coming in v2.0]`
 
@@ -198,7 +255,7 @@ Action     | Format, Examples
 **Add**    | `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... ` <br> e.g., `add n/James Ho p/22224444 e/jamesho@example.com a/123, Clementi Rd, 1234665 t/friend t/colleague`
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
-**Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS] [t/TAG]... `<br> e.g.,`edit 2 n/James Lee e/jameslee@example.com`
-**Find**   | `find KEYWORD [MORE_KEYWORDS]`<br> e.g., `find James Jake`
+**Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@example.com`
+**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find p/PHONE_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`
 **List**   | `list`
 **Help**   | `help`

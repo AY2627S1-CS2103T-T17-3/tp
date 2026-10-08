@@ -129,6 +129,26 @@ The `Model` component,
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
 * does not depend on any of the other three components (as the `Model` represents data entities of the domain, they should make sense on their own without depending on other components)
 
+`Tag` validates its input and stores the name in lowercase using `Locale.ROOT`. Equality and hash codes use this
+canonical name, so each person's `Set<Tag>` treats case variants as one tag. Command parsing and JSON loading both
+construct `Tag` objects and therefore share this identity rule. Saving writes the canonical lowercase names.
+
+`Email` validates the existing general email format and stores the value in lowercase using `Locale.ROOT`.
+It does not trim whitespace; model values and saved strings containing surrounding whitespace are invalid.
+Command parsing still trims surrounding argument whitespace. Addresses do not need an `@u.nus.edu` domain,
+and different local-part aliases remain distinct.
+
+`Person.isSamePerson` compares canonical emails only. Members can share a name or phone number when their emails
+differ. `UniquePersonList` uses this identity rule for addition, replacement, and bulk replacement, while
+`Person.equals` still compares every field. Add and edit detect email conflicts across the complete directory,
+including members outside the displayed filter, and identify the existing member by name and email without a
+displayed index. Re-entering one's own email or changing only its case remains valid; changing an email releases
+the previous one for reuse.
+
+`EditCommand` preserves the existing tag set and its descriptor contains only name, phone, email, and address.
+`EditCommandParser` still tokenizes `t/` so it can reject tag arguments explicitly instead of including them in another
+field's value. Dedicated tag commands should use the same `Tag` identity rule when adding or removing tags.
+
 
 <box type="info" seamless>
 
@@ -148,6 +168,17 @@ The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
+
+The JSON schema is unchanged: each person retains an `email` string. Loading applies the model's email validation
+and rejects the entire file on the first invalid record or duplicate canonical email. Record errors use one-based
+positions in the saved `persons` array; a duplicate reports both positions, for example
+`Record 2: email "alex@example.com" duplicates record 1.` `JsonAddressBookStorage` also rejects malformed
+JSON roots and missing or non-array `persons` values through `DataLoadingException`.
+
+`MainApp.initModelManager` catches `DataLoadingException` and opens the normal UI with an empty address book.
+Loading alone leaves the invalid file unchanged. The next successful command, including `list`, saves the
+current in-memory directory over that file. Only a missing file starts with sample members. Valid mixed-case
+emails become lowercase in memory on load and in the JSON file after a successful command saves.
 
 ### Common classes
 
@@ -353,7 +384,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-* 1b. A member record with the same phone number already exists.
+* 1b. A member record with the same canonical email already exists, regardless of its name or phone number.
 
   * 1b1. NUSocietyDesk shows a duplicate member record error and does not add the member.
 
@@ -363,21 +394,33 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to find members using one or more name keywords.
-2. NUSocietyDesk displays members whose names contain at least one of the keywords as a whole word, regardless of letter case, together with their contact details.
+1. Secretary requests to find members using one search field: name keywords or a single phone number substring.
+2. NUSocietyDesk displays matching members with their contact details and the number of matches.
 3. Secretary inspects the displayed details to identify the intended member.
 
    Use case ends.
 
 **Extensions**
 
-* 1a. Secretary provides no name keywords.
+* 1a. Secretary provides no search value.
 
   * 1a1. NUSocietyDesk shows an error message with the required format.
 
     Use case ends.
 
-* 2a. No members match the name keywords.
+* 1b. Secretary selects more than one search field or repeats a field selection.
+
+  * 1b1. NUSocietyDesk shows an error message explaining the invalid field selection.
+
+    Use case ends.
+
+* 1c. Secretary provides multiple phone number substrings in one search.
+
+  * 1c1. NUSocietyDesk shows an error message explaining that a phone search accepts only one substring.
+
+    Use case ends.
+
+* 2a. No members match the search.
 
   * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
 
@@ -415,7 +458,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * **Archived member record**: A retained former member's record that is excluded from routine membership results without being permanently deleted
 * **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
 * **Contact details**: A member's name, phone number, email address, and address
-* **Duplicate member record**: A member record with the same phone number as an existing member record. Members with the same name but different phone numbers are not considered duplicates
+* **Duplicate member record**: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ
 * **Former member**: A member who is no longer active in the society but whose record is retained
 * **Incomplete member record**: A member record containing only some normally expected details, but enough information to identify the member according to the application's rules
 * **Member**: A person whose contact and society-related information is stored in NUSocietyDesk
@@ -473,10 +516,61 @@ testers are expected to do more *exploratory* testing.
 
 1. _{ more test cases … }_
 
+### Tag identity and editing
+
+1. Add a person with case variants of a tag.
+
+   1. Test case: `add n/Tag Test p/91234567 e/tagtest@example.com a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
+      Expected: The card displays exactly two tags, `exco` and `publicity`, in lowercase.
+
+   1. Run `list` and note the displayed index of Tag Test. In the following commands, replace `INDEX` with that index.
+
+   1. Test case: `edit INDEX p/98765432`<br>
+      Expected: The phone number changes and both tags remain.
+
+   1. Test cases: `edit INDEX t/Publicity`, `edit INDEX t/`, and `edit INDEX a/New Address t/Publicity`<br>
+      Expected: Each command is rejected with guidance to use `tagadd` or `tagremove`. All person details remain
+      unchanged. These dedicated commands are being implemented separately and are not available in this change.
+
+1. Load tags from an existing saved record.
+
+   1. Close the app in a disposable test directory. Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`.
+
+   1. Relaunch the app.<br>
+      Expected: The card displays only `exco` and `publicity`.
+
+   1. Execute `list` and inspect the saved record.<br>
+      Expected: It contains exactly two tag names, `exco` and `publicity`, regardless of their order in the file.
+
 ### Saving data
 
-1. Dealing with missing/corrupted data files
+1. Dealing with invalid data files
 
-   1. _{Explain how to simulate missing or corrupted data files and state the expected behavior.}_
+   1. In a disposable test directory, run `list` to create `data/addressbook.json`, close the app, and back it up.
+   1. Give two saved records the emails `Alex@Example.com` and `alex@example.com`, then relaunch.<br>
+      Expected: the normal window opens with an empty member list. Loading leaves the invalid file unchanged.
+      Storage reports that record 2 duplicates record 1, but the UI does not display those record positions.
+   1. Correct the second email and relaunch.<br>
+      Expected: the records load with lowercase emails. The file remains unchanged until a successful command,
+      such as `list`, saves it.
+   1. Repeat with malformed JSON, a null record, or an email with surrounding whitespace.<br>
+      Expected: each file opens an empty member list. Restore the backup before running commands, which could
+      overwrite the invalid file. A missing file starts with the sample members instead.
 
-1. _{ more test cases … }_
+### Email identity
+
+1. On a fresh launch with no data file, run `find Morgan`.<br>
+   Expected: both sample members named Morgan Lee appear. They share a phone number but have different emails.
+1. In a disposable directory with `data/addressbook.json` containing `{"persons":[]}`, run:
+   * `add n/Alex Tan p/91234567 e/Alex.One@Example.com a/Kent Ridge`
+   * `add n/Alex Tan p/91234567 e/alex.two@example.com a/Clementi`
+   Expected: both succeed and show lowercase emails.
+1. Run `edit 2 e/ALEX.ONE@EXAMPLE.COM`.<br>
+   Expected: `Email "alex.one@example.com" is already used by "Alex Tan". No changes were made.`
+1. Run `edit 1 n/Alexander Tan e/ALEX.ONE@EXAMPLE.COM`, then `find Alex`, then
+   `edit 1 e/alex.one@example.com`.<br>
+   Expected: the rename succeeds; `find Alex` shows only Alex Tan. The final edit fails because that email
+   belongs to Alexander Tan outside the displayed filter.
+1. Run `list`, then `edit 1 e/alex.new@example.com`, then
+   `add n/Alex Tan p/91234567 e/alex.one@example.com a/Bukit Timah`.<br>
+   Expected: both commands succeed. Restart to confirm the saved email changes.

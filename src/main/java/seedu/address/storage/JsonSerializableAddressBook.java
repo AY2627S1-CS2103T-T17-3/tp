@@ -19,7 +19,8 @@ import seedu.address.model.person.Person;
 @JsonRootName(value = "addressbook")
 class JsonSerializableAddressBook {
 
-    public static final String MESSAGE_DUPLICATE_PERSON = "Persons list contains duplicate person(s).";
+    public static final String MESSAGE_DUPLICATE_PERSON =
+            "Record %1$d: email \"%2$s\" duplicates record %3$d.";
 
     private final List<JsonAdaptedPerson> persons = new ArrayList<>();
 
@@ -47,10 +48,23 @@ class JsonSerializableAddressBook {
      */
     public AddressBook toModelType() throws IllegalValueException {
         AddressBook addressBook = new AddressBook();
-        for (JsonAdaptedPerson jsonAdaptedPerson : persons) {
-            Person person = jsonAdaptedPerson.toModelType();
+        for (int i = 0; i < persons.size(); i++) {
+            JsonAdaptedPerson jsonAdaptedPerson = persons.get(i);
+            Person person;
+            try {
+                if (jsonAdaptedPerson == null) {
+                    throw new IllegalValueException("Member record must not be null.");
+                }
+                person = jsonAdaptedPerson.toModelType();
+            } catch (IllegalValueException e) {
+                throw new IllegalValueException("Record " + (i + 1) + ": " + e.getMessage());
+            }
             if (addressBook.hasPerson(person)) {
-                throw new IllegalValueException(MESSAGE_DUPLICATE_PERSON);
+                Person existingPerson = addressBook.getPersonList().stream()
+                        .filter(person::isSamePerson).findFirst().orElseThrow();
+                int existingRecord = addressBook.getPersonList().indexOf(existingPerson) + 1;
+                throw new IllegalValueException(String.format(MESSAGE_DUPLICATE_PERSON,
+                        i + 1, person.getEmail(), existingRecord));
             }
             addressBook.addPerson(person);
         }

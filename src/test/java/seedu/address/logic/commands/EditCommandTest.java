@@ -7,7 +7,6 @@ import static seedu.address.logic.commands.CommandTestUtil.DESC_AMY;
 import static seedu.address.logic.commands.CommandTestUtil.DESC_BOB;
 import static seedu.address.logic.commands.CommandTestUtil.VALID_NAME_BOB;
 import static seedu.address.logic.commands.CommandTestUtil.VALID_PHONE_BOB;
-import static seedu.address.logic.commands.CommandTestUtil.VALID_TAG_HUSBAND;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandFailure;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandSuccess;
 import static seedu.address.logic.commands.CommandTestUtil.showPersonAtIndex;
@@ -25,6 +24,9 @@ import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Phone;
+import seedu.address.model.person.Status;
+import seedu.address.model.tag.Tag;
 import seedu.address.testutil.EditPersonDescriptorBuilder;
 import seedu.address.testutil.PersonBuilder;
 
@@ -37,7 +39,9 @@ public class EditCommandTest {
 
     @Test
     public void execute_allFieldsSpecifiedUnfilteredList_success() {
-        Person editedPerson = new PersonBuilder().build();
+        Person personToEdit = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
+        Person editedPerson = new PersonBuilder().withTags(personToEdit.getTags().stream()
+                .map(tag -> tag.tagName).toArray(String[]::new)).build();
         EditPersonDescriptor descriptor = new EditPersonDescriptorBuilder(editedPerson).build();
         EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON, descriptor);
 
@@ -55,17 +59,52 @@ public class EditCommandTest {
         Person lastPerson = model.getFilteredPersonList().get(indexLastPerson.getZeroBased());
 
         PersonBuilder personInList = new PersonBuilder(lastPerson);
-        Person editedPerson = personInList.withName(VALID_NAME_BOB).withPhone(VALID_PHONE_BOB)
-                .withTags(VALID_TAG_HUSBAND).build();
+        Person editedPerson = personInList.withName(VALID_NAME_BOB).withPhone(VALID_PHONE_BOB).build();
 
         EditPersonDescriptor descriptor = new EditPersonDescriptorBuilder().withName(VALID_NAME_BOB)
-                .withPhone(VALID_PHONE_BOB).withTags(VALID_TAG_HUSBAND).build();
+                .withPhone(VALID_PHONE_BOB).build();
         EditCommand editCommand = new EditCommand(indexLastPerson, descriptor);
 
         String expectedMessage = String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
 
         Model expectedModel = new ModelManager(new AddressBook(model.getAddressBook()), new UserPrefs());
         expectedModel.setPerson(lastPerson, editedPerson);
+
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
+    }
+
+    @Test
+    public void execute_editOtherFields_preservesMultipleTags() {
+        Person personToEdit = new PersonBuilder().withTags("Publicity", "Exco").build();
+        model = new ModelManager(new AddressBook(), new UserPrefs());
+        model.addPerson(personToEdit);
+        Person editedPerson = new PersonBuilder(personToEdit).withPhone(VALID_PHONE_BOB).build();
+        EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withPhone(VALID_PHONE_BOB).build());
+        Model expectedModel = new ModelManager(new AddressBook(model.getAddressBook()), new UserPrefs());
+        expectedModel.setPerson(personToEdit, editedPerson);
+        String expectedMessage = String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
+        assertEquals(personToEdit.getTags(), model.getFilteredPersonList().get(0).getTags());
+        assertTrue(model.getFilteredPersonList().get(0).getTags().contains(new Tag("PUBLICITY")));
+    }
+
+    @Test
+    public void execute_editArchivedPerson_preservesStatusAndTags() {
+        Person original = new PersonBuilder().withTags("Publicity", "Exco").build();
+        Person archived = new Person(original.getName(), original.getPhone(), original.getEmail(),
+                original.getAddress(), Status.ARCHIVED, original.getTags());
+        model = new ModelManager(new AddressBook(), new UserPrefs());
+        model.addPerson(archived);
+
+        EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withPhone(VALID_PHONE_BOB).build());
+        Person editedPerson = new Person(archived.getName(), new Phone(VALID_PHONE_BOB),
+                archived.getEmail(), archived.getAddress(), Status.ARCHIVED, archived.getTags());
+        Model expectedModel = new ModelManager(new AddressBook(model.getAddressBook()), new UserPrefs());
+        expectedModel.setPerson(archived, editedPerson);
+        String expectedMessage = String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
 
         assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
     }
@@ -105,7 +144,7 @@ public class EditCommandTest {
         EditPersonDescriptor descriptor = new EditPersonDescriptorBuilder(firstPerson).build();
         EditCommand editCommand = new EditCommand(INDEX_SECOND_PERSON, descriptor);
 
-        assertCommandFailure(editCommand, model, EditCommand.MESSAGE_DUPLICATE_PERSON);
+        assertCommandFailure(editCommand, model, Messages.formatDuplicatePerson(firstPerson));
     }
 
     @Test
@@ -117,7 +156,7 @@ public class EditCommandTest {
         EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
                 new EditPersonDescriptorBuilder(personInList).build());
 
-        assertCommandFailure(editCommand, model, EditCommand.MESSAGE_DUPLICATE_PERSON);
+        assertCommandFailure(editCommand, model, Messages.formatDuplicatePerson(personInList));
     }
 
     @Test

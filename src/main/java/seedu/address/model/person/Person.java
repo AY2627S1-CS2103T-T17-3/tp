@@ -16,7 +16,7 @@ import seedu.address.model.tag.Tag;
  */
 public class Person {
 
-    // Identity fields
+    // Contact fields (email determines identity)
     private final Name name;
     private final Phone phone;
     private final Email email;
@@ -81,7 +81,7 @@ public class Person {
     }
 
     /**
-     * Returns true if both persons have the same name.
+     * Returns true if both persons have the same canonical email.
      * This defines a weaker notion of equality between two persons.
      */
     public boolean isSamePerson(Person otherPerson) {
@@ -90,7 +90,7 @@ public class Person {
         }
 
         return otherPerson != null
-                && otherPerson.getName().equals(getName());
+                && otherPerson.getEmail().equals(getEmail());
     }
 
     /**

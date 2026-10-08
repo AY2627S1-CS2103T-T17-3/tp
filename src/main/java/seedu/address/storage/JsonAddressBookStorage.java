@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.commons.exceptions.IllegalValueException;
@@ -50,15 +52,20 @@ public class JsonAddressBookStorage {
     public Optional<ReadOnlyAddressBook> readAddressBook(Path filePath) throws DataLoadingException {
         requireNonNull(filePath);
 
-        Optional<JsonSerializableAddressBook> jsonAddressBook = JsonUtil.readJsonFile(
-                filePath, JsonSerializableAddressBook.class);
-        if (!jsonAddressBook.isPresent()) {
+        Optional<JsonNode> json = JsonUtil.readJsonFile(filePath, JsonNode.class);
+        if (json.isEmpty()) {
             return Optional.empty();
         }
 
         try {
-            return Optional.of(jsonAddressBook.get().toModelType());
-        } catch (IllegalValueException ive) {
+            JsonNode root = json.get();
+            if (!root.isObject() || !root.path("persons").isArray()) {
+                throw new IllegalValueException("The data file does not match the expected address-book JSON format.");
+            }
+            JsonSerializableAddressBook jsonAddressBook = JsonUtil.fromJsonString(
+                    root.toString(), JsonSerializableAddressBook.class);
+            return Optional.of(jsonAddressBook.toModelType());
+        } catch (IllegalValueException | IOException ive) {
             logger.info("Illegal values found in " + filePath + ": " + ive.getMessage());
             throw new DataLoadingException(ive);
         }

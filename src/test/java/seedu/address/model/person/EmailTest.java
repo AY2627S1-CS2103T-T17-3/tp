@@ -1,8 +1,12 @@
 package seedu.address.model.person;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
+
+import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 
@@ -64,6 +68,45 @@ public class EmailTest {
         assertTrue(Email.isValidEmail("peter_jack@very-very-very-long-example.com")); // long domain name
         assertTrue(Email.isValidEmail("if.you.dream.it_you.can.do.it@example.com")); // long local part
         assertTrue(Email.isValidEmail("e1234567@u.nus.edu")); // more than one period in domain
+    }
+
+    @Test
+    public void constructor_mixedCase_canonicalizesEmail() {
+        Email email = new Email("Alex.One@EXAMPLE.COM");
+        Email canonical = new Email("alex.one@example.com");
+        assertEquals(canonical, email);
+        assertEquals(canonical.hashCode(), email.hashCode());
+        assertEquals("alex.one@example.com", email.value);
+        assertEquals(email.value, email.toString());
+    }
+
+    @Test
+    public void constructor_turkishLocale_usesRootLocale() {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            assertEquals("irfan@example.com", new Email("IRFAN@EXAMPLE.COM").value);
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    @Test
+    public void isValidEmail_whitespace_rejectsEmailWithoutTrimming() {
+        for (String email : new String[] {" alex@example.com", "alex@example.com ",
+            "\talex@example.com", "alex@example.com\r\n", "alex\ttan@example.com", "alex@\nexample.com",
+            "\u00a0alex@example.com", "\u2003alex@example.com"}) {
+            assertFalse(Email.isValidEmail(email));
+            assertThrows(IllegalArgumentException.class, () -> new Email(email));
+        }
+    }
+
+    @Test
+    public void equals_aliases_remainDistinct() {
+        Email email = new Email("alex@example.com");
+        assertNotEquals(email, new Email("alex+society@example.com"));
+        assertNotEquals(email, new Email("a.lex@example.com"));
+        assertNotEquals(email, new Email("alex@u.nus.edu"));
     }
 
     @Test
