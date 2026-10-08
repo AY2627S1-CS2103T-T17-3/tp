@@ -133,6 +133,38 @@ Examples:
 *  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
 *  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
 
+### Adding a tag to a member: `tagadd`
+
+Adds one tag to one member, preserving their other tags and contact details.
+
+Format: `tagadd INDEX t/TAG`
+
+* `INDEX` must be a positive integer referring to a member in the currently displayed list, including search results.
+* Exactly one index and one `t/` argument are required. Empty tags, multiple tags, and extra arguments are rejected.
+* Tag names must be alphanumeric. Matching is case-insensitive; tags are stored and displayed in lowercase.
+* Adding a tag the member already has succeeds with the normal completion message and leaves their tags unchanged.
+* After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
+
+Example: `tagadd 1 t/Volunteer` adds `volunteer` to the first displayed member. If they already have `publicity`
+and `exco`, they will have all three tags afterward.
+
+### Removing a tag from a member: `tagremove`
+
+Removes one matching tag from one member, preserving their other tags and contact details.
+
+Format: `tagremove INDEX t/TAG`
+
+* The same index, single-tag, and tag-name rules as `tagadd` apply.
+* Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
+* Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
+* Removing the last tag is allowed and leaves the member with no tags.
+* After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
+
+Example: `tagremove 1 t/publicity` removes only `publicity` from the first displayed member. If their tags were
+`publicity`, `exco`, and `volunteer`, they will retain `exco` and `volunteer`.
+
+Both commands save changes automatically. An invalid command leaves member records and the current filter unchanged.
+
 ### Locating members by name or phone: `find`
 
 Finds members by name keywords or a phone number substring. Matching members are displayed in a list with index numbers,
@@ -258,4 +290,6 @@ Action     | Format, Examples
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@example.com`
 **Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find p/PHONE_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`
 **List**   | `list`
+**Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`
+**Remove tag** | `tagremove INDEX t/TAG`<br> e.g., `tagremove 1 t/publicity`
 **Help**   | `help`

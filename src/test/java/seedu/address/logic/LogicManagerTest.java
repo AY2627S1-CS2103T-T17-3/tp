@@ -7,6 +7,7 @@ import static seedu.address.logic.commands.CommandTestUtil.ADDRESS_DESC_AMY;
 import static seedu.address.logic.commands.CommandTestUtil.EMAIL_DESC_AMY;
 import static seedu.address.logic.commands.CommandTestUtil.NAME_DESC_AMY;
 import static seedu.address.logic.commands.CommandTestUtil.PHONE_DESC_AMY;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.AMY;
 
@@ -22,6 +23,8 @@ import seedu.address.logic.commands.AddCommand;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.EditCommand;
 import seedu.address.logic.commands.ListCommand;
+import seedu.address.logic.commands.TagAddCommand;
+import seedu.address.logic.commands.TagRemoveCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.Model;
@@ -29,6 +32,7 @@ import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.tag.Tag;
 import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.JsonUserPrefsStorage;
 import seedu.address.storage.StorageManager;
@@ -79,6 +83,48 @@ public class LogicManagerTest {
         assertParseException("edit 1 t/", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
         assertParseException("edit 1 a/Kent Ridge t/Publicity", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
         assertParseException("edit 1 t/Publicity a/Kent Ridge", EditCommand.MESSAGE_TAG_EDIT_NOT_SUPPORTED);
+    }
+
+    @Test
+    public void execute_tagAdd_savesUpdatedTags() throws Exception {
+        Person person = new PersonBuilder(AMY).withTags("Publicity", "Exco").build();
+        model.addPerson(person);
+        Person expectedPerson = new PersonBuilder(person).withTags("Publicity", "Exco", "Volunteer").build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(person, expectedPerson);
+        String expectedMessage = String.format(TagAddCommand.MESSAGE_SUCCESS,
+                new Tag("Volunteer"), Messages.format(expectedPerson));
+
+        assertCommandSuccess("tagadd 1 t/Volunteer", expectedMessage, expectedModel);
+        assertCommandSuccess("tagadd 1 t/VOLUNTEER", expectedMessage, expectedModel);
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(expectedModel.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_tagRemove_savesUpdatedTags() throws Exception {
+        Person person = new PersonBuilder(AMY).withTags("Publicity", "Exco").build();
+        model.addPerson(person);
+        Person expectedPerson = new PersonBuilder(person).withTags("Exco").build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(person, expectedPerson);
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_SUCCESS,
+                new Tag("publicity"), Messages.format(expectedPerson));
+
+        assertCommandSuccess("tagremove 1 t/publicity", expectedMessage, expectedModel);
+        assertCommandSuccess("tagremove 1 t/PUBLICITY", expectedMessage, expectedModel);
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(expectedModel.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_multipleTags_throwsParseExceptionAndPreservesPerson() {
+        model.addPerson(new PersonBuilder(AMY).withTags("Publicity", "Exco").build());
+        String expectedMessage = Messages.getErrorMessageForDuplicatePrefixes(PREFIX_TAG);
+        assertParseException("tagadd 1 t/Volunteer t/Member", expectedMessage);
+        assertParseException("tagremove 1 t/Publicity t/Exco", expectedMessage);
     }
 
     @Test
