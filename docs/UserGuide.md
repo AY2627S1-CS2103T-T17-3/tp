@@ -82,6 +82,20 @@ Adds a person to the address book.
 
 Format: `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... `
 
+Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
+lowercase. General email addresses are accepted; `@u.nus.edu` is not required. Different aliases, such as
+`alex@example.com` and `alex+society@example.com`, count as different addresses. Command parsing trims
+surrounding argument whitespace, but email values in the data file cannot contain surrounding whitespace.
+
+Members may share a name or phone number if their emails differ. For example, both commands are valid:
+
+* `add n/Alex Tan p/91234567 e/Alex.One@Example.com a/Kent Ridge`
+* `add n/Alex Tan p/91234567 e/alex.two@example.com a/Clementi`
+
+Reusing `ALEX.ONE@EXAMPLE.COM` for another member is rejected with:
+`Email "alex.one@example.com" is already used by "Alex Tan". No changes were made.`
+The check includes members outside the current search results.
+
 <box type="tip" seamless>
 
 **Tip:** A person can have any number of tags, including zero.
@@ -111,6 +125,8 @@ Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
 * Existing tags are preserved. The `edit` command rejects `t/` arguments, including an empty `t/`.
+* Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
+  address for reuse. The new email cannot belong to another member, including one outside the displayed list.
 
 Examples:
 *  `edit 1 p/91234567 e/johndoe@example.com` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@example.com` respectively.
@@ -201,9 +217,16 @@ AddressBook data is saved automatically as a JSON file `[JAR file location]/data
 <box type="warning" seamless>
 
 **Caution:**
-If your changes make the data file invalid, AddressBook starts with an empty address book at the next run. The invalid file remains on disk until you run a command (AddressBook saves after every command). Still, we recommend backing up the file before editing it.<br>
+If your changes make the data file invalid, AddressBook opens with an empty address book at the next run. This
+includes files with duplicate emails that differ only in letter case. Loading alone leaves the invalid file
+unchanged, but the next successful command, including `list`, saves the current in-memory address book over it.
+Back up the file and correct it before running commands.<br>
 Furthermore, certain edits can cause the AddressBook to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </box>
+
+Valid mixed-case emails appear in lowercase when loaded and are saved in lowercase after the next successful
+command. Older versions of the app may reject same-name records saved by this version, so back up the data file
+before switching versions.
 
 ### Archiving data files `[coming in v2.0]`
 
