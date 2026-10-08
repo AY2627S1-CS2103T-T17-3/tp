@@ -24,6 +24,8 @@ import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Phone;
+import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
 import seedu.address.testutil.EditPersonDescriptorBuilder;
 import seedu.address.testutil.PersonBuilder;
@@ -86,6 +88,25 @@ public class EditCommandTest {
         assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
         assertEquals(personToEdit.getTags(), model.getFilteredPersonList().get(0).getTags());
         assertTrue(model.getFilteredPersonList().get(0).getTags().contains(new Tag("PUBLICITY")));
+    }
+
+    @Test
+    public void execute_editArchivedPerson_preservesStatusAndTags() {
+        Person original = new PersonBuilder().withTags("Publicity", "Exco").build();
+        Person archived = new Person(original.getName(), original.getPhone(), original.getEmail(),
+                original.getAddress(), Status.ARCHIVED, original.getTags());
+        model = new ModelManager(new AddressBook(), new UserPrefs());
+        model.addPerson(archived);
+
+        EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withPhone(VALID_PHONE_BOB).build());
+        Person editedPerson = new Person(archived.getName(), new Phone(VALID_PHONE_BOB),
+                archived.getEmail(), archived.getAddress(), Status.ARCHIVED, archived.getTags());
+        Model expectedModel = new ModelManager(new AddressBook(model.getAddressBook()), new UserPrefs());
+        expectedModel.setPerson(archived, editedPerson);
+        String expectedMessage = String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
+
+        assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
     }
 
     @Test

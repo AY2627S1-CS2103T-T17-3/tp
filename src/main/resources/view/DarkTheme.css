@@ -350,3 +350,11 @@
     -fx-background-radius: 2;
     -fx-font-size: 11;
 }
+
+.member_status {
+    -fx-text-fill: white;
+    -fx-background-color: #238558;
+    -fx-padding: 1 6 1 6;
+    -fx-background-radius: 2;
+    -fx-font-size: 11;
+}
