@@ -19,7 +19,9 @@ import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
+import seedu.address.model.util.SampleDataUtil;
 import seedu.address.testutil.PersonBuilder;
 
 /**
@@ -84,6 +86,20 @@ public class TagRemoveCommandTest {
     }
 
     @Test
+    public void execute_archivedMember_preservesStatus() {
+        Person person = setArchivedPerson();
+        Person expectedPerson = new Person(person.getName(), person.getPhone(), person.getEmail(),
+                person.getAddress(), Status.ARCHIVED, SampleDataUtil.getTagSet("Exco"));
+        assertTagRemoved(INDEX_FIRST_PERSON, "PUBLICITY", person, expectedPerson);
+    }
+
+    @Test
+    public void execute_archivedMemberWithUnchangedTags_preservesStatus() {
+        Person person = setArchivedPerson();
+        assertTagRemoved(INDEX_FIRST_PERSON, "Volunteer", person, person);
+    }
+
+    @Test
     public void execute_invalidIndexUnfilteredList_throwsCommandException() {
         Index index = Index.fromOneBased(model.getFilteredPersonList().size() + 1);
         assertCommandFailure(new TagRemoveCommand(index, new Tag("Volunteer")), model,
@@ -115,6 +131,14 @@ public class TagRemoveCommandTest {
         String expected = TagRemoveCommand.class.getCanonicalName() + "{targetIndex=" + INDEX_FIRST_PERSON
                 + ", tag=" + tag + "}";
         assertEquals(expected, command.toString());
+    }
+
+    private Person setArchivedPerson() {
+        Person person = setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
+        Person archivedPerson = new Person(person.getName(), person.getPhone(), person.getEmail(),
+                person.getAddress(), Status.ARCHIVED, person.getTags());
+        model.setPerson(person, archivedPerson);
+        return archivedPerson;
     }
 
     private Person setTags(Index index, String... tags) {

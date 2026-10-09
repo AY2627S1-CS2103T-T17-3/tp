@@ -53,7 +53,7 @@ public class TagRemoveCommand extends Command {
         Set<Tag> updatedTags = new HashSet<>(personToEdit.getTags());
         updatedTags.remove(tag);
         Person editedPerson = new Person(personToEdit.getName(), personToEdit.getPhone(), personToEdit.getEmail(),
-                personToEdit.getAddress(), updatedTags);
+                personToEdit.getAddress(), personToEdit.getStatus(), updatedTags);
 
         model.setPerson(personToEdit, editedPerson);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
