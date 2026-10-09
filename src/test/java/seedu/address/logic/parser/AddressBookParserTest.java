@@ -21,9 +21,12 @@ import seedu.address.logic.commands.ExitCommand;
 import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.commands.HelpCommand;
 import seedu.address.logic.commands.ListCommand;
+import seedu.address.logic.commands.TagAddCommand;
+import seedu.address.logic.commands.TagRemoveCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.Person;
+import seedu.address.model.tag.Tag;
 import seedu.address.testutil.EditPersonDescriptorBuilder;
 import seedu.address.testutil.PersonBuilder;
 import seedu.address.testutil.PersonUtil;
@@ -59,6 +62,18 @@ public class AddressBookParserTest {
         EditCommand command = (EditCommand) parser.parseCommand(EditCommand.COMMAND_WORD + " "
                 + INDEX_FIRST_PERSON.getOneBased() + " " + PersonUtil.getEditPersonDescriptorDetails(descriptor));
         assertEquals(new EditCommand(INDEX_FIRST_PERSON, descriptor), command);
+    }
+
+    @Test
+    public void parseCommand_tagAdd() throws Exception {
+        assertEquals(new TagAddCommand(INDEX_FIRST_PERSON, new Tag("Volunteer")),
+                parser.parseCommand("tagadd 1 t/Volunteer"));
+    }
+
+    @Test
+    public void parseCommand_tagRemove() throws Exception {
+        assertEquals(new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("Publicity")),
+                parser.parseCommand("tagremove 1 t/publicity"));
     }
 
     @Test

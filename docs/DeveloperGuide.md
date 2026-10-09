@@ -147,7 +147,18 @@ the previous one for reuse.
 
 `EditCommand` preserves the existing tag set and its descriptor contains only name, phone, email, and address.
 `EditCommandParser` still tokenizes `t/` so it can reject tag arguments explicitly instead of including them in another
-field's value. Dedicated tag commands should use the same `Tag` identity rule when adding or removing tags.
+field's value.
+
+`TagAddCommand` and `TagRemoveCommand` each accept one displayed index and one tag. Their parsers reuse
+`ParserUtil.parseIndex`, `ParserUtil.parseTag`, and duplicate-prefix validation to enforce this scope.
+Each command resolves the person from `Model.getFilteredPersonList()`, copies their immutable tag set,
+and adds or removes the requested `Tag` using the existing case-insensitive identity rule. It then constructs
+a replacement `Person` with unchanged contact details and calls `Model.setPerson`.
+
+Adding an existing tag or removing an absent tag succeeds with the normal completion message and leaves the
+record unchanged. Removing the final tag is allowed. After success, both commands reset the filter to show all
+persons, matching `EditCommand`. `LogicManager` saves the updated address book through the existing storage flow;
+no storage schema or UI changes are required.
 
 
 <box type="info" seamless>
@@ -530,7 +541,39 @@ testers are expected to do more *exploratory* testing.
 
    1. Test cases: `edit INDEX t/Publicity`, `edit INDEX t/`, and `edit INDEX a/New Address t/Publicity`<br>
       Expected: Each command is rejected with guidance to use `tagadd` or `tagremove`. All person details remain
-      unchanged. These dedicated commands are being implemented separately and are not available in this change.
+      unchanged.
+
+1. Add and remove individual tags using Tag Test from the previous steps.
+
+   1. Test case: `tagadd INDEX t/Volunteer`<br>
+      Expected: The member has `exco`, `publicity`, and `volunteer`; contact details and other members remain unchanged.
+
+   1. Test case: `tagadd INDEX t/VOLUNTEER`<br>
+      Expected: Success with the same three tags and no duplicate.
+
+   1. Test case: `tagremove INDEX t/PUBLICITY`<br>
+      Expected: Only `exco` and `volunteer` remain.
+
+   1. Repeat `tagremove INDEX t/publicity`.<br>
+      Expected: Success with the same two tags.
+
+   1. Close and reopen the app.<br>
+      Expected: The member still has only `exco` and `volunteer`.
+
+   1. Remove the remaining tags with `tagremove INDEX t/Exco` and `tagremove INDEX t/Volunteer`.<br>
+      Expected: The member has no tags and retains all contact details.
+
+1. Check displayed indices and invalid input.
+
+   1. Run `find Tag`, note Tag Test's displayed index, and run `tagadd INDEX t/Volunteer` using that index.<br>
+      Expected: Only Tag Test gains the tag, and all members are displayed afterward.
+
+   1. Run `find Tag` again and run `tagremove INDEX t/Volunteer` using the new displayed index.<br>
+      Expected: Only Tag Test loses the tag, and all members are displayed afterward.
+
+   1. For each of `tagadd` and `tagremove`, try arguments `0 t/Volunteer`, `1 2 t/Volunteer`, `1`, `1 t/`,
+      `1 t/Publicity Team`, `1 t/Volunteer t/Exco`, and an index larger than the displayed list.<br>
+      Expected: Each command is rejected; records and the current filter remain unchanged.
 
 1. Load tags from an existing saved record.
 
