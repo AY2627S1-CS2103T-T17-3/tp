@@ -116,6 +116,8 @@
         "adding-a-person-add": "Adding a person: add",
         "listing-all-persons-list": "Listing all persons: list",
         "editing-a-person-edit": "Editing a person: edit",
+        "adding-a-tag-to-a-member-tagadd": "Adding a tag to a member: tagadd",
+        "removing-a-tag-from-a-member-tagremove": "Removing a tag from a member: tagremove",
         "locating-members-by-name-or-phone-find": "Locating members by name or phone: find",
         "deleting-a-person-delete": "Deleting a person: delete",
         "clearing-all-entries-clear": "Clearing all entries: clear",
