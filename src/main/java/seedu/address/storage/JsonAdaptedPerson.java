@@ -15,6 +15,7 @@ import seedu.address.model.person.Email;
 import seedu.address.model.person.Name;
 import seedu.address.model.person.Person;
 import seedu.address.model.person.Phone;
+import seedu.address.model.person.Remark;
 import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
 
@@ -31,6 +32,7 @@ class JsonAdaptedPerson {
     private final String address;
     private final String status;
     private final List<JsonAdaptedTag> tags = new ArrayList<>();
+    private final String remark;
 
     /**
      * Constructs a {@code JsonAdaptedPerson} with the given person details and stored status.
@@ -38,12 +40,14 @@ class JsonAdaptedPerson {
     @JsonCreator
     public JsonAdaptedPerson(@JsonProperty("name") String name, @JsonProperty("phone") String phone,
             @JsonProperty("email") String email, @JsonProperty("address") String address,
-            @JsonProperty("status") String status, @JsonProperty("tags") List<JsonAdaptedTag> tags) {
+            @JsonProperty("status") String status, @JsonProperty("tags") List<JsonAdaptedTag> tags,
+            @JsonProperty("remark") String remark) {
         this.name = name;
         this.phone = phone;
         this.email = email;
         this.address = address;
         this.status = status;
+        this.remark = remark;
         if (tags != null) {
             this.tags.addAll(tags);
         }
@@ -54,8 +58,8 @@ class JsonAdaptedPerson {
      * The status defaults to active when converted to a {@code Person}.
      */
     public JsonAdaptedPerson(String name, String phone, String email, String address,
-            List<JsonAdaptedTag> tags) {
-        this(name, phone, email, address, null, tags);
+            List<JsonAdaptedTag> tags, String remark) {
+        this(name, phone, email, address, null, tags, remark);
     }
 
     /**
@@ -70,11 +74,13 @@ class JsonAdaptedPerson {
         tags.addAll(source.getTags().stream()
                 .map(JsonAdaptedTag::new)
                 .collect(Collectors.toList()));
+        remark = source.getRemark().value;
     }
 
     /**
      * Converts this Jackson-friendly adapted person object into the model's {@code Person} object.
      * A missing status defaults to active for compatibility with older saved data.
+     * A missing remark defaults to an empty remark.
      *
      * @throws IllegalValueException if there were any data constraints violated in the adapted person.
      */
@@ -125,7 +131,8 @@ class JsonAdaptedPerson {
         final Status modelStatus = Status.valueOf(tempStatus.toUpperCase());
 
         final Set<Tag> modelTags = new HashSet<>(personTags);
-        return new Person(modelName, modelPhone, modelEmail, modelAddress, modelStatus, modelTags);
+        final Remark modelRemark = new Remark(remark == null ? "" : remark);
+        return new Person(modelName, modelPhone, modelEmail, modelAddress, modelStatus, modelTags, modelRemark);
     }
 
 }

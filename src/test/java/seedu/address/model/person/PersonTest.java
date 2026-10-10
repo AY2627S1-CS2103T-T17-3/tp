@@ -19,6 +19,23 @@ import seedu.address.testutil.PersonBuilder;
 public class PersonTest {
 
     @Test
+    public void constructor_nullRemark_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> new Person(ALICE.getName(), ALICE.getPhone(),
+                ALICE.getEmail(), ALICE.getAddress(), null, ALICE.getTags()));
+        assertThrows(NullPointerException.class, () -> new Person(ALICE.getName(), ALICE.getPhone(),
+                ALICE.getEmail(), ALICE.getAddress(), Status.ARCHIVED, ALICE.getTags(), null));
+    }
+
+    @Test
+    public void differentRemark_changesEqualityButPreservesIdentity() {
+        Person withRemark = new PersonBuilder(ALICE).withRemark("Likes to swim").build();
+        assertFalse(ALICE.equals(withRemark));
+        assertTrue(ALICE.isSamePerson(withRemark));
+        assertEquals(withRemark, new PersonBuilder(withRemark).build());
+        assertEquals(withRemark.hashCode(), new PersonBuilder(withRemark).build().hashCode());
+    }
+
+    @Test
     public void asObservableList_modifyList_throwsUnsupportedOperationException() {
         Person person = new PersonBuilder().build();
         assertThrows(UnsupportedOperationException.class, () -> person.getTags().remove(0));
@@ -91,7 +108,7 @@ public class PersonTest {
 
         // different status -> returns false
         editedAlice = new Person(ALICE.getName(), ALICE.getPhone(), ALICE.getEmail(), ALICE.getAddress(),
-                Status.ARCHIVED, ALICE.getTags());
+                Status.ARCHIVED, ALICE.getTags(), ALICE.getRemark());
         assertFalse(ALICE.equals(editedAlice));
     }
 
@@ -105,7 +122,7 @@ public class PersonTest {
     public void toStringMethod() {
         String expected = Person.class.getCanonicalName() + "{name=" + ALICE.getName() + ", phone=" + ALICE.getPhone()
                 + ", email=" + ALICE.getEmail() + ", address=" + ALICE.getAddress() + ", tags=" + ALICE.getTags()
-                + ", status=" + ALICE.getStatus() + "}";
+                + ", status=" + ALICE.getStatus() + ", remark=" + ALICE.getRemark() + "}";
         assertEquals(expected, ALICE.toString());
     }
 }

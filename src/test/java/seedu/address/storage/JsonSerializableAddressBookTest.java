@@ -51,7 +51,7 @@ public class JsonSerializableAddressBookTest {
 
     @Test
     public void toModelType_invalidRecords_reportsFirstRecordOnly() {
-        JsonAdaptedPerson invalid = new JsonAdaptedPerson("Alex Tan", "91234567", null, "Kent Ridge", List.of());
+        JsonAdaptedPerson invalid = new JsonAdaptedPerson("Alex Tan", "91234567", null, "Kent Ridge", List.of(), "");
         JsonSerializableAddressBook data = new JsonSerializableAddressBook(List.of(invalid, invalid));
         assertThrows(IllegalValueException.class, "Record 1: Person's Email field is missing!", data::toModelType);
     }

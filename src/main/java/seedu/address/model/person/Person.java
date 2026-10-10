@@ -24,31 +24,27 @@ public class Person {
     // Data fields
     private final Address address;
     private final Status status;
+    private final Remark remark;
     private final Set<Tag> tags = new HashSet<>();
 
     /**
      * Every field must be present and not null.
      */
-    public Person(Name name, Phone phone, Email email, Address address, Set<Tag> tags) {
-        requireAllNonNull(name, phone, email, address, tags);
-        this.name = name;
-        this.phone = phone;
-        this.email = email;
-        this.address = address;
-        this.status = Status.ACTIVE;
-        this.tags.addAll(tags);
+    public Person(Name name, Phone phone, Email email, Address address, Remark remark, Set<Tag> tags) {
+        this(name, phone, email, address, Status.ACTIVE, tags, remark);
     }
 
     /**
      * Creates a person with the given status and details. Every field must be present and not null.
      */
-    public Person(Name name, Phone phone, Email email, Address address, Status status, Set<Tag> tags) {
-        requireAllNonNull(name, phone, email, address, status, tags);
+    public Person(Name name, Phone phone, Email email, Address address, Status status, Set<Tag> tags, Remark remark) {
+        requireAllNonNull(name, phone, email, address, status, tags, remark);
         this.name = name;
         this.phone = phone;
         this.email = email;
         this.address = address;
         this.status = status;
+        this.remark = remark;
         this.tags.addAll(tags);
     }
 
@@ -70,6 +66,10 @@ public class Person {
 
     public Status getStatus() {
         return status;
+    }
+
+    public Remark getRemark() {
+        return remark;
     }
 
     /**
@@ -113,13 +113,14 @@ public class Person {
                 && email.equals(otherPerson.email)
                 && address.equals(otherPerson.address)
                 && tags.equals(otherPerson.tags)
-                && status.equals(otherPerson.status);
+                && status.equals(otherPerson.status)
+                && remark.equals(otherPerson.remark);
     }
 
     @Override
     public int hashCode() {
         // use this method for custom fields hashing instead of implementing your own
-        return Objects.hash(name, phone, email, address, status, tags);
+        return Objects.hash(name, phone, email, address, status, tags, remark);
     }
 
     @Override
@@ -131,6 +132,7 @@ public class Person {
                 .add("address", address)
                 .add("tags", tags)
                 .add("status", status)
+                .add("remark", remark)
                 .toString();
     }
 

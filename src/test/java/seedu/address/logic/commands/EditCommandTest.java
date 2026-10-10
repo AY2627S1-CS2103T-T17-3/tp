@@ -91,22 +91,35 @@ public class EditCommandTest {
     }
 
     @Test
-    public void execute_editArchivedPerson_preservesStatusAndTags() {
-        Person original = new PersonBuilder().withTags("Publicity", "Exco").build();
+    public void execute_editArchivedPerson_preservesStatusTagsAndRemark() {
+        Person original = new PersonBuilder().withTags("Publicity", "Exco").withRemark("Likes to swim").build();
         Person archived = new Person(original.getName(), original.getPhone(), original.getEmail(),
-                original.getAddress(), Status.ARCHIVED, original.getTags());
+                original.getAddress(), Status.ARCHIVED, original.getTags(), original.getRemark());
         model = new ModelManager(new AddressBook(), new UserPrefs());
         model.addPerson(archived);
 
         EditCommand editCommand = new EditCommand(INDEX_FIRST_PERSON,
                 new EditPersonDescriptorBuilder().withPhone(VALID_PHONE_BOB).build());
         Person editedPerson = new Person(archived.getName(), new Phone(VALID_PHONE_BOB),
-                archived.getEmail(), archived.getAddress(), Status.ARCHIVED, archived.getTags());
+                archived.getEmail(), archived.getAddress(), Status.ARCHIVED, archived.getTags(), archived.getRemark());
         Model expectedModel = new ModelManager(new AddressBook(model.getAddressBook()), new UserPrefs());
         expectedModel.setPerson(archived, editedPerson);
         String expectedMessage = String.format(EditCommand.MESSAGE_EDIT_PERSON_SUCCESS, Messages.format(editedPerson));
 
         assertCommandSuccess(editCommand, model, expectedMessage, expectedModel);
+    }
+
+    @Test
+    public void execute_editRemarkThenClearRemark_success() throws Exception {
+        Person original = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
+        new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withRemark("Likes to swim").build()).execute(model);
+        assertEquals(new PersonBuilder(original).withRemark("Likes to swim").build(),
+                model.getFilteredPersonList().get(0));
+
+        new EditCommand(INDEX_FIRST_PERSON,
+                new EditPersonDescriptorBuilder().withRemark("").build()).execute(model);
+        assertEquals(original, model.getFilteredPersonList().get(0));
     }
 
     @Test

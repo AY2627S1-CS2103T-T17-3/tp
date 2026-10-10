@@ -26,6 +26,7 @@ import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.commons.util.JsonUtil;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ReadOnlyAddressBook;
+import seedu.address.testutil.PersonBuilder;
 
 public class JsonAddressBookStorageTest {
     private static final Path TEST_DATA_FOLDER = Paths.get("src", "test", "data", "JsonAddressBookStorageTest");
@@ -135,6 +136,21 @@ public class JsonAddressBookStorageTest {
         readBack = jsonAddressBookStorage.readAddressBook().get(); // file path not specified
         assertEquals(original, new AddressBook(readBack));
 
+    }
+
+    @Test
+    public void readAndSaveAddressBook_remark_preserved() throws Exception {
+        Path filePath = testFolder.resolve("Remarks.json");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+        AddressBook original = new AddressBook();
+        original.addPerson(new PersonBuilder(ALICE).withRemark("Likes to swim; call after 5pm").build());
+
+        storage.saveAddressBook(original);
+
+        JsonNode savedPerson = JsonUtil.fromJsonString(Files.readString(filePath), JsonNode.class)
+                .get("persons").get(0);
+        assertEquals("Likes to swim; call after 5pm", savedPerson.get("remark").asText());
+        assertEquals(original, storage.readAddressBook().get());
     }
 
     @Test
