@@ -42,7 +42,7 @@ public class PhoneContainsSubstringPredicateTest {
     @Test
     public void test_substringMatchesOtherFields_returnsFalse() {
         Person person = new PersonBuilder().withPhone("99999999").withName("9123 Alice")
-                .withEmail("9123@example.com").withAddress("9123 Main Street").withTags("9123").build();
+                .withEmail("9123@u.nus.edu").withAddress("9123 Main Street").withTags("9123").build();
         assertFalse(new PhoneContainsSubstringPredicate("9123").test(person));
     }
 

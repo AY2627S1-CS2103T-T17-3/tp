@@ -133,10 +133,14 @@ The `Model` component,
 canonical name, so each person's `Set<Tag>` treats case variants as one tag. Command parsing and JSON loading both
 construct `Tag` objects and therefore share this identity rule. Saving writes the canonical lowercase names.
 
-`Email` validates the existing general email format and stores the value in lowercase using `Locale.ROOT`.
+`Email` validates a complete address with the exact domain `u.nus.edu` and stores it in lowercase using `Locale.ROOT`.
 It does not trim whitespace; model values and saved strings containing surrounding whitespace are invalid.
-Command parsing still trims surrounding argument whitespace. Addresses do not need an `@u.nus.edu` domain,
-and different local-part aliases remain distinct.
+Command parsing trims surrounding argument whitespace using the `trim()` behavior.
+The existing local-part expression is unchanged: letters and digits may be separated by single `+`, `_`, `.`, or `-`
+characters, but punctuation cannot lead, trail, or appear consecutively. Validation uses the normalized whole string;
+no new Unicode support or length limit is introduced. Different local-part aliases remain distinct.
+The suffix is literal: `@nus.edu`, `@sub.u.nus.edu`, `@u.nus.edu.com`, and `@uXnusXedu` are invalid.
+Command parsers and JSON loading reuse this model validation and `Email.MESSAGE_CONSTRAINTS`.
 
 `Person.isSamePerson` compares canonical emails only. Members can share a name or phone number when their emails
 differ. `UniquePersonList` uses this identity rule for addition, replacement, and bulk replacement, while
@@ -183,7 +187,7 @@ The `Storage` component,
 The JSON schema is unchanged: each person retains an `email` string. Loading applies the model's email validation
 and rejects the entire file on the first invalid record or duplicate canonical email. Record errors use one-based
 positions in the saved `persons` array; a duplicate reports both positions, for example
-`Record 2: email "alex@example.com" duplicates record 1.` `JsonAddressBookStorage` also rejects malformed
+`Record 2: email "alex@u.nus.edu" duplicates record 1.` `JsonAddressBookStorage` also rejects malformed
 JSON roots and missing or non-array `persons` values through `DataLoadingException`.
 
 `MainApp.initModelManager` catches `DataLoadingException` and opens the normal UI with an empty address book.
@@ -531,7 +535,7 @@ testers are expected to do more *exploratory* testing.
 
 1. Add a person with case variants of a tag.
 
-   1. Test case: `add n/Tag Test p/91234567 e/tagtest@example.com a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
+   1. Test case: `add n/Tag Test p/91234567 e/tagtest@u.nus.edu a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
       Expected: The card displays exactly two tags, `exco` and `publicity`, in lowercase.
 
    1. Run `list` and note the displayed index of Tag Test. In the following commands, replace `INDEX` with that index.
@@ -590,7 +594,7 @@ testers are expected to do more *exploratory* testing.
 1. Dealing with invalid data files
 
    1. In a disposable test directory, run `list` to create `data/addressbook.json`, close the app, and back it up.
-   1. Give two saved records the emails `Alex@Example.com` and `alex@example.com`, then relaunch.<br>
+   1. Give two saved records the emails `Alex@U.NUS.EDU` and `alex@u.nus.edu`, then relaunch.<br>
       Expected: the normal window opens with an empty member list. Loading leaves the invalid file unchanged.
       Storage reports that record 2 duplicates record 1, but the UI does not display those record positions.
    1. Correct the second email and relaunch.<br>
@@ -600,20 +604,32 @@ testers are expected to do more *exploratory* testing.
       Expected: each file opens an empty member list. Restore the backup before running commands, which could
       overwrite the invalid file. A missing file starts with the sample members instead.
 
+### Email domain validation
+
+1. Add `add n/Nus Test p/91234567 e/Nus.Test@U.NUS.EDU a/Kent Ridge`.<br>
+   Expected: success with `nus.test@u.nus.edu` in the result and card. Restart after saving to confirm persistence.
+1. Using its displayed index, try edits with `e/nus.test`, `e/nus.test@gmail.com`, `e/nus.test@nus.edu`,
+   `e/nus.test@sub.u.nus.edu`, `e/nus.test@u.nus.edu.com`, and `e/nus..test@u.nus.edu`.<br>
+   Expected: each shows the shared email-constraints message. Records, filter, and saved file stay unchanged.
+1. Try the same invalid emails in otherwise valid `add` commands.<br>
+   Expected: the same rejection without adding members.
+1. Add a different member with `e/nus.test+society@u.nus.edu`.<br>
+   Expected: success because aliases remain distinct. New domains are never appended or substituted automatically.
+
 ### Email identity
 
 1. On a fresh launch with no data file, run `find Morgan`.<br>
    Expected: both sample members named Morgan Lee appear. They share a phone number but have different emails.
 1. In a disposable directory with `data/addressbook.json` containing `{"persons":[]}`, run:
-   * `add n/Alex Tan p/91234567 e/Alex.One@Example.com a/Kent Ridge`
-   * `add n/Alex Tan p/91234567 e/alex.two@example.com a/Clementi`
+   * `add n/Alex Tan p/91234567 e/Alex.One@U.NUS.EDU a/Kent Ridge`
+   * `add n/Alex Tan p/91234567 e/alex.two@u.nus.edu a/Clementi`
    Expected: both succeed and show lowercase emails.
-1. Run `edit 2 e/ALEX.ONE@EXAMPLE.COM`.<br>
-   Expected: `Email "alex.one@example.com" is already used by "Alex Tan". No changes were made.`
-1. Run `edit 1 n/Alexander Tan e/ALEX.ONE@EXAMPLE.COM`, then `find Alex`, then
-   `edit 1 e/alex.one@example.com`.<br>
+1. Run `edit 2 e/ALEX.ONE@U.NUS.EDU`.<br>
+   Expected: `Email "alex.one@u.nus.edu" is already used by "Alex Tan". No changes were made.`
+1. Run `edit 1 n/Alexander Tan e/ALEX.ONE@U.NUS.EDU`, then `find Alex`, then
+   `edit 1 e/alex.one@u.nus.edu`.<br>
    Expected: the rename succeeds; `find Alex` shows only Alex Tan. The final edit fails because that email
    belongs to Alexander Tan outside the displayed filter.
-1. Run `list`, then `edit 1 e/alex.new@example.com`, then
-   `add n/Alex Tan p/91234567 e/alex.one@example.com a/Bukit Timah`.<br>
+1. Run `list`, then `edit 1 e/alex.new@u.nus.edu`, then
+   `add n/Alex Tan p/91234567 e/alex.one@u.nus.edu a/Bukit Timah`.<br>
    Expected: both commands succeed. Restart to confirm the saved email changes.

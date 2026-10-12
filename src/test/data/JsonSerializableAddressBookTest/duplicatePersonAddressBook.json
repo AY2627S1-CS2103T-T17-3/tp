@@ -2,13 +2,13 @@
   "persons": [ {
     "name": "Alice Pauline",
     "phone": "94351253",
-    "email": "alice@example.com",
+    "email": "alice@u.nus.edu",
     "address": "123, Jurong West Ave 6, #08-111",
     "tags": [ "friends" ]
   }, {
     "name": "Alice Pauline",
     "phone": "94351253",
-    "email": "ALICE@EXAMPLE.COM",
+    "email": "ALICE@U.NUS.EDU",
     "address": "4th street"
   } ]
 }
