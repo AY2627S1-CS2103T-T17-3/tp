@@ -125,6 +125,60 @@ Examples:
 * `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01`
 * `add n/Betsy Crowe t/friend e/betsycrowe@u.nus.edu a/Newgate Prison p/1234567 t/criminal`
 
+### Importing member contacts from CSV: `import`
+
+Appends an existing member directory from a CSV file. The entire import is rejected if any member is invalid
+or has a duplicate email; valid records are not imported separately in this version.
+
+Format: `import FILE_PATH`
+
+Examples:
+
+* `import members.csv`
+* `import "member contacts.csv"`
+* `import "C:\Users\chinh\Downloads\members.csv"`
+
+Relative paths are resolved from the folder where the application was launched. Use double quotes around paths
+containing spaces. The command reads a local file; it does not download a Google Sheet or open an Excel workbook.
+
+Save your spreadsheet as a comma-separated UTF-8 CSV using these lowercase headers in this exact order:
+
+```csv
+name,phone,email,address,tags,status
+Alex Tan,91234567,alex@u.nus.edu,"NUS, Kent Ridge",Publicity;Exco,active
+Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
+```
+
+A [sample CSV](samples/members.csv) is available to copy or download. Replace its example members with your own data.
+
+* Every member must have all six columns. Name, phone, email, address, and status must be nonempty.
+* Contact fields follow the same validation rules as `add`. Surrounding field whitespace is removed.
+  Phone numbers contain digits only and have at least three digits. Emails must end with exactly `@u.nus.edu`.
+* Separate tags with semicolons, for example `Publicity;Exco`. Leave the tags cell empty for a member with no tags.
+  Each tag must be alphanumeric. Tags and emails are normalized to lowercase; case variants of tags are merged.
+  Empty tags inside a list, such as `publicity;`, are rejected.
+* Status is required and must be exactly `active` or `archived`. It is preserved during import;
+  `archived` members display the existing `FORMER` badge. Status is separate from tags.
+* Quote cells containing commas or double quotes. Inside a quoted cell, write a double quote as `""`.
+  Embedded line breaks are parsed as part of a cell, but existing contact-field rules reject multiline values.
+* A UTF-8 byte order mark and empty lines are accepted. An empty file or a header without members is rejected.
+
+On success, members are appended in CSV order, existing records remain unchanged, and the full directory is displayed.
+The feedback states how many members were imported. The combined directory is automatically saved as JSON.
+The source CSV is never changed. An import source that points to the application's JSON save file is rejected.
+
+Duplicate checks include every existing member, including archived members and members outside the current search
+results, as well as other records in the CSV. Matching is by case-insensitive email; shared names or phone numbers
+are allowed when emails differ. Re-importing the same CSV is rejected rather than updating existing members.
+
+Invalid records produce a message with a CSV record number and the reason. The header counts as record 1,
+empty lines do not count, and record numbers can differ from physical line numbers when quoted cells span lines.
+Correct the reported problem and retry the complete file. Invalid headers, malformed CSV, and unreadable files also
+reject the import. Rejected imports leave member records, the current search results, and saved JSON unchanged.
+
+If automatic saving fails after a successful validation, an error is shown. Imported members may remain in the current
+session without being saved, as with `add`; confirm that saving succeeds before closing the application.
+
 ### Listing all persons: `list`
 
 Shows a list of all persons in the address book.
@@ -327,6 +381,7 @@ Action     | Format, Examples
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
 **Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING` or `find e/EMAIL_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`
 **List**   | `list`
+**Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`
 **Remove tag** | `tagremove INDEX t/TAG`<br> e.g., `tagremove 1 t/publicity`
 **Help**   | `help`

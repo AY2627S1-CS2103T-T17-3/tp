@@ -223,6 +223,35 @@ the canonical lowercase email. It does not construct an `Email` or validate the 
 so fragments such as `alice`, `@u.nus.edu` and `+` are accepted. Searching `@u.nus.edu` returns every member
 under the existing email domain restriction. No member data or storage schema changes are required.
 
+### Importing member directories from CSV
+
+`ImportCommandParser` parses a relative or absolute local path, optionally enclosed in double quotes. It preserves
+backslashes and performs no file I/O. `AddressBookParser` dispatches `import` through this parser.
+
+`CsvMemberReader` uses Apache Commons CSV 1.14.1 to parse UTF-8 input with standard CSV quoting. It accepts an optional
+byte order mark and ignores empty lines. The header must be `name,phone,email,address,tags,status` in that order.
+The reader parses the entire file, checks column counts, trims field values, and constructs existing model objects to
+reuse their validation and canonicalization. Semicolon-separated tags use a `Set<Tag>`. Status is validated through
+`Status.isValidStatus` and supplied explicitly to `Person`; it never defaults to active. Record errors include the
+logical CSV record number, counting the header as 1. Empty and header-only files are rejected.
+
+`ImportCommand` reads the members and copies the complete existing directory into a temporary `AddressBook`.
+It checks each imported member against that copy using the existing canonical-email identity rule before appending
+them. This includes archived members, members outside the current filter, and earlier CSV records.
+Only after all records pass does it call `Model.setAddressBook` and reset the filter to show the complete directory.
+No model or storage-schema changes are needed. Parsing, validation, and duplicate failures throw `CommandException`
+before the live directory is changed, so `LogicManager` does not save rejected imports.
+
+Before executing an import, `LogicManager` checks that its source differs from the JSON save file. Normalized paths
+and `Files.isSameFile` detect path aliases and links; this prevents subsequent automatic saving from overwriting the
+import source. The reader only opens the CSV for reading. Successful imports use existing automatic JSON persistence.
+As with other mutating commands, a subsequent save failure is reported but does not roll back the in-memory change.
+
+Tests cover quoted fields, BOM/CRLF input, fixed headers, existing validators, required statuses, duplicate emails,
+late CSV errors, source preservation, unchanged filters/files on rejection, successful JSON round trips, source/save
+file aliases, and save failures. The first increment intentionally rejects the entire file on any bad record;
+partial import with aggregate rejection feedback is a future increment.
+
 ### \[Proposed\] Undo/redo feature
 
 #### Proposed Implementation
@@ -531,6 +560,34 @@ testers are expected to do more *exploratory* testing.
        Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
+
+### Importing member directories
+
+Use a disposable application folder. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
+Keep a separate copy of this source file for comparison.
+
+1. Test case: `import "member contacts.csv"`<br>
+   Expected: Two members are appended after existing members, all members are displayed, and feedback states
+   `Imported 2 member(s)`. Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
+   status, displays `FORMER`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
+
+1. Test case: `find Existing`, followed by importing the same CSV again.<br>
+   Expected: The import is rejected as a duplicate email. Member records, search results, and saved JSON are unchanged.
+
+1. In a fresh copy of the CSV, change the second member's status to `former`. Run the import in a fresh disposable
+   directory, or first remove the previously imported example members.<br>
+   Expected: A status validation error identifies CSV record 3. Neither member is imported. The original directory,
+   current search results, saved JSON, and source CSV remain unchanged.
+
+1. Repeat with a non-NUS email, missing status, a duplicate case-variant email, missing/extra columns, a reordered
+   header, a header-only file, and an unterminated quoted cell after a valid record.<br>
+   Expected: Each import is rejected with a useful reason and does not import a valid prefix of the file.
+
+1. Test cases: `import`, `import ""`, `import member contacts.csv`, and `import missing.csv`.<br>
+   Expected: Format errors explain the command syntax; a missing file gives a file-reading error.
+   Member records, current search results, and saved JSON remain unchanged.
+
+These GUI checks are documented for manual execution; automated tests exercise the command and persistence paths.
 
 ### Finding members by email
 
