@@ -205,6 +205,24 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
+### Finding members by contact details
+
+`FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/` and `e/` search fields.
+It normalizes whitespace before tokenizing prefixes, so spaces, tabs and line breaks separate fields consistently.
+Duplicate prefixes, multiple selected fields, text before a selected field and empty search values are rejected.
+Phone and email searches each accept one substring; multiple whitespace-separated fragments are rejected.
+
+`FindCommand` accepts a `Predicate<Person>` and replaces the model's current filter using
+`Model.updateFilteredPersonList`. Every search checks the complete directory. The existing results view displays
+the matching members and their count, including an empty list and zero for a valid search with no matches.
+
+`NameContainsKeywordsPredicate` matches any whole name keyword, ignoring case.
+`PhoneContainsSubstringPredicate` matches a literal phone substring.
+`EmailContainsSubstringPredicate` lowercases the search substring with `Locale.ROOT` and matches it anywhere in
+the canonical lowercase email. It does not construct an `Email` or validate the substring as a complete address,
+so fragments such as `alice`, `@u.nus.edu` and `+` are accepted. Searching `@u.nus.edu` returns every member
+under the existing email domain restriction. No member data or storage schema changes are required.
+
 ### \[Proposed\] Undo/redo feature
 
 #### Proposed Implementation
@@ -409,7 +427,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to find members using one search field: name keywords or a single phone number substring.
+1. Secretary requests to find members using name keywords, a single phone number substring or a single email substring.
 2. NUSocietyDesk displays matching members with their contact details and the number of matches.
 3. Secretary inspects the displayed details to identify the intended member.
 
@@ -429,9 +447,9 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-* 1c. Secretary provides multiple phone number substrings in one search.
+* 1c. Secretary provides multiple phone number or email substrings in one search.
 
-  * 1c1. NUSocietyDesk shows an error message explaining that a phone search accepts only one substring.
+  * 1c1. NUSocietyDesk shows an error message explaining that the selected search field accepts only one substring.
 
     Use case ends.
 
@@ -513,6 +531,33 @@ testers are expected to do more *exploratory* testing.
        Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
+
+### Finding members by email
+
+1. Search using the sample members from a fresh launch with no data file.
+
+   1. Test case: `find e/ALEX`<br>
+      Expected: Alex Yeoh is displayed and the result count is one.
+
+   1. Test case: `find e/ALExYeOh@U.NUS.EDU`<br>
+      Expected: Alex Yeoh is displayed and the result count is one.
+
+   1. Test case: `find e/@u.nus.edu`<br>
+      Expected: All sample members are displayed and the count equals the directory size.
+
+   1. Test case: `find e/no-such-email`<br>
+      Expected: The list is empty and the result count is zero.
+
+1. Reject invalid email searches after running `find e/ALEX`.
+
+   1. Test cases: `find e/`, `find e/alex david`, `find e/alex e/david`, `find e/alex n/Alex`,
+      `find e/alex p/9103` and `find Alex e/alex`<br>
+      Expected: An informative error is displayed. Alex Yeoh remains displayed and member records are unchanged.
+
+1. Search the complete directory after a previous search.
+
+   1. Test case: `find n/David`, followed by `find e/ALEX`<br>
+      Expected: The email search displays Alex Yeoh even though he was absent from the preceding results.
 
 ### Deleting a person
 

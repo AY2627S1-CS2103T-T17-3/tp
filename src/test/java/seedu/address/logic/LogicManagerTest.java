@@ -14,6 +14,7 @@ import static seedu.address.testutil.TypicalPersons.AMY;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.io.TempDir;
 import seedu.address.logic.commands.AddCommand;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.EditCommand;
+import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.TagAddCommand;
 import seedu.address.logic.commands.TagRemoveCommand;
@@ -73,6 +75,39 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_emailSearch_displaysMatchesWithoutChangingRecords() throws Exception {
+        Person matchingPerson = new PersonBuilder().withName("Morgan Lee").withEmail("alice@u.nus.edu").build();
+        Person otherPerson = new PersonBuilder().withName("Alice Tan").withEmail("bob@u.nus.edu").build();
+        model.addPerson(matchingPerson);
+        model.addPerson(otherPerson);
+
+        CommandResult result = logic.execute("find e/ALICE");
+
+        assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+        assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
+        assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_invalidEmailSearch_preservesRecordsAndFilter() throws Exception {
+        model.addPerson(new PersonBuilder().withEmail("alice@u.nus.edu").build());
+        model.addPerson(new PersonBuilder().withEmail("bob@u.nus.edu").build());
+        logic.execute("find e/alice");
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.updateFilteredPersonList(person -> person.getEmail().value.equals("alice@u.nus.edu"));
+
+        assertCommandFailure("find e/alice bob", ParseException.class,
+                FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS, expectedModel);
+        assertCommandFailure("find e/alice n/Amy", ParseException.class,
+                FindCommand.MESSAGE_MULTIPLE_FIELDS, expectedModel);
+        assertCommandFailure("find e/", ParseException.class,
+                String.format(Messages.MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE), expectedModel);
     }
 
     @Test
