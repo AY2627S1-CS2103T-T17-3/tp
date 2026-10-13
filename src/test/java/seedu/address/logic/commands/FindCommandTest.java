@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.logic.Messages.MESSAGE_PERSONS_LISTED_OVERVIEW;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandSuccess;
 import static seedu.address.testutil.TypicalPersons.CARL;
+import static seedu.address.testutil.TypicalPersons.DANIEL;
 import static seedu.address.testutil.TypicalPersons.ELLE;
 import static seedu.address.testutil.TypicalPersons.FIONA;
 import static seedu.address.testutil.TypicalPersons.GEORGE;
 import static seedu.address.testutil.TypicalPersons.getTypicalAddressBook;
+import static seedu.address.testutil.TypicalPersons.getTypicalPersons;
 
 import java.util.List;
 
@@ -20,6 +22,7 @@ import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
+import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
 
@@ -120,6 +123,55 @@ public class FindCommandTest {
         String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 0);
         assertCommandSuccess(command, model, expectedMessage, expectedModel);
         assertEquals(List.of(), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_emailSubstring_multiplePersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("e/iA");
+        expectedModel.updateFilteredPersonList(new EmailContainsSubstringPredicate("ia"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 2);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(DANIEL, FIONA), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_fullEmailAddress_onePersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("e/HEINZ@U.NUS.EDU");
+        expectedModel.updateFilteredPersonList(new EmailContainsSubstringPredicate("heinz@u.nus.edu"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(CARL), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_emailDomain_allPersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("e/@U.NUS.EDU");
+        expectedModel.updateFilteredPersonList(new EmailContainsSubstringPredicate("@u.nus.edu"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, getTypicalPersons().size());
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(getTypicalPersons(), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_nonMatchingEmailSubstring_noPersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("e/no-such-email");
+        expectedModel.updateFilteredPersonList(new EmailContainsSubstringPredicate("no-such-email"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 0);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_emailSearchAfterNameSearch_searchesAllPersons() throws ParseException {
+        new FindCommandParser().parse("n/Elle").execute(model);
+        assertEquals(List.of(ELLE), model.getFilteredPersonList());
+
+        FindCommand command = new FindCommandParser().parse("e/heinz");
+        expectedModel.updateFilteredPersonList(new EmailContainsSubstringPredicate("heinz"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(CARL), model.getFilteredPersonList());
+        assertEquals(getTypicalAddressBook(), model.getAddressBook());
     }
 
     @Test

@@ -182,15 +182,16 @@ Example: `tagremove 1 t/publicity` removes only `publicity` from the first displ
 
 Both commands save changes automatically. An invalid command leaves member records and the current filter unchanged.
 
-### Locating members by name or phone: `find`
+### Locating members by name, phone or email: `find`
 
-Finds members by name keywords or a phone number substring. Matching members are displayed in a list with index numbers,
-together with the number of matches.
+Finds members by name keywords, a phone number substring or an email address substring. Matching members are displayed
+in a list with index numbers, together with the number of matches.
 
 Formats:
 
 * `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
 * `find p/PHONE_SUBSTRING` for phone searches.
+* `find e/EMAIL_SUBSTRING` for email searches.
 
 **Name searches**
 
@@ -212,13 +213,30 @@ Formats:
 * Both partial and full phone numbers are accepted. Even one or two digits can be used, such as `find p/9` or `find p/91`.
 * Include `p/` to search phone numbers: `find 9103` searches names, while `find p/9103` searches phone numbers.
 
+**Email searches**
+
+* The search considers only email addresses and matches a literal substring anywhere in the address, ignoring case.
+  For example, `find e/ALEX` matches `alexyeoh@u.nus.edu`.
+* Both partial and full email addresses are accepted. The search value need not be a valid complete email address;
+  fragments such as `alex`, `@u.nus.edu` and `+` are accepted.
+* Full addresses use the same substring rule. For example, `find e/alice@u.nus.edu` matches both
+  `alice@u.nus.edu` and `malice@u.nus.edu`.
+* Email searches support only one substring. Commands such as `find e/alex david` are rejected with an error.
+  The same applies to substrings separated by tabs or line breaks.
+  Search separately with `find e/alex` and `find e/david`.
+* Include `e/` to search email addresses: `find alex@u.nus.edu` searches names,
+  while `find e/alex@u.nus.edu` searches emails.
+* `find e/@u.nus.edu` returns every member because all stored email addresses use that domain.
+
 **Search rules**
 
-* Search one field per command. Combining fields, such as `find n/Alice p/9123`, is rejected.
-* Use each prefix only once. Commands such as `find n/Alice n/Bob` and `find p/9123 p/4567` are rejected.
-* Provide a nonempty search value. Commands such as `find`, `find n/` and `find p/` are rejected.
+* Search one field per command. Combining fields, such as `find n/Alice p/9123` or `find e/alice n/Alice`, is rejected.
+* Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567` and
+  `find e/alice e/bob` are rejected.
+* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/` and `find e/` are rejected.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
+* Each search checks the complete directory and replaces the previous search results.
 
 Examples:
 
@@ -226,6 +244,8 @@ Examples:
 * `find n/alex david` returns the same members as `find alex david`.
 * `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
 * `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
+* `find e/ALEX` returns members whose email addresses contain `alex`, including Alex Yeoh in the sample data.
+* `find e/ALExYeOh@U.NUS.EDU` returns Alex Yeoh in the sample data.
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
 
@@ -305,7 +325,7 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
-**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find p/PHONE_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`
+**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING` or `find e/EMAIL_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`
 **List**   | `list`
 **Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`
 **Remove tag** | `tagremove INDEX t/TAG`<br> e.g., `tagremove 1 t/publicity`

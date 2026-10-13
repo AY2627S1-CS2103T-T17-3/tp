@@ -1,6 +1,7 @@
 package seedu.address.logic.parser;
 
 import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseFailure;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import seedu.address.logic.Messages;
 import seedu.address.logic.commands.FindCommand;
+import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
 
@@ -127,6 +129,71 @@ public class FindCommandParserTest {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
         assertParseFailure(parser, "Alice p/9123", expectedMessage);
         assertParseFailure(parser, "Alice\tp/9123", expectedMessage);
+    }
+
+    @Test
+    public void parse_emailPrefix_returnsFindCommand() {
+        FindCommand expectedFindCommand = new FindCommand(new EmailContainsSubstringPredicate("alice"));
+        assertParseSuccess(parser, "e/alice", expectedFindCommand);
+        assertParseSuccess(parser, " \n \t e/ \t aLiCe \n ", expectedFindCommand);
+        for (String substring : List.of("ALICE@U.NUS.EDU", "@u.nus.edu", "ice@u.", "+", ".", "a", "not-an-email")) {
+            assertParseSuccess(parser, "e/" + substring,
+                    new FindCommand(new EmailContainsSubstringPredicate(substring)));
+        }
+    }
+
+    @Test
+    public void parse_unprefixedEmail_returnsNameFindCommand() {
+        FindCommand expectedFindCommand =
+                new FindCommand(new NameContainsKeywordsPredicate(List.of("alice@u.nus.edu")));
+        assertParseSuccess(parser, "alice@u.nus.edu", expectedFindCommand);
+    }
+
+    @Test
+    public void parse_emptyEmailValue_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        assertParseFailure(parser, "e/", expectedMessage);
+        assertParseFailure(parser, " e/ \t \n ", expectedMessage);
+    }
+
+    @Test
+    public void parse_multipleEmailSubstrings_throwsParseException() {
+        String expectedMessage = "Email searches accept only one substring. "
+                + "Search each substring in a separate find command.";
+        assertParseFailure(parser, "e/alice bob", expectedMessage);
+        assertParseFailure(parser, "e/alice  bob", expectedMessage);
+        assertParseFailure(parser, "e/alice\tbob", expectedMessage);
+        assertParseFailure(parser, "e/alice\nbob", expectedMessage);
+        assertParseFailure(parser, " e/ \talice \nbob \t", expectedMessage);
+    }
+
+    @Test
+    public void parse_repeatedEmailPrefix_throwsParseException() {
+        String expectedMessage = Messages.getErrorMessageForDuplicatePrefixes(PREFIX_EMAIL);
+        assertParseFailure(parser, "e/alice e/bob", expectedMessage);
+        assertParseFailure(parser, "e/alice e/alice", expectedMessage);
+        assertParseFailure(parser, "e/alice\te/bob", expectedMessage);
+        assertParseFailure(parser, "e/alice\ne/bob", expectedMessage);
+        assertParseFailure(parser, "e/ e/bob", expectedMessage);
+        assertParseFailure(parser, "e/alice e/", expectedMessage);
+    }
+
+    @Test
+    public void parse_emailAndOtherPrefixes_throwsParseException() {
+        String expectedMessage = "Specify only one search field per find command.";
+        for (String args : List.of("e/alice n/Alice", "n/Alice e/alice", "e/alice p/9123", "p/9123 e/alice",
+                "n/Alice p/9123 e/alice", "e/alice\tn/Alice", "p/9123\ne/alice", "e/ n/Alice", "e/alice n/",
+                "e/ p/9123", "e/alice p/")) {
+            assertParseFailure(parser, args, expectedMessage);
+        }
+    }
+
+    @Test
+    public void parse_emailPrefixWithPreamble_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        assertParseFailure(parser, "Alice e/alice", expectedMessage);
+        assertParseFailure(parser, "Alice\te/alice", expectedMessage);
+        assertParseFailure(parser, "Alice\ne/alice", expectedMessage);
     }
 
 }

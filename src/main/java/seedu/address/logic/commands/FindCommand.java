@@ -16,18 +16,18 @@ public class FindCommand extends Command {
 
     public static final String COMMAND_WORD = "find";
 
-    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Finds persons by name keywords or a phone substring "
-            + "and displays them as a list with index numbers.\n"
-            + "Name searches match whole words, ignoring case. "
-            + "Phone searches match one substring without spaces.\n"
-            + "Parameters: [n/]KEYWORD [MORE_KEYWORDS]... OR p/PHONE_SUBSTRING\n"
-            + "Specify only one search field.\n"
-            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " n/alice bob; "
-            + COMMAND_WORD + " p/9123";
+    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members using one field.\n"
+            + "Name:  " + COMMAND_WORD + " [n/]KEYWORD [MORE_KEYWORDS]...\n"
+            + "Phone: " + COMMAND_WORD + " p/SUBSTRING\n"
+            + "Email: " + COMMAND_WORD + " e/SUBSTRING\n"
+            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
 
     public static final String MESSAGE_MULTIPLE_PHONE_SUBSTRINGS = "Phone searches accept only one substring. "
+            + "Search each substring in a separate find command.";
+
+    public static final String MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS = "Email searches accept only one substring. "
             + "Search each substring in a separate find command.";
 
     private final Predicate<Person> predicate;
