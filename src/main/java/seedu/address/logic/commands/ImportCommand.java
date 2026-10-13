@@ -28,6 +28,8 @@ public class ImportCommand extends Command {
     public static final String MESSAGE_FAILURE = "Could not import %1$s: %2$s\nNo members were imported.";
     public static final String MESSAGE_DUPLICATE = "CSV record %1$d: email \"%2$s\" duplicates an existing member "
             + "or an earlier CSV record.";
+    public static final String MESSAGE_SOURCE_IS_DATA_FILE = "The import source must differ from the directory's "
+            + "JSON save file. No members were imported.";
 
     private final Path filePath;
 
@@ -36,6 +38,10 @@ public class ImportCommand extends Command {
      */
     public ImportCommand(Path filePath) {
         this.filePath = requireNonNull(filePath);
+    }
+
+    public Path getFilePath() {
+        return filePath;
     }
 
     @Override

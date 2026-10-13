@@ -106,6 +106,20 @@ public class ImportIntegrationTest {
     }
 
     @Test
+    public void execute_sourceIsSaveFile_rejectsBeforeChangingRecordsOrFile() throws Exception {
+        Files.writeString(dataFile, HEADER + FIRST_ROW);
+        assertRejectedWithoutChanges(dataFile);
+        assertRejectedWithoutChanges(dataFile.getParent().resolve(".").resolve(dataFile.getFileName()));
+    }
+
+    @Test
+    public void execute_sourceIsHardLinkToSaveFile_rejectsBeforeChangingRecordsOrFile() throws Exception {
+        Files.writeString(dataFile, HEADER + FIRST_ROW);
+        Path source = Files.createLink(testFolder.resolve("linked.csv"), dataFile);
+        assertRejectedWithoutChanges(source);
+    }
+
+    @Test
     public void execute_saveFailure_reportsErrorAndRetainsExistingPersistenceBehavior() throws Exception {
         JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(dataFile) {
             @Override

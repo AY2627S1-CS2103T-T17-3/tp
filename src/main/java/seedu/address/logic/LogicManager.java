@@ -2,6 +2,8 @@ package seedu.address.logic;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Logger;
 
 import javafx.collections.ObservableList;
@@ -9,6 +11,7 @@ import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.logic.commands.Command;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.ImportCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.AddressBookParser;
 import seedu.address.logic.parser.exceptions.ParseException;
@@ -46,6 +49,9 @@ public class LogicManager implements Logic {
 
         CommandResult commandResult;
         Command command = addressBookParser.parseCommand(commandText);
+        if (command instanceof ImportCommand importCommand) {
+            verifyImportSource(importCommand.getFilePath());
+        }
         commandResult = command.execute(model);
 
         try {
@@ -57,6 +63,20 @@ public class LogicManager implements Logic {
         }
 
         return commandResult;
+    }
+
+    private void verifyImportSource(Path sourceFile) throws CommandException {
+        Path dataFile = storage.getAddressBookFilePath();
+        try {
+            boolean isSamePath = sourceFile.toAbsolutePath().normalize().equals(dataFile.toAbsolutePath().normalize());
+            boolean isSameFile = Files.exists(sourceFile) && Files.exists(dataFile)
+                    && Files.isSameFile(sourceFile, dataFile);
+            if (isSamePath || isSameFile) {
+                throw new CommandException(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE);
+            }
+        } catch (IOException e) {
+            throw new CommandException(String.format(ImportCommand.MESSAGE_FAILURE, sourceFile, e.getMessage()), e);
+        }
     }
 
     @Override
