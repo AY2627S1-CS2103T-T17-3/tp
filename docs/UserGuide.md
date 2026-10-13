@@ -31,7 +31,7 @@ AddressBook Level 3 (AB3) is a **desktop application for managing contacts, opti
 
    * `list` : Lists all contacts.
 
-   * `add n/John Doe p/98765432 e/johnd@example.com a/John street, block 123, #01-01` : Adds a contact named `John Doe` to the Address Book.
+   * `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01` : Adds a contact named `John Doe` to the Address Book.
 
    * `delete 3` : Deletes the 3rd contact shown in the current list.
 
@@ -83,18 +83,34 @@ Adds a person to the address book.
 Format: `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... `
 
 Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
-lowercase. General email addresses are accepted; `@u.nus.edu` is not required. Different aliases, such as
-`alex@example.com` and `alex+society@example.com`, count as different addresses. Command parsing trims
+lowercase. Only complete email addresses ending with exactly `@u.nus.edu` are accepted. For example,
+`Alex@U.NUS.EDU` is accepted and stored as `alex@u.nus.edu`; `alex`, `alex@gmail.com`, `alex@nus.edu`,
+`alex@sub.u.nus.edu`, and `alex@u.nus.edu.com` are rejected without changing any records.
+The local-part (before `@`) must contain letters or digits, optionally separated by single `+`, `_`, `.`, or `-`
+characters. It cannot start or end with punctuation or contain adjacent punctuation.
+The existing character rules accept ASCII letters and digits after lowercasing; mailbox existence is not checked.
+Different aliases, such as
+`alex@u.nus.edu` and `alex+society@u.nus.edu`, count as different addresses. Command parsing trims
 surrounding argument whitespace, but email values in the data file cannot contain surrounding whitespace.
+
+Invalid email input produces this message:
+
+```text
+Emails must have the format local-part@u.nus.edu.
+The local-part must contain letters or digits, optionally separated by single +, _, ., or - characters.
+It must not start or end with punctuation or contain consecutive punctuation.
+Email addresses are case-insensitive and are stored in lowercase.
+```
 
 Members may share a name or phone number if their emails differ. For example, both commands are valid:
 
-* `add n/Alex Tan p/91234567 e/Alex.One@Example.com a/Kent Ridge`
-* `add n/Alex Tan p/91234567 e/alex.two@example.com a/Clementi`
+* `add n/Alex Tan p/91234567 e/Alex.One@U.NUS.EDU a/Kent Ridge`
+* `add n/Alex Tan p/91234567 e/alex.two@u.nus.edu a/Clementi`
 
-Reusing `ALEX.ONE@EXAMPLE.COM` for another member is rejected with:
-`Email "alex.one@example.com" is already used by "Alex Tan". No changes were made.`
+Reusing `ALEX.ONE@U.NUS.EDU` for another member is rejected with:
+`Email "alex.one@u.nus.edu" is already used by "Alex Tan". No changes were made.`
 The check includes members outside the current search results.
+It also includes archived members.
 
 <box type="tip" seamless>
 
@@ -106,8 +122,8 @@ For example, `t/Publicity t/publicity` adds one tag named `publicity`.
 Tags in existing saved records follow the same rule when loaded; case variants are merged.
 
 Examples:
-* `add n/John Doe p/98765432 e/johnd@example.com a/John street, block 123, #01-01`
-* `add n/Betsy Crowe t/friend e/betsycrowe@example.com a/Newgate Prison p/1234567 t/criminal`
+* `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01`
+* `add n/Betsy Crowe t/friend e/betsycrowe@u.nus.edu a/Newgate Prison p/1234567 t/criminal`
 
 ### Listing all persons: `list`
 
@@ -124,12 +140,13 @@ Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, ...
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
+* A provided email must follow the same `@u.nus.edu` rules as `add`. Omitting `e/` preserves the current email.
 * Existing tags are preserved. The `edit` command rejects `t/` arguments, including an empty `t/`.
 * Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
   address for reuse. The new email cannot belong to another member, including one outside the displayed list.
 
 Examples:
-*  `edit 1 p/91234567 e/johndoe@example.com` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@example.com` respectively.
+*  `edit 1 p/91234567 e/johndoe@u.nus.edu` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@u.nus.edu` respectively.
 *  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
 *  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
 
@@ -284,10 +301,10 @@ _Details coming soon ..._
 
 Action     | Format, Examples
 -----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-**Add**    | `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... ` <br> e.g., `add n/James Ho p/22224444 e/jamesho@example.com a/123, Clementi Rd, 1234665 t/friend t/colleague`
+**Add**    | `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... ` <br> e.g., `add n/James Ho p/22224444 e/jamesho@u.nus.edu a/123, Clementi Rd, 1234665 t/friend t/colleague`
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
-**Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@example.com`
+**Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
 **Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find p/PHONE_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`
 **List**   | `list`
 **Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`

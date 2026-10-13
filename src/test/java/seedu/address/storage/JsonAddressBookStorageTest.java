@@ -88,7 +88,7 @@ public class JsonAddressBookStorageTest {
                   "persons": [ {
                     "name": "Alice",
                     "phone": "91234567",
-                    "email": "alice@example.com",
+                    "email": "alice@u.nus.edu",
                     "address": "Kent Ridge",
                     "tags": [ "Publicity", "publicity", "PUBLICITY", "Exco" ]
                   } ]

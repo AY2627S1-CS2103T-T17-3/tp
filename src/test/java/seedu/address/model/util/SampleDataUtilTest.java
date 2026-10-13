@@ -22,7 +22,7 @@ public class SampleDataUtilTest {
                 .toList();
 
         assertEquals(2, morganLees.size());
-        assertEquals(Set.of(new Email("morgan.one@example.com"), new Email("morgan.two@example.com")),
+        assertEquals(Set.of(new Email("morgan.one@u.nus.edu"), new Email("morgan.two@u.nus.edu")),
                 Set.copyOf(morganLees.stream().map(Person::getEmail).toList()));
         assertEquals(List.of(new Phone("91234567"), new Phone("91234567")),
                 morganLees.stream().map(Person::getPhone).toList());

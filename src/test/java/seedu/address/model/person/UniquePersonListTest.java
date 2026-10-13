@@ -170,14 +170,14 @@ public class UniquePersonListTest {
     public void setPersons_normalizedEmailConflict_preservesOriginalList() {
         uniquePersonList.add(BOB);
         Person duplicate = new PersonBuilder(ALICE).withName("Different Name")
-                .withEmail("ALICE@EXAMPLE.COM").build();
+                .withEmail("ALICE@U.NUS.EDU").build();
         assertThrows(DuplicatePersonException.class, () -> uniquePersonList.setPersons(List.of(ALICE, duplicate)));
         assertEquals(List.of(BOB), uniquePersonList.asUnmodifiableObservableList());
     }
 
     @Test
     public void setPerson_sameNameDifferentEmail_changesOnlyTarget() {
-        Person namesake = new PersonBuilder(ALICE).withEmail("namesake@example.com").build();
+        Person namesake = new PersonBuilder(ALICE).withEmail("namesake@u.nus.edu").build();
         uniquePersonList.add(ALICE);
         uniquePersonList.add(namesake);
         Person edited = new PersonBuilder(namesake).withPhone("91234567").build();

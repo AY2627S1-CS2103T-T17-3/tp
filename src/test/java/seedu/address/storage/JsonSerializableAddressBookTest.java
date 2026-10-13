@@ -42,8 +42,8 @@ public class JsonSerializableAddressBookTest {
 
     @Test
     public void toModelType_sameNameDifferentEmails_returnsBothPersons() throws Exception {
-        Person first = new PersonBuilder().withName("Alex Tan").withEmail("alex.one@example.com").build();
-        Person second = new PersonBuilder(first).withEmail("alex.two@example.com").build();
+        Person first = new PersonBuilder().withName("Alex Tan").withEmail("alex.one@u.nus.edu").build();
+        Person second = new PersonBuilder(first).withEmail("alex.two@u.nus.edu").build();
         JsonSerializableAddressBook data = new JsonSerializableAddressBook(
                 List.of(new JsonAdaptedPerson(first), new JsonAdaptedPerson(second)));
         assertEquals(List.of(first, second), data.toModelType().getPersonList());
@@ -68,7 +68,7 @@ public class JsonSerializableAddressBookTest {
     public void toModelType_duplicatePersons_throwsIllegalValueException() throws Exception {
         JsonSerializableAddressBook dataFromFile = JsonUtil.readJsonFile(DUPLICATE_PERSON_FILE,
                 JsonSerializableAddressBook.class).get();
-        assertThrows(IllegalValueException.class, "Record 2: email \"alice@example.com\" duplicates record 1.",
+        assertThrows(IllegalValueException.class, "Record 2: email \"alice@u.nus.edu\" duplicates record 1.",
                 dataFromFile::toModelType);
     }
 
