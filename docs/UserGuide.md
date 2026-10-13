@@ -136,7 +136,7 @@ Examples:
 
 * `import members.csv`
 * `import "member contacts.csv"`
-* `import "C:\Users\chinh\Downloads\members.csv"`
+* `import "C:\Members\member contacts.csv"`
 
 Relative paths are resolved from the folder where the application was launched. Use double quotes around paths
 containing spaces. The command reads a local file; it does not download a Google Sheet or open an Excel workbook.
