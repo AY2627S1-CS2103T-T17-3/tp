@@ -16,15 +16,11 @@ public class FindCommand extends Command {
 
     public static final String COMMAND_WORD = "find";
 
-    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Finds persons by name keywords, a phone substring "
-            + "or an email substring and displays them as a list with index numbers.\n"
-            + "Name searches match whole words, ignoring case. "
-            + "Phone and email searches match one substring without spaces. "
-            + "Email searches ignore case and accept partial or full addresses.\n"
-            + "Parameters: [n/]KEYWORD [MORE_KEYWORDS]... OR p/PHONE_SUBSTRING OR e/EMAIL_SUBSTRING\n"
-            + "Specify only one search field.\n"
-            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " n/alice bob; "
-            + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice";
+    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members using one field.\n"
+            + "Name:  " + COMMAND_WORD + " [n/]KEYWORD [MORE_KEYWORDS]...\n"
+            + "Phone: " + COMMAND_WORD + " p/SUBSTRING\n"
+            + "Email: " + COMMAND_WORD + " e/SUBSTRING\n"
+            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
 
