@@ -26,6 +26,8 @@ public class Messages {
     public static final String MESSAGE_DUPLICATE_FIELDS =
                 "Multiple values specified for the following single-valued field(s): ";
 
+    private static final String NAME_PREFIX = "Name: ";
+
     /**
      * Formats a duplicate error identifying the existing person without a displayed index.
      */
@@ -52,7 +54,7 @@ public class Messages {
      */
     public static String format(Person person) {
         final StringBuilder builder = new StringBuilder();
-        builder.append(person.getName().map(name -> name.fullName).orElse(NOT_PROVIDED))
+        builder.append(person.getName().map(name -> NAME_PREFIX + name.fullName).orElse(NOT_PROVIDED))
                 .append("; Phone: ")
                 .append(person.getPhone().map(phone -> phone.value).orElse(NOT_PROVIDED))
                 .append("; Email: ")
@@ -65,11 +67,11 @@ public class Messages {
     }
 
     /**
-     * Formats only the supplied contact details and nonempty tags for add and edit confirmations.
+     * Formats only the supplied contact details and nonempty tags for command confirmations.
      */
     public static String formatProvidedDetails(Person person) {
         StringJoiner details = new StringJoiner("; ");
-        person.getName().ifPresent(name -> details.add(name.fullName));
+        person.getName().ifPresent(name -> details.add(NAME_PREFIX + name.fullName));
         person.getPhone().ifPresent(phone -> details.add("Phone: " + phone.value));
         details.add("Email: " + person.getEmail());
         person.getAddress().ifPresent(address -> details.add("Address: " + address.value));

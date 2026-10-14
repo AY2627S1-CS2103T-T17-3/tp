@@ -58,6 +58,19 @@ public class TagAddCommandTest {
     }
 
     @Test
+    public void execute_emailOnlyMember_omitsMissingDetails() throws Exception {
+        Person original = model.getFilteredPersonList().get(0);
+        Person person = new PersonBuilder(original).withoutName().withoutPhone().withoutAddress()
+                .withEmail("2@u.nus.edu").withTags().build();
+        model.setPerson(original, person);
+
+        CommandResult result = new TagAddCommand(INDEX_FIRST_PERSON, new Tag("Publicity")).execute(model);
+
+        assertEquals("Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [publicity]", result.getFeedbackToUser());
+        assertEquals(new PersonBuilder(person).withTags("publicity").build(), model.getFilteredPersonList().get(0));
+    }
+
+    @Test
     public void execute_existingTagWithDifferentCase_succeedsWithoutChangingTags() {
         Person person = setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
         assertTagAdded(INDEX_FIRST_PERSON, "PUBLICITY", person, person);
@@ -145,7 +158,8 @@ public class TagAddCommandTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(originalPerson, expectedPerson);
         Tag tag = new Tag(tagName);
-        String expectedMessage = String.format(TagAddCommand.MESSAGE_SUCCESS, tag, Messages.format(expectedPerson));
+        String expectedMessage = String.format(TagAddCommand.MESSAGE_SUCCESS, tag,
+                Messages.formatProvidedDetails(expectedPerson));
         assertCommandSuccess(new TagAddCommand(index, tag), model, expectedMessage, expectedModel);
     }
 }

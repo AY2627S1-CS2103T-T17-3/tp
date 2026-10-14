@@ -100,6 +100,8 @@ New person added: Email: alex@u.nus.edu
 ```
 
 These placeholders are display text only. They are not stored as contact values or searched as names or phones.
+When a name is present, add, edit, tag and delete confirmations label it as `Name: <person name>`.
+For example, adding Alex with only a name and email shows `New person added: Name: Alex; Email: alex@u.nus.edu`.
 After a successful add, all members are displayed in their existing order, with the new member appended.
 
 Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
@@ -270,6 +272,15 @@ Example: `tagremove 1 t/publicity` removes only `publicity` from the first displ
 `publicity`, `exco`, and `volunteer`, they will retain `exco` and `volunteer`.
 
 Both commands save changes automatically. An invalid command leaves member records and the current filter unchanged.
+
+Both confirmations show only supplied contact details. The `Name:` field is omitted when the member has no name,
+and missing phone and address fields are omitted. The `Tags:` section appears only when tags remain.
+For an email-only member, adding and then removing their only tag produces:
+
+```text
+Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [publicity]
+Tag removed: [publicity]; Email: 2@u.nus.edu
+```
 
 ### Locating members by name, phone or email: `find`
 

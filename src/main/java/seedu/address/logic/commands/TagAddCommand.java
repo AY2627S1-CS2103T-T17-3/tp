@@ -27,7 +27,7 @@ public class TagAddCommand extends Command {
             + ": Adds one tag to the person identified by the index number in the displayed person list.\n"
             + "Parameters: INDEX (must be a positive integer) " + PREFIX_TAG + "TAG\n"
             + "Example: " + COMMAND_WORD + " 1 " + PREFIX_TAG + "Volunteer";
-    public static final String MESSAGE_SUCCESS = "Tag added: %1$s; Person: %2$s";
+    public static final String MESSAGE_SUCCESS = "Tag added: %1$s; %2$s";
 
     private final Index targetIndex;
     private final Tag tag;
@@ -57,7 +57,8 @@ public class TagAddCommand extends Command {
 
         model.setPerson(personToEdit, editedPerson);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
-        return new CommandResult(String.format(MESSAGE_SUCCESS, tag, Messages.format(editedPerson)));
+        return new CommandResult(String.format(MESSAGE_SUCCESS, tag,
+                Messages.formatProvidedDetails(editedPerson)));
     }
 
     @Override
