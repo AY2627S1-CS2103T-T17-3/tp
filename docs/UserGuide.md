@@ -82,6 +82,11 @@ Adds a person to the address book.
 
 Format: `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... `
 
+For an unnamed member, the card heading displays their email. Missing phone and address rows display
+`Phone: -` and `Address: -`.
+
+These placeholders are display text only. They are not stored as contact values or searched as names or phones.
+
 Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
 lowercase. Only complete email addresses ending with exactly `@u.nus.edu` are accepted. For example,
 `Alex@U.NUS.EDU` is accepted and stored as `alex@u.nus.edu`; `alex`, `alex@gmail.com`, `alex@nus.edu`,
@@ -337,6 +342,28 @@ AddressBook automatically saves data after every command. You do not need to sav
 
 AddressBook data is saved automatically as a JSON file `[JAR file location]/data/addressbook.json`. Advanced users are welcome to update data directly by editing that data file.
 
+Missing names, phones, and addresses are saved as JSON `null`, for example:
+
+```json
+{
+  "persons": [
+    {
+      "name": null,
+      "phone": null,
+      "email": "alex@u.nus.edu",
+      "address": null,
+      "status": "active",
+      "tags": []
+    }
+  ]
+}
+```
+
+For these three optional fields, an omitted property also loads as missing. Empty strings, whitespace-only
+strings, and invalid supplied values are rejected. Email must always be present and valid. Older complete
+records continue to load, and a missing status still defaults to active. Loading alone does not rewrite a file;
+the next successful command saves absent optional fields as explicit `null` values.
+
 <box type="warning" seamless>
 
 **Caution:**
@@ -350,6 +377,10 @@ Furthermore, certain edits can cause the AddressBook to behave in unexpected way
 Valid mixed-case emails appear in lowercase when loaded and are saved in lowercase after the next successful
 command. Older versions of the app may reject same-name records saved by this version, so back up the data file
 before switching versions.
+
+Versions that require complete contact details reject the entire data file if any member is incomplete.
+They may open an empty directory and overwrite the original file after a successful command, including `list`.
+Back up the file before switching versions; incomplete records are not compatible with those older versions.
 
 ### Archiving data files `[coming in v2.0]`
 

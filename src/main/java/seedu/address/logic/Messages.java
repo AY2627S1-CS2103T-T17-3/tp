@@ -14,6 +14,9 @@ public class Messages {
 
     public static final String MESSAGE_DUPLICATE_PERSON =
             "Email \"%1$s\" is already used by \"%2$s\". No changes were made.";
+    public static final String MESSAGE_DUPLICATE_UNNAMED_PERSON =
+            "Email \"%1$s\" is already used by an existing member. No changes were made.";
+    public static final String NOT_PROVIDED = "Not provided";
 
     public static final String MESSAGE_UNKNOWN_COMMAND = "Unknown command.";
     public static final String MESSAGE_INVALID_COMMAND_FORMAT = "Invalid command format!\n%1$s";
@@ -26,7 +29,9 @@ public class Messages {
      * Formats a duplicate error identifying the existing person without a displayed index.
      */
     public static String formatDuplicatePerson(Person person) {
-        return String.format(MESSAGE_DUPLICATE_PERSON, person.getEmail(), person.getName());
+        return person.getName()
+                .map(name -> String.format(MESSAGE_DUPLICATE_PERSON, person.getEmail(), name))
+                .orElseGet(() -> String.format(MESSAGE_DUPLICATE_UNNAMED_PERSON, person.getEmail()));
     }
 
     /**
@@ -46,13 +51,13 @@ public class Messages {
      */
     public static String format(Person person) {
         final StringBuilder builder = new StringBuilder();
-        builder.append(person.getName())
+        builder.append(person.getName().map(name -> name.fullName).orElse(NOT_PROVIDED))
                 .append("; Phone: ")
-                .append(person.getPhone())
+                .append(person.getPhone().map(phone -> phone.value).orElse(NOT_PROVIDED))
                 .append("; Email: ")
                 .append(person.getEmail())
                 .append("; Address: ")
-                .append(person.getAddress())
+                .append(person.getAddress().map(address -> address.value).orElse(NOT_PROVIDED))
                 .append("; Tags: ");
         person.getTags().forEach(builder::append);
         return builder.toString();
