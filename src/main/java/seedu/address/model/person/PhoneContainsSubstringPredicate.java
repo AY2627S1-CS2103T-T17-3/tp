@@ -21,7 +21,7 @@ public class PhoneContainsSubstringPredicate implements Predicate<Person> {
 
     @Override
     public boolean test(Person person) {
-        return person.getPhone().value.contains(substring);
+        return person.getPhone().map(phone -> phone.value.contains(substring)).orElse(false);
     }
 
     @Override

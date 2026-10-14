@@ -27,10 +27,10 @@ public class EditPersonDescriptorBuilder {
      */
     public EditPersonDescriptorBuilder(Person person) {
         descriptor = new EditPersonDescriptor();
-        descriptor.setName(person.getName());
-        descriptor.setPhone(person.getPhone());
+        person.getName().ifPresent(descriptor::setName);
+        person.getPhone().ifPresent(descriptor::setPhone);
         descriptor.setEmail(person.getEmail());
-        descriptor.setAddress(person.getAddress());
+        person.getAddress().ifPresent(descriptor::setAddress);
     }
 
     /**

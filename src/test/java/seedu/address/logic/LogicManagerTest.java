@@ -128,7 +128,7 @@ public class LogicManagerTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(person, expectedPerson);
         String expectedMessage = String.format(TagAddCommand.MESSAGE_SUCCESS,
-                new Tag("Volunteer"), Messages.format(expectedPerson));
+                new Tag("Volunteer"), Messages.formatProvidedDetails(expectedPerson));
 
         assertCommandSuccess("tagadd 1 t/Volunteer", expectedMessage, expectedModel);
         assertCommandSuccess("tagadd 1 t/VOLUNTEER", expectedMessage, expectedModel);
@@ -145,7 +145,7 @@ public class LogicManagerTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(person, expectedPerson);
         String expectedMessage = String.format(TagRemoveCommand.MESSAGE_SUCCESS,
-                new Tag("publicity"), Messages.format(expectedPerson));
+                new Tag("publicity"), Messages.formatProvidedDetails(expectedPerson));
 
         assertCommandSuccess("tagremove 1 t/publicity", expectedMessage, expectedModel);
         assertCommandSuccess("tagremove 1 t/PUBLICITY", expectedMessage, expectedModel);

@@ -40,12 +40,12 @@ public class CsvMemberReaderTest {
         List<Person> members = reader.read(file);
 
         assertEquals(2, members.size());
-        assertEquals("Alex Tan", members.getFirst().getName().fullName);
+        assertEquals("Alex Tan", members.getFirst().getName().orElseThrow().fullName);
         assertEquals("alex@u.nus.edu", members.getFirst().getEmail().value);
-        assertEquals("NUS, Kent Ridge", members.getFirst().getAddress().value);
+        assertEquals("NUS, Kent Ridge", members.getFirst().getAddress().orElseThrow().value);
         assertEquals(Set.of(new Tag("publicity"), new Tag("exco")), members.getFirst().getTags());
         assertEquals(Status.ACTIVE, members.getFirst().getStatus());
-        assertEquals("Jamie Lee", members.get(1).getName().fullName);
+        assertEquals("Jamie Lee", members.get(1).getName().orElseThrow().fullName);
         assertEquals(Status.ARCHIVED, members.get(1).getStatus());
         assertTrue(members.get(1).getTags().isEmpty());
         assertEquals(original, Files.readString(file));
@@ -61,7 +61,7 @@ public class CsvMemberReaderTest {
     public void read_quotedAddressAndEscapedQuotes_preservesValue() throws Exception {
         Path file = writeCsv(HEADER
                 + "Alex Tan,91234567,alex@u.nus.edu,\"Block \"\"A\"\", Kent Ridge\",,active\n");
-        assertEquals("Block \"A\", Kent Ridge", reader.read(file).getFirst().getAddress().value);
+        assertEquals("Block \"A\", Kent Ridge", reader.read(file).getFirst().getAddress().orElseThrow().value);
     }
 
     @Test

@@ -50,9 +50,11 @@ public class PersonCard extends UiPart<Region> {
         super(FXML);
         this.person = person;
         id.setText(displayedIndex + ". ");
-        name.setText(person.getName().fullName);
-        phone.setText(person.getPhone().value);
-        address.setText(person.getAddress().value);
+        name.setText(person.getName().map(memberName -> memberName.fullName).orElse(person.getEmail().value));
+        phone.setText(person.getPhone().map(memberPhone -> memberPhone.value)
+                .orElse("Phone: -"));
+        address.setText(person.getAddress().map(memberAddress -> memberAddress.value)
+                .orElse("Address: -"));
         email.setText(person.getEmail().value);
         status.setText(person.getStatus().badgeName);
         person.getTags().stream()

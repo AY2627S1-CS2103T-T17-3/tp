@@ -2,6 +2,7 @@ package seedu.address.model.person;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.logic.commands.CommandTestUtil.VALID_ADDRESS_BOB;
 import static seedu.address.logic.commands.CommandTestUtil.VALID_EMAIL_BOB;
@@ -12,11 +13,48 @@ import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 import static seedu.address.testutil.TypicalPersons.BOB;
 
+import java.util.Optional;
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.address.testutil.PersonBuilder;
 
 public class PersonTest {
+
+    @Test
+    public void constructor_optionalDetails_rejectsNullContainersAndRequiredFields() {
+        Email email = new Email("alex@u.nus.edu");
+        assertThrows(NullPointerException.class, () ->
+                new Person(null, Optional.empty(), email, Optional.empty(), Status.ACTIVE, Set.of()));
+        assertThrows(NullPointerException.class, () ->
+                new Person(Optional.empty(), null, email, Optional.empty(), Status.ACTIVE, Set.of()));
+        assertThrows(NullPointerException.class, () ->
+                new Person(Optional.empty(), Optional.empty(), email, null, Status.ACTIVE, Set.of()));
+        assertThrows(NullPointerException.class, () ->
+                new Person(Optional.empty(), Optional.empty(), null, Optional.empty(), Status.ACTIVE, Set.of()));
+        assertThrows(NullPointerException.class, () ->
+                new Person(Optional.empty(), Optional.empty(), email, Optional.empty(), null, Set.of()));
+        assertThrows(NullPointerException.class, () ->
+                new Person(Optional.empty(), Optional.empty(), email, Optional.empty(), Status.ACTIVE, null));
+        assertThrows(NullPointerException.class, () ->
+                new Person(null, new Phone("91234567"), email, new Address("NUS"), Set.of()));
+    }
+
+    @Test
+    public void equals_absentDetails_comparesValuesWithoutChangingIdentity() {
+        Person incomplete = new PersonBuilder().withoutName().withoutPhone().withoutAddress()
+                .withStatus(Status.ARCHIVED).build();
+        Person copy = new PersonBuilder(incomplete).build();
+        assertEquals(incomplete, copy);
+        assertEquals(incomplete.hashCode(), copy.hashCode());
+        assertEquals(Status.ARCHIVED, copy.getStatus());
+        assertNotEquals(incomplete, new PersonBuilder(incomplete).withName("Not provided").build());
+        assertNotEquals(incomplete, new PersonBuilder(incomplete).withPhone("123").build());
+        assertNotEquals(incomplete, new PersonBuilder(incomplete).withAddress("Not provided").build());
+        assertTrue(incomplete.isSamePerson(new PersonBuilder(incomplete).withName("Alex").build()));
+        assertFalse(incomplete.isSamePerson(new PersonBuilder(incomplete).withEmail("other@u.nus.edu").build()));
+    }
 
     @Test
     public void asObservableList_modifyList_throwsUnsupportedOperationException() {
@@ -103,8 +141,10 @@ public class PersonTest {
 
     @Test
     public void toStringMethod() {
-        String expected = Person.class.getCanonicalName() + "{name=" + ALICE.getName() + ", phone=" + ALICE.getPhone()
-                + ", email=" + ALICE.getEmail() + ", address=" + ALICE.getAddress() + ", tags=" + ALICE.getTags()
+        String expected = Person.class.getCanonicalName() + "{name=" + ALICE.getName().orElseThrow()
+                + ", phone=" + ALICE.getPhone().orElseThrow()
+                + ", email=" + ALICE.getEmail() + ", address=" + ALICE.getAddress().orElseThrow()
+                + ", tags=" + ALICE.getTags()
                 + ", status=" + ALICE.getStatus() + "}";
         assertEquals(expected, ALICE.toString());
     }

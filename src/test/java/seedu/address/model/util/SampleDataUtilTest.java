@@ -18,13 +18,13 @@ public class SampleDataUtilTest {
     public void getSampleAddressBook_sameNameDifferentEmails_containsBothMembers() {
         Name name = new Name("Morgan Lee");
         List<Person> morganLees = SampleDataUtil.getSampleAddressBook().getPersonList().stream()
-                .filter(person -> person.getName().equals(name))
+                .filter(person -> person.getName().filter(name::equals).isPresent())
                 .toList();
 
         assertEquals(2, morganLees.size());
         assertEquals(Set.of(new Email("morgan.one@u.nus.edu"), new Email("morgan.two@u.nus.edu")),
                 Set.copyOf(morganLees.stream().map(Person::getEmail).toList()));
         assertEquals(List.of(new Phone("91234567"), new Phone("91234567")),
-                morganLees.stream().map(Person::getPhone).toList());
+                morganLees.stream().map(person -> person.getPhone().orElseThrow()).toList());
     }
 }

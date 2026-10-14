@@ -57,6 +57,22 @@ public class TagRemoveCommandTest {
     }
 
     @Test
+    public void execute_emailOnlyMember_omitsMissingDetailsAndEmptyTags() throws Exception {
+        Person original = model.getFilteredPersonList().get(0);
+        Person person = new PersonBuilder(original).withoutName().withoutPhone().withoutAddress()
+                .withEmail("2@u.nus.edu").withTags("Publicity", "Exco").build();
+        model.setPerson(original, person);
+
+        CommandResult result = new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("Publicity")).execute(model);
+        assertEquals("Tag removed: [publicity]; Email: 2@u.nus.edu; Tags: [exco]", result.getFeedbackToUser());
+
+        TagRemoveCommand removeLastTag = new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("Exco"));
+        assertEquals("Tag removed: [exco]; Email: 2@u.nus.edu",
+                removeLastTag.execute(model).getFeedbackToUser());
+        assertEquals(new PersonBuilder(person).withTags().build(), model.getFilteredPersonList().get(0));
+    }
+
+    @Test
     public void execute_existingTagWithDifferentCase_removesMatchingTag() {
         Person person = setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
         Person expectedPerson = new PersonBuilder(person).withTags("Exco").build();
@@ -152,7 +168,8 @@ public class TagRemoveCommandTest {
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.setPerson(originalPerson, expectedPerson);
         Tag tag = new Tag(tagName);
-        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_SUCCESS, tag, Messages.format(expectedPerson));
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_SUCCESS, tag,
+                Messages.formatProvidedDetails(expectedPerson));
         assertCommandSuccess(new TagRemoveCommand(index, tag), model, expectedMessage, expectedModel);
     }
 }

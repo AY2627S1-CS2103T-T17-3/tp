@@ -2,6 +2,7 @@ package seedu.address.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 import static seedu.address.testutil.TypicalPersons.HOON;
@@ -26,12 +27,78 @@ import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.commons.util.JsonUtil;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ReadOnlyAddressBook;
+import seedu.address.model.person.Person;
+import seedu.address.model.person.Status;
 
 public class JsonAddressBookStorageTest {
     private static final Path TEST_DATA_FOLDER = Paths.get("src", "test", "data", "JsonAddressBookStorageTest");
 
     @TempDir
     public Path testFolder;
+
+    @Test
+    public void readAndSaveAddressBook_absentContactFields_preservesNullsAndLegacyDefaults() throws Exception {
+        Path filePath = testFolder.resolve("IncompleteMembers.json");
+        String originalJson = """
+                {"persons":[
+                  {"email":"Alex@U.NUS.EDU"},
+                  {"name":null,"phone":null,"email":"jamie@u.nus.edu","address":null,
+                   "status":"archived","tags":["Publicity"]},
+                  {"name":"Not provided","phone":null,"email":"known@u.nus.edu","address":"NUS"}
+                ]}
+                """;
+        Files.writeString(filePath, originalJson);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+        ReadOnlyAddressBook loaded = storage.readAddressBook().orElseThrow();
+        assertEquals(originalJson, Files.readString(filePath));
+        Person first = loaded.getPersonList().getFirst();
+        assertTrue(first.getName().isEmpty());
+        assertTrue(first.getPhone().isEmpty());
+        assertTrue(first.getAddress().isEmpty());
+        assertEquals("alex@u.nus.edu", first.getEmail().value);
+        assertEquals(Status.ACTIVE, first.getStatus());
+        assertEquals(Status.ARCHIVED, loaded.getPersonList().get(1).getStatus());
+
+        storage.saveAddressBook(loaded);
+        JsonNode savedPersons = JsonUtil.fromJsonString(Files.readString(filePath), JsonNode.class).get("persons");
+        for (int i = 0; i < 2; i++) {
+            for (String field : List.of("name", "phone", "address")) {
+                assertTrue(savedPersons.get(i).has(field));
+                assertTrue(savedPersons.get(i).get(field).isNull());
+            }
+        }
+        assertEquals("publicity", savedPersons.get(1).get("tags").get(0).asText());
+        assertEquals("Not provided", savedPersons.get(2).get("name").asText());
+        assertEquals(loaded, storage.readAddressBook().orElseThrow());
+    }
+
+    @Test
+    public void readAddressBook_blankSuppliedFields_rejectsEntireFileWithoutRewriting() throws Exception {
+        Path filePath = testFolder.resolve("BlankContact.json");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+        for (String field : List.of("name", "phone", "address", "email")) {
+            for (String value : List.of("", "   ")) {
+                String emailField = field.equals("email") ? "" : "\"email\":\"other@u.nus.edu\",";
+                String json = "{\"persons\":[{\"email\":\"valid@u.nus.edu\"},{" + emailField
+                        + "\"" + field + "\":\"" + value + "\"}]}";
+                Files.writeString(filePath, json);
+                assertThrows(DataLoadingException.class, storage::readAddressBook);
+                assertEquals(json, Files.readString(filePath));
+            }
+        }
+    }
+
+    @Test
+    public void readAddressBook_incompleteDuplicateEmails_rejectsEntireFile() throws Exception {
+        Path filePath = testFolder.resolve("DuplicateIncompleteMembers.json");
+        String json = """
+                {"persons":[{"email":"alex@u.nus.edu"},{"email":"ALEX@U.NUS.EDU"}]}
+                """;
+        Files.writeString(filePath, json);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+        assertThrows(DataLoadingException.class, storage::readAddressBook);
+        assertEquals(json, Files.readString(filePath));
+    }
 
     @Test
     public void readAddressBook_nullFilePath_throwsNullPointerException() {
