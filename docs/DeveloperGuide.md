@@ -217,13 +217,21 @@ This section describes some noteworthy details on how certain features are imple
 
 ### Recording a member with incomplete contact details
 
+`add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...` requires only email. All eight combinations
+of the other contact fields are accepted. `AddCommandParser` checks for the email prefix and a valid preamble,
+rejects repeated contact prefixes, then validates supplied name, supplied phone, email, supplied address and tags
+in that order. Omitted optional prefixes become empty optionals; supplied blank values still fail validation.
+Existing tokenization is unchanged: recognized prefixes need an ordinary preceding space, and unknown prefix-like
+text may become part of a field value. New members have active status and may have tags.
+
 `EditCommand` uses the descriptor's supplied values or the member's existing optionals to construct the replacement.
 An omitted edit preserves either the value or its absence. Blank edits cannot clear a detail. Tags and status are
 preserved. Tag commands also pass the optional contact details and status through unchanged. Add and edit still
 check email conflicts throughout the directory; a repeated add never merges records. Successful add, edit and tag
 commands retain the existing behavior of showing the full directory.
 
-`Messages.format` renders each absent detail as `Not provided`. Unnamed duplicate errors identify the existing
+`Messages.format` renders each absent detail as `Not provided`. Add and edit use `Messages.formatProvidedDetails`
+to omit absent contact fields and empty tags from their success messages. Unnamed duplicate errors identify the existing
 member by email only. `PersonCard` uses the canonical email as its heading when the name is absent and displays
 `Phone: -` or `Address: -` in the existing rows. No new card row, membership state or badge
 is introduced. Once supplied, contact values use the existing display style. Name and phone predicates return
@@ -236,6 +244,12 @@ complete contact details reject the entire file if it contains an incomplete mem
 behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
 Automatic saving and save-failure behavior are unchanged: a save failure is reported without rolling back the
 in-memory command. CSV import continues to require complete contact details and explicit status.
+
+Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
+incremental completion across reloads, filtered edits, unnamed duplicates, email reuse, searches, tags and deletion.
+The import regression checks that CSV requirements remain strict and that imported emails conflict with existing
+incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
+`PersonUtil` omits absent prefixes when generating commands.
 
 ### Finding members by contact details
 
@@ -422,7 +436,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* * *`  | secretary dealing with members who have similar or duplicate names     | distinguish their records using additional information                       | avoid contacting or modifying the wrong member                                                |
 | `* * *`  | secretary                                                              | receive precise confirmation and error messages                              | know exactly what changed and how to correct a failed operation                               |
 | `* *`    | secretary who has to manage local and international members            | store phone numbers with country codes                                       | contact members who have international phone numbers                                          |
-| `* *`    | secretary with incomplete information                                  | record a member using only the available details                             | capture the contact immediately and complete it later                                         |
+| `* *`    | secretary with incomplete information                                  | record a member using a NUS email and any other available details             | capture the contact immediately and complete it later                                         |
 | `* *`    | secretary who only has a member’s phone number                         | create an incomplete record using that unique phone number                   | save the contact immediately and complete the remaining details later                         |
 | `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                         | spend less time on repetitive maintenance                                                     |
 | `* *`    | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
@@ -465,14 +479,14 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to add a member, providing a name, phone number, email address, address, and any tags.
+1. Secretary requests to add a member, providing a NUS email address and any known name, phone, address or tags.
 2. NUSocietyDesk adds the member and displays a confirmation with the member's details.
 
    Use case ends.
 
 **Extensions**
 
-* 1a. Required details are missing, or a provided detail is invalid.
+* 1a. Email is missing, or a provided detail is blank or invalid.
 
   * 1a1. NUSocietyDesk shows an error message and does not add the member.
 
@@ -592,6 +606,29 @@ testers are expected to do more *exploratory* testing.
        Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
+
+### Recording and completing an email-only member
+
+Use a disposable application folder. Before launching, create `data/addressbook.json` containing
+`{"persons":[]}`. A missing file would load sample members instead.
+
+1. Run `add e/Alex@U.NUS.EDU`.<br>
+   Expected: One active member is added with heading `alex@u.nus.edu`, missing phone/address placeholders,
+   and feedback `New person added: Email: alex@u.nus.edu`.
+1. Close and reopen the app before filling any details.<br>
+   Expected: The same incomplete member loads; saved name, phone and address values are null.
+1. Run `find e/alex`, then `edit 1 n/Alex Tan`. Close and reopen again.<br>
+   Expected: Alex Tan is the heading; phone and address remain absent.
+1. Run `edit 1 p/91234567`, then `edit 1 a/Kent Ridge`, and restart.<br>
+   Expected: Exactly one complete member remains with all supplied values.
+1. Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
+   Expected: Only the intended member changes. Each successful edit resets the view to the full directory.
+1. Try `add e/new@u.nus.edu p/`, `edit 1 n/`, and a duplicate `add e/ALEX@U.NUS.EDU`.<br>
+   Expected: Each is rejected without changing records, filters or saved data.
+1. Add `add e/unnamed@u.nus.edu t/Publicity`. Search by its email, add/remove a tag, and delete it.<br>
+   Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.
+1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
+   Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
 
 ### Importing member directories
 

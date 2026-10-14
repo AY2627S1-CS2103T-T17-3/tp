@@ -1,6 +1,7 @@
 package seedu.address.logic;
 
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,6 +62,21 @@ public class Messages {
                 .append("; Tags: ");
         person.getTags().forEach(builder::append);
         return builder.toString();
+    }
+
+    /**
+     * Formats only the supplied contact details and nonempty tags for add and edit confirmations.
+     */
+    public static String formatProvidedDetails(Person person) {
+        StringJoiner details = new StringJoiner("; ");
+        person.getName().ifPresent(name -> details.add(name.fullName));
+        person.getPhone().ifPresent(phone -> details.add("Phone: " + phone.value));
+        details.add("Email: " + person.getEmail());
+        person.getAddress().ifPresent(address -> details.add("Address: " + address.value));
+        if (!person.getTags().isEmpty()) {
+            details.add("Tags: " + person.getTags().stream().map(Object::toString).collect(Collectors.joining()));
+        }
+        return details.toString();
     }
 
 }

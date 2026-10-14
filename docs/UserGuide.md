@@ -31,7 +31,7 @@ AddressBook Level 3 (AB3) is a **desktop application for managing contacts, opti
 
    * `list` : Lists all contacts.
 
-   * `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01` : Adds a contact named `John Doe` to the Address Book.
+   * `add e/johnd@u.nus.edu` : Adds a member whose other contact details can be filled in later.
 
    * `delete 3` : Deletes the 3rd contact shown in the current list.
 
@@ -80,12 +80,27 @@ Format: `help`
 
 Adds a person to the address book.
 
-Format: `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... `
+Format: `add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...`
+
+Only email is required. Name, phone number, and address are independently optional: provide any details you know
+and omit the other prefixes. For example, `add e/alex@u.nus.edu p/91234567` records an email and phone number.
+An incomplete record is a normal active member and supports the existing edit, search, tag, and delete commands.
+
+Supplied values must still be valid. Names contain alphanumeric characters and spaces; phones contain at least
+three digits; addresses must be nonblank. An explicit blank value such as `n/`, `p/`, or `a/` is rejected,
+including a value containing only spaces. To omit a detail, leave out its prefix entirely. Each contact prefix
+can appear only once. Rejected commands leave the directory and current search results unchanged.
 
 For an unnamed member, the card heading displays their email. Missing phone and address rows display
-`Phone: -` and `Address: -`.
+`Phone: -` and `Address: -`. The add confirmation shows only supplied details, omitting missing contact fields
+and the tags section when there are no tags. For an email-only member:
+
+```text
+New person added: Email: alex@u.nus.edu
+```
 
 These placeholders are display text only. They are not stored as contact values or searched as names or phones.
+After a successful add, all members are displayed in their existing order, with the new member appended.
 
 Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
 lowercase. Only complete email addresses ending with exactly `@u.nus.edu` are accepted. For example,
@@ -117,6 +132,10 @@ Reusing `ALEX.ONE@U.NUS.EDU` for another member is rejected with:
 The check includes members outside the current search results.
 It also includes archived members.
 
+If the existing member has no name, the error is:
+`Email "alex.one@u.nus.edu" is already used by an existing member. No changes were made.`
+Adding the same email again never fills or overwrites the existing record. Use `edit` to add the missing details.
+
 <box type="tip" seamless>
 
 **Tip:** A person can have any number of tags, including zero.
@@ -127,6 +146,7 @@ For example, `t/Publicity t/publicity` adds one tag named `publicity`.
 Tags in existing saved records follow the same rule when loaded; case variants are merged.
 
 Examples:
+* `add e/newmember@u.nus.edu n/New Member t/Publicity`
 * `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01`
 * `add n/Betsy Crowe t/friend e/betsycrowe@u.nus.edu a/Newgate Prison p/1234567 t/criminal`
 
@@ -157,6 +177,7 @@ Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
 A [sample CSV](samples/members.csv) is available to copy or download. Replace its example members with your own data.
 
 * Every member must have all six columns. Name, phone, email, address, and status must be nonempty.
+  Incomplete records are supported through `add` and JSON storage; CSV import still requires complete contact details.
 * Contact fields follow the same validation rules as `add`. Surrounding field whitespace is removed.
   Phone numbers contain digits only and have at least three digits. Emails must end with exactly `@u.nus.edu`.
 * Separate tags with semicolons, for example `Publicity;Exco`. Leave the tags cell empty for a member with no tags.
@@ -199,6 +220,11 @@ Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, ...
 * At least one of the optional fields must be provided.
 * Existing values will be updated to the input values.
+* Missing contact details can be filled in one at a time. Omitting a field preserves its current value or absence.
+  Supplied blank values are rejected; this command cannot clear a name, phone, address, or email.
+* Successful edits display the full directory. Recheck the displayed index before the next edit.
+* The confirmation shows the member's current supplied details, including retained values, and omits missing
+  fields and empty tags. For an email-only member, it reads `Edited person: Email: 2@u.nus.edu`.
 * A provided email must follow the same `@u.nus.edu` rules as `add`. Omitting `e/` preserves the current email.
 * Existing tags are preserved. The `edit` command rejects `t/` arguments, including an empty `t/`.
 * Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
@@ -208,6 +234,10 @@ Examples:
 *  `edit 1 p/91234567 e/johndoe@u.nus.edu` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@u.nus.edu` respectively.
 *  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
 *  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
+
+To complete an email-only member, run `find e/newmember@u.nus.edu`, identify the member's displayed index,
+and use `edit INDEX n/New Member`. Search again or recheck the index before using `edit INDEX p/91234567`
+and `edit INDEX a/Kent Ridge`. Each step saves automatically; you can close and reopen the app between steps.
 
 ### Adding a tag to a member: `tagadd`
 
@@ -296,6 +326,8 @@ Formats:
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
+* A member with no name cannot match a name search, and a member with no phone cannot match a phone search.
+  Use `find e/EMAIL_SUBSTRING` for email-only members. Display placeholders do not match searches.
 
 Examples:
 
@@ -406,7 +438,7 @@ _Details coming soon ..._
 
 Action     | Format, Examples
 -----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-**Add**    | `add n/NAME p/PHONE_NUMBER e/EMAIL a/ADDRESS [t/TAG]... ` <br> e.g., `add n/James Ho p/22224444 e/jamesho@u.nus.edu a/123, Clementi Rd, 1234665 t/friend t/colleague`
+**Add**    | `add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...` <br> e.g., `add e/jamesho@u.nus.edu` or `add n/James Ho p/22224444 e/jamesho@u.nus.edu a/123, Clementi Rd, 1234665 t/President`
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`

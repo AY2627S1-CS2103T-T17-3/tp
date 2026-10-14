@@ -33,6 +33,8 @@ import static seedu.address.logic.parser.CommandParserTestUtil.assertParseSucces
 import static seedu.address.testutil.TypicalPersons.AMY;
 import static seedu.address.testutil.TypicalPersons.BOB;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.address.logic.Messages;
@@ -147,6 +149,45 @@ public class AddCommandParserTest {
     }
 
     @Test
+    public void parse_optionalContactCombinations_success() {
+        List<String> details = List.of("", NAME_DESC_BOB, PHONE_DESC_BOB, ADDRESS_DESC_BOB,
+                NAME_DESC_BOB + PHONE_DESC_BOB, NAME_DESC_BOB + ADDRESS_DESC_BOB,
+                PHONE_DESC_BOB + ADDRESS_DESC_BOB, NAME_DESC_BOB + PHONE_DESC_BOB + ADDRESS_DESC_BOB);
+        List<Person> expectedPersons = List.of(
+                new PersonBuilder(BOB).withoutName().withoutPhone().withoutAddress().build(),
+                new PersonBuilder(BOB).withoutPhone().withoutAddress().build(),
+                new PersonBuilder(BOB).withoutName().withoutAddress().build(),
+                new PersonBuilder(BOB).withoutName().withoutPhone().build(),
+                new PersonBuilder(BOB).withoutAddress().build(),
+                new PersonBuilder(BOB).withoutPhone().build(),
+                new PersonBuilder(BOB).withoutName().build(), BOB);
+        for (int i = 0; i < details.size(); i++) {
+            Person withoutTags = new PersonBuilder(expectedPersons.get(i)).withTags().build();
+            assertParseSuccess(parser, EMAIL_DESC_BOB + details.get(i), new AddCommand(withoutTags));
+            Person withTags = new PersonBuilder(expectedPersons.get(i)).withTags(VALID_TAG_FRIEND).build();
+            assertParseSuccess(parser, details.get(i) + TAG_DESC_FRIEND + EMAIL_DESC_BOB, new AddCommand(withTags));
+        }
+    }
+
+    @Test
+    public void parse_emailOnlyWithInvalidOrRepeatedFields_failure() {
+        assertParseFailure(parser, EMAIL_DESC_BOB + " n/   ", Name.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, EMAIL_DESC_BOB + " p/   ", Phone.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, EMAIL_DESC_BOB + " a/   ", Address.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, EMAIL_DESC_BOB + " t/   ", Tag.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, " e/   ", Email.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, " e/alex@nus.edu", Email.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, EMAIL_DESC_BOB + " n/ n/Bob",
+                Messages.getErrorMessageForDuplicatePrefixes(PREFIX_NAME));
+        assertParseFailure(parser, EMAIL_DESC_BOB + " p/ p/91234567",
+                Messages.getErrorMessageForDuplicatePrefixes(PREFIX_PHONE));
+        assertParseFailure(parser, EMAIL_DESC_BOB + " a/ a/Kent Ridge",
+                Messages.getErrorMessageForDuplicatePrefixes(PREFIX_ADDRESS));
+        assertParseFailure(parser, EMAIL_DESC_BOB + EMAIL_DESC_BOB,
+                Messages.getErrorMessageForDuplicatePrefixes(PREFIX_EMAIL));
+    }
+
+    @Test
     public void parse_compulsoryFieldMissing_failure() {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, AddCommand.MESSAGE_USAGE);
 
@@ -154,17 +195,16 @@ public class AddCommandParserTest {
         assertParseFailure(parser, VALID_NAME_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + ADDRESS_DESC_BOB,
                 expectedMessage);
 
-        // missing phone prefix
-        assertParseFailure(parser, NAME_DESC_BOB + VALID_PHONE_BOB + EMAIL_DESC_BOB + ADDRESS_DESC_BOB,
-                expectedMessage);
+        assertParseFailure(parser, "", expectedMessage);
+        assertParseFailure(parser, NAME_DESC_BOB, expectedMessage);
 
         // missing email prefix
         assertParseFailure(parser, NAME_DESC_BOB + PHONE_DESC_BOB + VALID_EMAIL_BOB + ADDRESS_DESC_BOB,
                 expectedMessage);
 
-        // missing address prefix
+        // unprefixed address text becomes part of the email and fails email validation
         assertParseFailure(parser, NAME_DESC_BOB + PHONE_DESC_BOB + EMAIL_DESC_BOB + VALID_ADDRESS_BOB,
-                expectedMessage);
+                Email.MESSAGE_CONSTRAINTS);
 
         // all prefixes missing
         assertParseFailure(parser, VALID_NAME_BOB + VALID_PHONE_BOB + VALID_EMAIL_BOB + VALID_ADDRESS_BOB,

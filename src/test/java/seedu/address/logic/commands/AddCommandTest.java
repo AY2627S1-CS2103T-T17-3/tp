@@ -38,9 +38,21 @@ public class AddCommandTest {
 
         CommandResult commandResult = new AddCommand(validPerson).execute(modelStub);
 
-        assertEquals(String.format(AddCommand.MESSAGE_SUCCESS, Messages.format(validPerson)),
+        assertEquals(String.format(AddCommand.MESSAGE_SUCCESS, Messages.formatProvidedDetails(validPerson)),
                 commandResult.getFeedbackToUser());
         assertEquals(List.of(validPerson), modelStub.personsAdded);
+    }
+
+    @Test
+    public void execute_partialPersonWithTag_showsOnlyProvidedDetails() throws Exception {
+        ModelStubAcceptingPersonAdded modelStub = new ModelStubAcceptingPersonAdded();
+        Person person = new PersonBuilder().withoutName().withoutAddress().withTags("Publicity").build();
+
+        CommandResult commandResult = new AddCommand(person).execute(modelStub);
+
+        assertEquals(String.format(AddCommand.MESSAGE_SUCCESS, Messages.formatProvidedDetails(person)),
+                commandResult.getFeedbackToUser());
+        assertEquals(List.of(person), modelStub.personsAdded);
     }
 
     @Test
