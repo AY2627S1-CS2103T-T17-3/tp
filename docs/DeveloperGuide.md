@@ -230,8 +230,8 @@ preserved. Tag commands also pass the optional contact details and status throug
 check email conflicts throughout the directory; a repeated add never merges records. Successful add, edit and tag
 commands retain the existing behavior of showing the full directory.
 
-`Messages.format` renders each absent detail as `Not provided`. Add, edit and tag commands use
-`Messages.formatProvidedDetails` to omit absent contact fields and empty tags from their success messages.
+Add, edit, tag and delete commands use `Messages.formatProvidedDetails` to omit absent contact fields and empty 
+tags from their success messages.
 Both formatters label a supplied name as `Name: <person name>` consistently across command confirmations.
 Unnamed duplicate errors identify the existing
 member by email only. `PersonCard` uses the canonical email as its heading when the name is absent and displays

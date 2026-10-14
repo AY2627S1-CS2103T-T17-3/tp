@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
 
 import seedu.address.commons.core.index.Index;
 import seedu.address.logic.Messages;
+import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.testutil.PersonBuilder;
 
 /**
  * Contains integration tests (interaction with the Model) and unit tests for
@@ -32,8 +34,8 @@ public class DeleteCommandTest {
         Person personToDelete = model.getFilteredPersonList().get(INDEX_FIRST_PERSON.getZeroBased());
         DeleteCommand deleteCommand = new DeleteCommand(INDEX_FIRST_PERSON);
 
-        String expectedMessage = String.format(DeleteCommand.MESSAGE_DELETE_PERSON_SUCCESS,
-                Messages.format(personToDelete));
+        String expectedMessage = "Deleted person: Name: Alice Pauline; Phone: 94351253; Email: alice@u.nus.edu; "
+                + "Address: 123, Jurong West Ave 6, #08-111; Tags: [friends]";
 
         ModelManager expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.deletePerson(personToDelete);
@@ -50,6 +52,19 @@ public class DeleteCommandTest {
     }
 
     @Test
+    public void execute_emailOnlyPerson_omitsMissingDetailsAndEmptyTags() {
+        model = new ModelManager(new AddressBook(), new UserPrefs());
+        Person person = new PersonBuilder().withEmail("bobby@u.nus.edu")
+                .withoutName().withoutPhone().withoutAddress().withTags().build();
+        model.addPerson(person);
+
+        DeleteCommand deleteCommand = new DeleteCommand(INDEX_FIRST_PERSON);
+
+        Model expectedModel = new ModelManager(new AddressBook(), new UserPrefs());
+        assertCommandSuccess(deleteCommand, model, "Deleted person: Email: bobby@u.nus.edu", expectedModel);
+    }
+
+    @Test
     public void execute_validIndexFilteredList_success() {
         showPersonAtIndex(model, INDEX_FIRST_PERSON);
 
@@ -57,7 +72,7 @@ public class DeleteCommandTest {
         DeleteCommand deleteCommand = new DeleteCommand(INDEX_FIRST_PERSON);
 
         String expectedMessage = String.format(DeleteCommand.MESSAGE_DELETE_PERSON_SUCCESS,
-                Messages.format(personToDelete));
+                Messages.formatProvidedDetails(personToDelete));
 
         Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
         expectedModel.deletePerson(personToDelete);

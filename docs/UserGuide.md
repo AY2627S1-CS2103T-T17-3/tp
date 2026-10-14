@@ -365,6 +365,9 @@ Examples:
 * `list` followed by `delete 2` deletes the 2nd person in the address book.
 * `find Betsy` followed by `delete 1` deletes the 1st person in the results of the `find` command.
 
+The deletion confirmation shows only the member's supplied details. For an email-only member with no tags,
+it reads `Deleted person: Email: bobby@u.nus.edu`.
+
 ### Clearing all entries: `clear`
 
 Clears all entries from the address book.
