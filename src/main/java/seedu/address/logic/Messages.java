@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import seedu.address.logic.parser.Prefix;
+import seedu.address.model.person.Address;
 import seedu.address.model.person.Person;
 
 /**
@@ -27,6 +28,10 @@ public class Messages {
                 "Multiple values specified for the following single-valued field(s): ";
 
     private static final String NAME_PREFIX = "Name: ";
+    private static final String PHONE_PREFIX = "Phone: ";
+    private static final String EMAIL_PREFIX = "Email: ";
+    private static final String ADDRESS_PREFIX = "Address: ";
+    private static final String TAGS_PREFIX = "Tags: ";
 
     /**
      * Formats a duplicate error identifying the existing person without a displayed index.
@@ -55,13 +60,13 @@ public class Messages {
     public static String format(Person person) {
         final StringBuilder builder = new StringBuilder();
         builder.append(person.getName().map(name -> NAME_PREFIX + name.fullName).orElse(NOT_PROVIDED))
-                .append("; Phone: ")
+                .append("; " + PHONE_PREFIX)
                 .append(person.getPhone().map(phone -> phone.value).orElse(NOT_PROVIDED))
-                .append("; Email: ")
+                .append("; " + EMAIL_PREFIX)
                 .append(person.getEmail())
-                .append("; Address: ")
+                .append("; " + ADDRESS_PREFIX)
                 .append(person.getAddress().map(address -> address.value).orElse(NOT_PROVIDED))
-                .append("; Tags: ");
+                .append("; " + TAGS_PREFIX);
         person.getTags().forEach(builder::append);
         return builder.toString();
     }
@@ -72,11 +77,11 @@ public class Messages {
     public static String formatProvidedDetails(Person person) {
         StringJoiner details = new StringJoiner("; ");
         person.getName().ifPresent(name -> details.add(NAME_PREFIX + name.fullName));
-        person.getPhone().ifPresent(phone -> details.add("Phone: " + phone.value));
-        details.add("Email: " + person.getEmail());
-        person.getAddress().ifPresent(address -> details.add("Address: " + address.value));
+        person.getPhone().ifPresent(phone -> details.add(PHONE_PREFIX + phone.value));
+        details.add(EMAIL_PREFIX + person.getEmail());
+        person.getAddress().ifPresent(address -> details.add(ADDRESS_PREFIX + address.value));
         if (!person.getTags().isEmpty()) {
-            details.add("Tags: " + person.getTags().stream().map(Object::toString).collect(Collectors.joining()));
+            details.add(TAGS_PREFIX + person.getTags().stream().map(Object::toString).collect(Collectors.joining()));
         }
         return details.toString();
     }
