@@ -35,6 +35,10 @@ AddressBook Level 3 (AB3) is a **desktop application for managing contacts, opti
 
    * `delete 3` : Deletes the 3rd contact shown in the current list.
 
+   * `archive 2` : Marks the 2nd displayed member as archived without deleting their record.
+
+   * `activate 2` : Marks the 2nd displayed member as active again.
+
    * `clear` : Deletes all contacts.
 
    * `exit` : Exits the app.
@@ -351,6 +355,30 @@ Examples:
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
 
+### Archiving a member: `archive`
+
+Marks a member as archived while keeping their contact details and tags. The badge changes to `FORMER`.
+
+Format: `archive INDEX`
+
+* `INDEX` is a positive integer from the currently displayed list, including search results.
+* An already archived member cannot be archived again.
+* Archived members remain visible in `list` and can still be found, edited, and activated.
+* A successful command restores the full displayed list and saves the new status automatically.
+
+Example: `find n/Jamie` followed by `archive 1` archives the first displayed result.
+
+### Activating a member: `activate`
+
+Marks an archived member as active again. The badge changes to `ACTIVE`.
+
+Format: `activate INDEX`
+
+The displayed-index rules are the same as for `archive`. An already active member cannot be activated again.
+The member's other details remain unchanged, and the new status is saved automatically.
+
+Example: `list` followed by `activate 2` activates the second displayed member.
+
 ### Deleting a person: `delete`
 
 Deletes the specified person from the address book.
@@ -407,8 +435,9 @@ Missing names, phones, and addresses are saved as JSON `null`, for example:
 
 For these three optional fields, an omitted property also loads as missing. Empty strings, whitespace-only
 strings, and invalid supplied values are rejected. Email must always be present and valid. Older complete
-records continue to load, and a missing status still defaults to active. Loading alone does not rewrite a file;
-the next successful command saves absent optional fields as explicit `null` values.
+records continue to load. An omitted or `null` status defaults to `active`; a supplied status must be exactly
+`active` or `archived`. Loading alone does not rewrite a file; the next successful command saves the resolved status
+and absent optional fields as explicit `null` values.
 
 <box type="warning" seamless>
 
@@ -453,6 +482,8 @@ _Details coming soon ..._
 Action     | Format, Examples
 -----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 **Add**    | `add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...` <br> e.g., `add e/jamesho@u.nus.edu` or `add n/James Ho p/22224444 e/jamesho@u.nus.edu a/123, Clementi Rd, 1234665 t/President`
+**Activate** | `activate INDEX`<br> e.g., `activate 2`
+**Archive** | `archive INDEX`<br> e.g., `archive 2`
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`

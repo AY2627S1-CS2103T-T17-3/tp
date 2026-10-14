@@ -193,8 +193,9 @@ The `Storage` component,
 The JSON root, property names and email string are unchanged. `JsonAdaptedPerson` writes absent name, phone and
 address fields as explicit `null` values. Missing properties and explicit nulls load as empty optionals; supplied
 strings still use the existing validators without trimming. Empty or whitespace-only strings are invalid.
-Valid complete records still load, and missing/null status still defaults to active. No migration or schema-version
-field is introduced. Loading applies the model's email validation
+Valid complete records still load. `JsonAdaptedPerson` writes a lowercase status; `active` and `archived` load
+unchanged, while a missing or null status defaults to active. No migration or schema-version field is introduced.
+Loading applies the model's email validation
 and rejects the entire file on the first invalid record or duplicate canonical email. Record errors use one-based
 positions in the saved `persons` array; a duplicate reports both positions, for example
 `Record 2: email "alex@u.nus.edu" duplicates record 1.` `JsonAddressBookStorage` also rejects malformed
@@ -214,6 +215,15 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 ## **Implementation**
 
 This section describes some noteworthy details on how certain features are implemented.
+
+### Archiving and activating members
+
+`archive INDEX` and `activate INDEX` use the index in `Model.getFilteredPersonList`, so they work after a search.
+Each command rejects an invalid index or a member already in the requested status. `Person.withStatus` creates a
+replacement that retains the member's optional contact details, email and tags. `Model.setPerson` replaces the
+record in the directory; its email identity remains unchanged. A successful command resets the displayed list to
+the complete directory. Archived members remain visible and searchable, so they can be selected for `activate`.
+`LogicManager` saves the new status through the existing JSON storage after each successful command.
 
 ### Recording a member with incomplete contact details
 
@@ -432,8 +442,8 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* * *`  | secretary who remembers only part of a member’s information            | search across relevant contact fields                                        | locate the member without knowing their exact name                                            |
 | `* * *`  | secretary                                                              | combine multiple search conditions                                           | find members matching specific criteria such as committee, role, and membership status       |
 | `* * *`  | secretary                                                              | change selected member information without replacing unrelated details       | make corrections safely                                                                       |
-| `* * *`  | secretary                                                              | remove former members from routine results without deleting their records    | keep the active directory relevant                                                            |
-| `* * *`  | secretary                                                              | restore a former member to active status                                     | return an incorrectly archived member to routine results                                      |
+| `* * *`  | secretary                                                              | mark former members as archived without deleting their records              | retain their contact history                                                                   |
+| `* * *`  | secretary                                                              | activate a member who was archived                                           | correct an incorrect archive or record a returning member                                     |
 | `* * *`  | secretary dealing with members who have similar or duplicate names     | distinguish their records using additional information                       | avoid contacting or modifying the wrong member                                                |
 | `* * *`  | secretary                                                              | receive precise confirmation and error messages                              | know exactly what changed and how to correct a failed operation                               |
 | `* *`    | secretary who has to manage local and international members            | store phone numbers with country codes                                       | contact members who have international phone numbers                                          |
@@ -563,8 +573,8 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 ### Glossary
 
-* **Active member**: A member whose record is included in routine membership results
-* **Archived member record**: A retained former member's record that is excluded from routine membership results without being permanently deleted
+* **Active member**: A member whose record has active membership status
+* **Archived member record**: A retained record with archived status; it remains visible in list and search results
 * **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
 * **Contact details**: A member's name, phone number, email address, and address
 * **Duplicate member record**: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ
@@ -576,7 +586,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * **Membership status**: A classification indicating a member's current relationship with the society, such as active or former
 * **Rejected record**: A record that is not imported because it contains invalid, missing, or conflicting information
 * **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
-* **Tag**: A label attached to a member record to represent information such as a committee, role, or membership status
+* **Tag**: A label attached to a member record to represent information such as a committee or role
 
 --------------------------------------------------------------------------------------------------------------------
 
