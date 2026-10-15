@@ -13,6 +13,7 @@ import static seedu.address.testutil.TypicalPersons.AMY;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.EditCommand;
 import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.commands.ListCommand;
+import seedu.address.logic.commands.RestoreCommand;
 import seedu.address.logic.commands.TagAddCommand;
 import seedu.address.logic.commands.TagRemoveCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
@@ -34,6 +36,7 @@ import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
 import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.JsonUserPrefsStorage;
@@ -152,6 +155,76 @@ public class LogicManagerTest {
         ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_restoreFromSearch_savesStatusAndPreservesOtherDetails() throws Exception {
+        model.addPerson(new PersonBuilder(AMY).build());
+        Person archived = new PersonBuilder().withoutName().withoutPhone().withoutAddress()
+                .withEmail("former@u.nus.edu").withTags("Publicity", "Exco").withStatus(Status.ARCHIVED).build();
+        model.addPerson(archived);
+        logic.execute("find e/former");
+        Person restored = new PersonBuilder(archived).withStatus(Status.ACTIVE).build();
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.setPerson(archived, restored);
+
+        assertCommandSuccess("restore 1", String.format(RestoreCommand.MESSAGE_SUCCESS,
+                Messages.formatProvidedDetails(restored)), expectedModel);
+
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(expectedModel.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_invalidRestore_preservesRecordsFilterAndSavedFile() throws Exception {
+        model.addPerson(new PersonBuilder(AMY).build());
+        model.addPerson(new PersonBuilder().withEmail("former@u.nus.edu").withStatus(Status.ARCHIVED).build());
+        logic.execute("find e/" + AMY.getEmail());
+        Model expectedModel = new ModelManager(model.getAddressBook(), new UserPrefs());
+        expectedModel.updateFilteredPersonList(person -> person.getEmail().equals(AMY.getEmail()));
+        Path savedPath = temporaryFolder.resolve("addressBook.json");
+        String savedBefore = Files.readString(savedPath);
+
+        assertCommandFailure("restore 1", CommandException.class,
+                RestoreCommand.MESSAGE_ALREADY_ACTIVE, expectedModel);
+        assertCommandFailure("restore 2", CommandException.class,
+                MESSAGE_INVALID_PERSON_DISPLAYED_INDEX, expectedModel);
+        assertCommandFailure("restore 1 2", ParseException.class,
+                String.format(Messages.MESSAGE_INVALID_COMMAND_FORMAT, RestoreCommand.MESSAGE_USAGE), expectedModel);
+
+        assertEquals(savedBefore, Files.readString(savedPath));
+    }
+
+    @Test
+    public void execute_restoreSaveFailure_reportsErrorAndPreservesSavedStatus() throws Exception {
+        Path savedPath = temporaryFolder.resolve("addressBook.json");
+        JsonAddressBookStorage readableStorage = new JsonAddressBookStorage(savedPath);
+        for (IOException error : List.of(DUMMY_IO_EXCEPTION, DUMMY_AD_EXCEPTION)) {
+            model = new ModelManager();
+            Person archived = new PersonBuilder(AMY).withStatus(Status.ARCHIVED).build();
+            model.addPerson(archived);
+            readableStorage.saveAddressBook(model.getAddressBook());
+            String savedBefore = Files.readString(savedPath);
+            JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(savedPath) {
+                @Override
+                public void saveAddressBook(ReadOnlyAddressBook addressBook) throws IOException {
+                    throw error;
+                }
+            };
+            logic = new LogicManager(model, new StorageManager(failingStorage,
+                    new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"))));
+            String expectedMessage = String.format(error instanceof AccessDeniedException
+                    ? LogicManager.FILE_OPS_PERMISSION_ERROR_FORMAT : LogicManager.FILE_OPS_ERROR_FORMAT,
+                    error.getMessage());
+
+            assertThrows(CommandException.class, expectedMessage, () -> logic.execute("restore 1"));
+
+            assertEquals(new PersonBuilder(archived).withStatus(Status.ACTIVE).build(),
+                    model.getAddressBook().getPersonList().get(0));
+            assertEquals(savedBefore, Files.readString(savedPath));
+            assertEquals(archived, readableStorage.readAddressBook().orElseThrow().getPersonList().get(0));
+        }
     }
 
     @Test
