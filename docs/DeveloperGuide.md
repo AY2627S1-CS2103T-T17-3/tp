@@ -649,7 +649,7 @@ Keep a separate copy of this source file for comparison.
 1. Test case: `import "member contacts.csv"`<br>
    Expected: Two members are appended after existing members, all members are displayed, and feedback states
    `Imported 2 member(s)`. Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
-   status, displays `FORMER`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
+   status, displays `ARCHIVED`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
 
 1. Test case: `find Existing`, followed by importing the same CSV again.<br>
    Expected: The import is rejected as a duplicate email. Member records, search results, and saved JSON are unchanged.

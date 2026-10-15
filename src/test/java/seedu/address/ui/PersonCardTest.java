@@ -40,7 +40,7 @@ public class PersonCardTest {
                 Status.ARCHIVED, ALICE.getTags());
 
         assertEquals(Status.ACTIVE.badgeName, displayedStatus(ALICE));
-        assertEquals(Status.ARCHIVED.badgeName, displayedStatus(archived));
+        assertEquals("ARCHIVED", displayedStatus(archived));
     }
 
     private String displayedStatus(Person person) throws Exception {

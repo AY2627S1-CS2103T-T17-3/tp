@@ -3,7 +3,7 @@
 
 ![Ui](docs/images/Ui.png)
 
-The screenshot is a UI concept that includes a `FORMER` badge. New members start Active; archived records loaded from saved data or CSV display `FORMER`.
+The screenshot is an early UI concept that shows a `FORMER` badge. The current app displays `ARCHIVED` for archived members. New members start Active.
 
 # NUSocietyDesk
 
@@ -21,7 +21,7 @@ The planned application will combine typed commands with a graphical interface f
 | --- | --- |
 | Add member contacts | Store a member's name, phone number, email address, and address, with optional society-related tags. |
 | Organise members with tags | Attach tags such as `Publicity` and `President` to describe committees and roles. |
-| Display member status | Show an `ACTIVE` or `FORMER` badge beside a member's tags. Archived members remain in list and search results. |
+| Display member status | Show an `ACTIVE` or `ARCHIVED` badge beside a member's tags. Archived members remain in list and search results. |
 | Archive and activate members | Change a member's status by their displayed index without deleting contact details. |
 | Find members | Search by a partial name, phone number, email address, address, or tag, using one field at a time. |
 | List all members | Display the complete member directory and restore the full list after a search. |
@@ -72,7 +72,7 @@ archive 2
 activate 2
 ```
 
-Both commands use the member's index in the currently displayed list. Archiving retains the record and shows a `FORMER` badge; activating it shows `ACTIVE` again. Archived members remain visible in the directory.
+Both commands use the member's index in the currently displayed list. Archiving retains the record and shows an `ARCHIVED` badge; activating it shows `ACTIVE` again. Archived members remain visible in the directory.
 
 ### Delete a member
 
