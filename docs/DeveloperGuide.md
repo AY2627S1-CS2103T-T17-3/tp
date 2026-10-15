@@ -170,6 +170,19 @@ record unchanged. Removing the final tag is allowed. After success, both command
 persons, matching `EditCommand`. `LogicManager` saves the updated address book through the existing storage flow;
 no storage schema or UI changes are required.
 
+`RestoreCommandParser` accepts a single displayed index using `ParserUtil.parseIndex`. `RestoreCommand`
+resolves that index through `Model.getFilteredPersonList()` and rejects invalid indices and already-active
+members before mutation. It constructs a replacement `Person` with `Status.ACTIVE`, preserving all optional
+contact details, email and tags, then calls `Model.setPerson` and resets the filter to show all persons.
+The existing person card displays the updated `ACTIVE` badge, and `LogicManager` persists the status through
+the existing JSON storage flow. No schema change is needed. As with other mutations, a save failure produces
+an error but leaves the updated member in memory; the user must retry saving before exit.
+
+Restore tests cover filtered indices, duplicate names, absent contact details, unchanged unrelated records,
+invalid input, already-active members, save/reload and storage failures. Archived members are currently
+accessible through `list` and `find`; future active-only filtering must retain a way to display archived
+members for restoration.
+
 
 <box type="info" seamless>
 
@@ -702,6 +715,21 @@ These GUI checks are documented for manual execution; automated tests exercise t
       Expected: Similar to previous.
 
 1. _{ more test cases … }_
+
+### Restoring a former member
+
+1. In a disposable test directory, import `docs/samples/members.csv` using its absolute path.
+   Run `find e/jamie@u.nus.edu` and confirm Jamie Lee has a `FORMER` badge.
+1. Run `restore 1`.<br>
+   Expected: The confirmation identifies Jamie and states that the member was restored to active status.
+   All members are displayed, Jamie's badge is `ACTIVE`, and contact details and tags are unchanged.
+1. Restart the application and find Jamie by email again.<br>
+   Expected: Jamie still has an `ACTIVE` badge and the same contact details.
+1. Run `restore 1` again while Jamie is the only result.<br>
+   Expected: `Member is already active. No changes were made.` The filtered list stays unchanged.
+1. While Jamie is the only result, try `restore`, `restore 0`, `restore -1`, `restore abc`,
+   `restore 1 2`, `restore 1 t/Exco`, and `restore 2`.<br>
+   Expected: Each command reports an appropriate format or index error without changing records or the filter.
 
 ### Tag identity and editing
 

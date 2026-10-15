@@ -282,6 +282,26 @@ Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [publicity]
 Tag removed: [publicity]; Email: 2@u.nus.edu
 ```
 
+### Restoring a former member: `restore`
+
+Changes a former member's status from archived to active, preserving all contact details and tags.
+
+Format: `restore INDEX`
+
+* Run `list` or `find` to locate the former member. Both currently include archived members, shown with a `FORMER` badge.
+* Use exactly one positive integer index from the displayed list. For example, `restore 2` restores the second
+  displayed member, even when the list is filtered.
+* After success, the badge changes to `ACTIVE` and all members are displayed. Check the displayed indices before
+  your next command.
+* The confirmation reads `Restored member to active status: <member details>`, showing supplied details and tags.
+* Restoring an active member reports `Member is already active. No changes were made.`
+* Missing, invalid, multiple, or out-of-range indices are rejected. Rejected commands leave records and the
+  current search results unchanged.
+
+Changes are saved automatically. If saving fails, an error is shown; the member may be active in the current
+session while still archived on disk. Resolve the saving problem and run `list` to retry saving before closing
+the application. A deleted member cannot be restored with this command.
+
 ### Locating members by name, phone or email: `find`
 
 Finds members by name keywords, a phone number substring or an email address substring. Matching members are displayed
@@ -461,4 +481,5 @@ Action     | Format, Examples
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`
 **Remove tag** | `tagremove INDEX t/TAG`<br> e.g., `tagremove 1 t/publicity`
+**Restore** | `restore INDEX`<br> e.g., `restore 2`
 **Help**   | `help`
