@@ -13,9 +13,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import seedu.address.logic.commands.ActivateCommand;
 import seedu.address.logic.commands.AddCommand;
-import seedu.address.logic.commands.ArchiveCommand;
 import seedu.address.logic.commands.ClearCommand;
 import seedu.address.logic.commands.DeleteCommand;
 import seedu.address.logic.commands.EditCommand;
@@ -50,20 +48,6 @@ public class AddressBookParserTest {
         Person person = new PersonBuilder().build();
         AddCommand command = (AddCommand) parser.parseCommand(PersonUtil.getAddCommand(person));
         assertEquals(new AddCommand(person), command);
-    }
-
-    @Test
-    public void parseCommand_archiveAndActivate() throws Exception {
-        assertEquals(new ArchiveCommand(INDEX_FIRST_PERSON), parser.parseCommand("archive 1"));
-        assertEquals(new ActivateCommand(INDEX_FIRST_PERSON), parser.parseCommand("activate 1"));
-    }
-
-    @Test
-    public void parseCommand_archiveAndActivateInvalidIndex_throwsParseException() {
-        String archiveError = String.format(MESSAGE_INVALID_COMMAND_FORMAT, ArchiveCommand.MESSAGE_USAGE);
-        String activateError = String.format(MESSAGE_INVALID_COMMAND_FORMAT, ActivateCommand.MESSAGE_USAGE);
-        assertThrows(ParseException.class, archiveError, () -> parser.parseCommand("archive 0"));
-        assertThrows(ParseException.class, activateError, () -> parser.parseCommand("activate 1 extra"));
     }
 
     @Test

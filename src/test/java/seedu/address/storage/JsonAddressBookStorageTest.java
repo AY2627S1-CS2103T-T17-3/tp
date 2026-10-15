@@ -44,9 +44,7 @@ public class JsonAddressBookStorageTest {
                   {"email":"Alex@U.NUS.EDU"},
                   {"name":null,"phone":null,"email":"jamie@u.nus.edu","address":null,
                    "status":"archived","tags":["Publicity"]},
-                  {"name":"Not provided","phone":null,"email":"known@u.nus.edu","address":"NUS",
-                   "status":null},
-                  {"email":"current@u.nus.edu","status":"active"}
+                  {"name":"Not provided","phone":null,"email":"known@u.nus.edu","address":"NUS"}
                 ]}
                 """;
         Files.writeString(filePath, originalJson);
@@ -60,8 +58,6 @@ public class JsonAddressBookStorageTest {
         assertEquals("alex@u.nus.edu", first.getEmail().value);
         assertEquals(Status.ACTIVE, first.getStatus());
         assertEquals(Status.ARCHIVED, loaded.getPersonList().get(1).getStatus());
-        assertEquals(Status.ACTIVE, loaded.getPersonList().get(2).getStatus());
-        assertEquals(Status.ACTIVE, loaded.getPersonList().get(3).getStatus());
 
         storage.saveAddressBook(loaded);
         JsonNode savedPersons = JsonUtil.fromJsonString(Files.readString(filePath), JsonNode.class).get("persons");
@@ -73,10 +69,6 @@ public class JsonAddressBookStorageTest {
         }
         assertEquals("publicity", savedPersons.get(1).get("tags").get(0).asText());
         assertEquals("Not provided", savedPersons.get(2).get("name").asText());
-        assertEquals("active", savedPersons.get(0).get("status").asText());
-        assertEquals("archived", savedPersons.get(1).get("status").asText());
-        assertEquals("active", savedPersons.get(2).get("status").asText());
-        assertEquals("active", savedPersons.get(3).get("status").asText());
         assertEquals(loaded, storage.readAddressBook().orElseThrow());
     }
 

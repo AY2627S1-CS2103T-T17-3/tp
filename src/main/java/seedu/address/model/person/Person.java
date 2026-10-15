@@ -77,13 +77,6 @@ public class Person {
     }
 
     /**
-     * Returns a person with the given status and all other details unchanged.
-     */
-    public Person withStatus(Status status) {
-        return new Person(name, phone, email, address, status, tags);
-    }
-
-    /**
      * Returns an immutable tag set, which throws {@code UnsupportedOperationException}
      * if modification is attempted.
      */

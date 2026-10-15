@@ -8,7 +8,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import seedu.address.model.person.Person;
-import seedu.address.model.person.Status;
 
 /**
  * A UI component that displays information of a {@code Person}.
@@ -58,9 +57,6 @@ public class PersonCard extends UiPart<Region> {
                 .orElse("Address: -"));
         email.setText(person.getEmail().value);
         status.setText(person.getStatus().badgeName);
-        if (person.getStatus() == Status.ARCHIVED) {
-            status.getStyleClass().add("archived");
-        }
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))
                 .forEach(tag -> tags.getChildren().add(new Label(tag.tagName)));
