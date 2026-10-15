@@ -282,9 +282,9 @@ Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [publicity]
 Tag removed: [publicity]; Email: 2@u.nus.edu
 ```
 
-### Locating members by name, phone or email: `find`
+### Locating members by combined conditions: `find`
 
-Finds members by name keywords, a phone number substring or an email address substring. Matching members are displayed
+Finds members matching all supplied contact, tag and status conditions. Matching members are displayed
 in a list with index numbers, together with the number of matches.
 
 Formats:
@@ -292,10 +292,15 @@ Formats:
 * `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
 * `find p/PHONE_SUBSTRING` for phone searches.
 * `find e/EMAIL_SUBSTRING` for email searches.
+* `find t/TAG [t/MORE_TAGS]...` for exact tag searches.
+* `find s/STATUS` for membership status searches.
+* `find [n/KEYWORD [MORE_KEYWORDS]...] [p/PHONE_SUBSTRING] [e/EMAIL_SUBSTRING] [t/TAG]... [s/STATUS]`
+  for combined searches; supply at least one condition.
 
 **Name searches**
 
-* The `n/` prefix is optional: `find Alice Bob` and `find n/Alice Bob` return the same results.
+* The `n/` prefix is optional for name-only searches: `find Alice Bob` and `find n/Alice Bob` return the same results.
+  When combining names with other fields, include `n/`.
 * Name matching is case-insensitive; for example, `hans` matches `Hans`.
 * Keyword order does not matter; for example, `Hans Bo` matches `Bo Hans`.
 * Unprefixed searches and `n/` searches consider only names.
@@ -328,12 +333,29 @@ Formats:
   while `find e/alex@u.nus.edu` searches emails.
 * `find e/@u.nus.edu` returns every member because all stored email addresses use that domain.
 
+**Tag and status searches**
+
+* Tags match exactly, ignoring case. `t/President` matches `president`, but not `vicepresident` or `pres`.
+* Repeat `t/` to require every specified tag: `find t/publicity t/president` finds members with both tags.
+  Repeating the same tag, including a case variant, has no additional effect.
+* Tags must be single alphanumeric words, following the same rules as adding tags.
+* `s/active` and `s/archived` match the stored membership status, ignoring case. `s/ARCHIVED` is also accepted.
+  Use `archived` for members whose badge reads `FORMER`; `s/former` is rejected.
+* Status is independent of tags. A tag named `active` or `archived` does not determine membership status.
+* Omitting `s/` includes both active and archived members.
+
 **Search rules**
 
-* Search one field per command. Combining fields, such as `find n/Alice p/9123` or `find e/alice n/Alice`, is rejected.
-* Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567` and
-  `find e/alice e/bob` are rejected.
-* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/` and `find e/` are rejected.
+* All supplied conditions must match (`AND`). For example, `find n/Alice Bob t/publicity s/active` finds
+  active publicity members whose name contains either Alice or Bob: `(Alice OR Bob) AND publicity AND active`.
+* Prefix order does not matter. `find e/alice s/active` and `find s/active e/alice` return the same results.
+* Use `n/`, `p/`, `e/` and `s/` only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
+  `find e/alice e/bob` and `find s/active s/archived` are rejected. Only `t/` is repeatable.
+* Provide a nonempty value for every supplied condition. Commands such as `find`, `find n/`, `find p/`,
+  `find e/`, `find t/` and `find t/publicity s/` are rejected.
+* Search prefixes are lowercase. Unsupported field prefixes such as `a/`, `x/`, `N/` and `status/` are rejected.
+  Separate conditions with whitespace; extra surrounding spaces are allowed.
+* Invalid searches show an error and preserve member records and the previous search results.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
@@ -342,6 +364,9 @@ Formats:
 
 Examples:
 
+* `find t/publicity t/president s/active` finds active members with both society tags.
+* `find n/Alice p/9123 e/@u.nus.edu` finds members matching all three contact conditions.
+* `find s/archived` lists former members.
 * `find John` returns members named `john` and `John Doe`.
 * `find n/alex david` returns the same members as `find alex david`.
 * `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
@@ -456,7 +481,7 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
-**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING` or `find e/EMAIL_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`
+**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...` or `find [n/KEYWORDS] [p/SUBSTRING] [e/SUBSTRING] [t/TAG]... [s/STATUS]` (at least one condition)<br> e.g., `find James Jake`, `find t/publicity t/president s/active`
 **List**   | `list`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`

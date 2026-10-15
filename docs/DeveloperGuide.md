@@ -252,12 +252,21 @@ The import regression checks that CSV requirements remain strict and that import
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
 
-### Finding members by contact details
+### Finding members by combined conditions
 
-`FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/` and `e/` search fields.
-It normalizes whitespace before tokenizing prefixes, so spaces, tabs and line breaks separate fields consistently.
-Duplicate prefixes, multiple selected fields, text before a selected field and empty search values are rejected.
-Phone and email searches each accept one substring; multiple whitespace-separated fragments are rejected.
+`FindCommandParser` accepts unprefixed name keywords or any combination of `n/`, `p/`, `e/`, `t/` and `s/`.
+It normalizes whitespace before tokenizing prefixes. Duplicate single-valued prefixes, unsupported field prefixes,
+text before a selected field and empty search values are rejected. Only `t/` can repeat; `ParserUtil.parseTags`
+validates and deduplicates the tags using canonical tag identity. Phone and email conditions each accept one
+substring; multiple whitespace-separated fragments are rejected. Status searches accept `active` or `archived`
+case-insensitively using `Locale.ROOT`, without changing the stricter stored/CSV status validation.
+
+The parser constructs conditions in a fixed field order. A single condition uses its existing predicate directly;
+multiple conditions use `AllConditionsPredicate`, which stores an immutable list and requires every condition to
+match. Its value-based equality compares the component predicates. Prefix order therefore does not affect command
+equality. Name keywords retain OR matching within their condition. `HasAllTagsPredicate` requires every exact tag;
+`StatusMatchesPredicate` compares the stored status independently of tags. Absent optional fields fail only their
+corresponding condition. All validation completes before the command can replace the displayed filter.
 
 `FindCommand` accepts a `Predicate<Person>` and replaces the model's current filter using
 `Model.updateFilteredPersonList`. Every search checks the complete directory. The existing results view displays
@@ -503,7 +512,8 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to find members using name keywords, a single phone number substring or a single email substring.
+1. Secretary requests to find members using name keywords, phone/email substrings, tags, status, or a combination.
+   Conditions are combined with AND; name keywords within one condition are combined with OR.
 2. NUSocietyDesk displays matching members with their contact details and the number of matches.
 3. Secretary inspects the displayed details to identify the intended member.
 
@@ -517,7 +527,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-* 1b. Secretary selects more than one search field or repeats a field selection.
+* 1b. Secretary repeats a single-valued field selection or supplies an unsupported field prefix.
 
   * 1b1. NUSocietyDesk shows an error message explaining the invalid field selection.
 
@@ -526,6 +536,12 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * 1c. Secretary provides multiple phone number or email substrings in one search.
 
   * 1c1. NUSocietyDesk shows an error message explaining that the selected search field accepts only one substring.
+
+    Use case ends.
+
+* 1d. Secretary provides an invalid tag or status.
+
+  * 1d1. NUSocietyDesk explains the valid values and preserves the previous results and member records.
 
     Use case ends.
 
@@ -702,6 +718,33 @@ These GUI checks are documented for manual execution; automated tests exercise t
       Expected: Similar to previous.
 
 1. _{ more test cases … }_
+
+### Combined search conditions
+
+Use a disposable directory. Import a CSV with the following contents:
+
+```csv
+name,phone,email,address,tags,status
+Alice Tan,91234567,alice@u.nus.edu,Kent Ridge,Publicity;President,active
+Bob Lee,91234567,bob@u.nus.edu,Clementi,Publicity;President,active
+Alice Tan,91234567,former@u.nus.edu,Kent Ridge,Publicity;President,archived
+Alice Tan,91234567,vice@u.nus.edu,Kent Ridge,Publicity;VicePresident,active
+```
+
+1. Run `find n/Alice Bob p/9123 t/publicity t/president s/ACTIVE`.<br>
+   Expected: Exactly Alice (`alice@u.nus.edu`) and Bob, with a count of two. Name keywords use OR;
+   the other conditions all apply. The former member and vice president are excluded.
+1. Run `find s/active t/PRESIDENT t/publicity t/Publicity n/Alice Bob p/9123`.<br>
+   Expected: The same two results, despite reordered prefixes and the duplicate case-variant tag.
+1. Run `find t/pres`, followed by `find t/publicity s/archived`.<br>
+   Expected: Zero results for the partial tag, then only `former@u.nus.edu` with a `FORMER` badge.
+   The second search checks the whole directory even though the previous search was empty.
+1. Try `find t/publicity s/former`, `find n/Alice x/test`, `find Alice t/publicity`,
+   `find s/active s/archived`, and `find t/publicity t/`.<br>
+   Expected: Each query reports an error and preserves the displayed former member and the records.
+1. Add `add e/unnamed@u.nus.edu t/publicity`. Run `find e/unnamed t/publicity s/active`, then
+   `find e/unnamed t/publicity n/Alice`.<br>
+   Expected: The first query finds the unnamed member; the second finds nobody because a name is required.
 
 ### Tag identity and editing
 
