@@ -91,13 +91,13 @@ public class AddressBookParserTest {
     @Test
     public void parseCommand_tagAdd() throws Exception {
         assertEquals(new TagAddCommand(INDEX_FIRST_PERSON, new Tag("Volunteer")),
-                parser.parseCommand("tagadd 1 t/Volunteer"));
+                parser.parseCommand("tag 1 t/Volunteer"));
     }
 
     @Test
     public void parseCommand_tagRemove() throws Exception {
         assertEquals(new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("Publicity")),
-                parser.parseCommand("tagremove 1 t/publicity"));
+                parser.parseCommand("untag 1 t/publicity"));
     }
 
     @Test

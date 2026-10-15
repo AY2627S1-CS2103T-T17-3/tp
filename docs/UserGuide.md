@@ -245,11 +245,11 @@ To complete an email-only member, run `find e/newmember@u.nus.edu`, identify the
 and use `edit INDEX n/New Member`. Search again or recheck the index before using `edit INDEX p/91234567`
 and `edit INDEX a/Kent Ridge`. Each step saves automatically; you can close and reopen the app between steps.
 
-### Adding a tag to a member: `tagadd`
+### Adding a tag to a member: `tag`
 
 Adds one tag to one member, preserving their other tags and contact details.
 
-Format: `tagadd INDEX t/TAG`
+Format: `tag INDEX t/TAG`
 
 * `INDEX` must be a positive integer referring to a member in the currently displayed list, including search results.
 * Exactly one index and one `t/` argument are required. Empty tags, multiple tags, and extra arguments are rejected.
@@ -257,22 +257,22 @@ Format: `tagadd INDEX t/TAG`
 * Adding a tag the member already has succeeds with the normal completion message and leaves their tags unchanged.
 * After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
 
-Example: `tagadd 1 t/Volunteer` adds `volunteer` to the first displayed member. If they already have `publicity`
+Example: `tag 1 t/Volunteer` adds `volunteer` to the first displayed member. If they already have `publicity`
 and `exco`, they will have all three tags afterward.
 
-### Removing a tag from a member: `tagremove`
+### Removing a tag from a member: `untag`
 
 Removes one matching tag from one member, preserving their other tags and contact details.
 
-Format: `tagremove INDEX t/TAG`
+Format: `untag INDEX t/TAG`
 
-* The same index, single-tag, and tag-name rules as `tagadd` apply.
+* The same index, single-tag, and tag-name rules as `tag` apply.
 * Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
 * Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
 * Removing the last tag is allowed and leaves the member with no tags.
 * After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
 
-Example: `tagremove 1 t/publicity` removes only `publicity` from the first displayed member. If their tags were
+Example: `untag 1 t/publicity` removes only `publicity` from the first displayed member. If their tags were
 `publicity`, `exco`, and `volunteer`, they will retain `exco` and `volunteer`.
 
 Both commands save changes automatically. An invalid command leaves member records and the current filter unchanged.
@@ -490,6 +490,6 @@ Action     | Format, Examples
 **Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING` or `find e/EMAIL_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`
 **List**   | `list`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
-**Add tag** | `tagadd INDEX t/TAG`<br> e.g., `tagadd 1 t/Volunteer`
-**Remove tag** | `tagremove INDEX t/TAG`<br> e.g., `tagremove 1 t/publicity`
+**Add tag** | `tag INDEX t/TAG`<br> e.g., `tag 1 t/Volunteer`
+**Remove tag** | `untag INDEX t/TAG`<br> e.g., `untag 1 t/publicity`
 **Help**   | `help`

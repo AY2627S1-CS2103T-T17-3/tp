@@ -22,7 +22,7 @@ import seedu.address.model.tag.Tag;
  */
 public class TagRemoveCommand extends Command {
 
-    public static final String COMMAND_WORD = "tagremove";
+    public static final String COMMAND_WORD = "untag";
     public static final String MESSAGE_USAGE = COMMAND_WORD
             + ": Removes one tag from the person identified by the index number in the displayed person list.\n"
             + "Parameters: INDEX (must be a positive integer) " + PREFIX_TAG + "TAG\n"

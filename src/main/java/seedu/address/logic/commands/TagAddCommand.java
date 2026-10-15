@@ -22,7 +22,7 @@ import seedu.address.model.tag.Tag;
  */
 public class TagAddCommand extends Command {
 
-    public static final String COMMAND_WORD = "tagadd";
+    public static final String COMMAND_WORD = "tag";
     public static final String MESSAGE_USAGE = COMMAND_WORD
             + ": Adds one tag to the person identified by the index number in the displayed person list.\n"
             + "Parameters: INDEX (must be a positive integer) " + PREFIX_TAG + "TAG\n"

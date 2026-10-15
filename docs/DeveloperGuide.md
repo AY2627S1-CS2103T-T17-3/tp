@@ -726,38 +726,38 @@ These GUI checks are documented for manual execution; automated tests exercise t
       Expected: The phone number changes and both tags remain.
 
    1. Test cases: `edit INDEX t/Publicity`, `edit INDEX t/`, and `edit INDEX a/New Address t/Publicity`<br>
-      Expected: Each command is rejected with guidance to use `tagadd` or `tagremove`. All person details remain
+      Expected: Each command is rejected with guidance to use `tag` or `untag`. All person details remain
       unchanged.
 
 1. Add and remove individual tags using Tag Test from the previous steps.
 
-   1. Test case: `tagadd INDEX t/Volunteer`<br>
+   1. Test case: `tag INDEX t/Volunteer`<br>
       Expected: The member has `exco`, `publicity`, and `volunteer`; contact details and other members remain unchanged.
 
-   1. Test case: `tagadd INDEX t/VOLUNTEER`<br>
+   1. Test case: `tag INDEX t/VOLUNTEER`<br>
       Expected: Success with the same three tags and no duplicate.
 
-   1. Test case: `tagremove INDEX t/PUBLICITY`<br>
+   1. Test case: `untag INDEX t/PUBLICITY`<br>
       Expected: Only `exco` and `volunteer` remain.
 
-   1. Repeat `tagremove INDEX t/publicity`.<br>
+   1. Repeat `untag INDEX t/publicity`.<br>
       Expected: Success with the same two tags.
 
    1. Close and reopen the app.<br>
       Expected: The member still has only `exco` and `volunteer`.
 
-   1. Remove the remaining tags with `tagremove INDEX t/Exco` and `tagremove INDEX t/Volunteer`.<br>
+   1. Remove the remaining tags with `untag INDEX t/Exco` and `untag INDEX t/Volunteer`.<br>
       Expected: The member has no tags and retains all contact details.
 
 1. Check displayed indices and invalid input.
 
-   1. Run `find Tag`, note Tag Test's displayed index, and run `tagadd INDEX t/Volunteer` using that index.<br>
+   1. Run `find Tag`, note Tag Test's displayed index, and run `tag INDEX t/Volunteer` using that index.<br>
       Expected: Only Tag Test gains the tag, and all members are displayed afterward.
 
-   1. Run `find Tag` again and run `tagremove INDEX t/Volunteer` using the new displayed index.<br>
+   1. Run `find Tag` again and run `untag INDEX t/Volunteer` using the new displayed index.<br>
       Expected: Only Tag Test loses the tag, and all members are displayed afterward.
 
-   1. For each of `tagadd` and `tagremove`, try arguments `0 t/Volunteer`, `1 2 t/Volunteer`, `1`, `1 t/`,
+   1. For each of `tag` and `untag`, try arguments `0 t/Volunteer`, `1 2 t/Volunteer`, `1`, `1 t/`,
       `1 t/Publicity Team`, `1 t/Volunteer t/Exco`, and an index larger than the displayed list.<br>
       Expected: Each command is rejected; records and the current filter remain unchanged.
 

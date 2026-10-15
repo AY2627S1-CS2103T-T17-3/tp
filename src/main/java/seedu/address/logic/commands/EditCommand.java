@@ -45,7 +45,7 @@ public class EditCommand extends Command {
     public static final String MESSAGE_EDIT_PERSON_SUCCESS = "Edited person: %1$s";
     public static final String MESSAGE_NOT_EDITED = "At least one field to edit must be provided.";
     public static final String MESSAGE_TAG_EDIT_NOT_SUPPORTED =
-            "Tags cannot be edited with edit. Use tagadd or tagremove instead.";
+            "Tags cannot be edited with edit. Use tag or untag instead.";
 
     private final Index index;
     private final EditPersonDescriptor editPersonDescriptor;

@@ -146,8 +146,8 @@ public class LogicManagerTest {
         String expectedMessage = String.format(TagAddCommand.MESSAGE_SUCCESS,
                 new Tag("Volunteer"), Messages.formatProvidedDetails(expectedPerson));
 
-        assertCommandSuccess("tagadd 1 t/Volunteer", expectedMessage, expectedModel);
-        assertCommandSuccess("tagadd 1 t/VOLUNTEER", expectedMessage, expectedModel);
+        assertCommandSuccess("tag 1 t/Volunteer", expectedMessage, expectedModel);
+        assertCommandSuccess("tag 1 t/VOLUNTEER", expectedMessage, expectedModel);
         ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
@@ -163,8 +163,8 @@ public class LogicManagerTest {
         String expectedMessage = String.format(TagRemoveCommand.MESSAGE_SUCCESS,
                 new Tag("publicity"), Messages.formatProvidedDetails(expectedPerson));
 
-        assertCommandSuccess("tagremove 1 t/publicity", expectedMessage, expectedModel);
-        assertCommandSuccess("tagremove 1 t/PUBLICITY", expectedMessage, expectedModel);
+        assertCommandSuccess("untag 1 t/publicity", expectedMessage, expectedModel);
+        assertCommandSuccess("untag 1 t/PUBLICITY", expectedMessage, expectedModel);
         ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
@@ -174,8 +174,8 @@ public class LogicManagerTest {
     public void execute_multipleTags_throwsParseExceptionAndPreservesPerson() {
         model.addPerson(new PersonBuilder(AMY).withTags("Publicity", "Exco").build());
         String expectedMessage = Messages.getErrorMessageForDuplicatePrefixes(PREFIX_TAG);
-        assertParseException("tagadd 1 t/Volunteer t/Member", expectedMessage);
-        assertParseException("tagremove 1 t/Publicity t/Exco", expectedMessage);
+        assertParseException("tag 1 t/Volunteer t/Member", expectedMessage);
+        assertParseException("untag 1 t/Publicity t/Exco", expectedMessage);
     }
 
     @Test
