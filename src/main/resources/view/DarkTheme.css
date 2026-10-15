@@ -358,3 +358,8 @@
     -fx-background-radius: 2;
     -fx-font-size: 11;
 }
+
+.member_status.archived {
+    -fx-text-fill: #1d1d1d;
+    -fx-background-color: #f4c542;
+}

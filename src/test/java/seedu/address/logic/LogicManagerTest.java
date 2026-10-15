@@ -34,6 +34,7 @@ import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
 import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.JsonUserPrefsStorage;
@@ -75,6 +76,21 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_archiveAndActivate_persistsStatus() throws Exception {
+        Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
+        model.addPerson(person);
+        JsonAddressBookStorage savedData = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"));
+
+        logic.execute("archive 1");
+        assertEquals(Status.ARCHIVED, model.getFilteredPersonList().get(0).getStatus());
+        assertEquals(Status.ARCHIVED, savedData.readAddressBook().orElseThrow().getPersonList().get(0).getStatus());
+
+        logic.execute("activate 1");
+        assertEquals(Status.ACTIVE, model.getFilteredPersonList().get(0).getStatus());
+        assertEquals(Status.ACTIVE, savedData.readAddressBook().orElseThrow().getPersonList().get(0).getStatus());
     }
 
     @Test
