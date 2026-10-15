@@ -4,18 +4,26 @@ import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_STATUS;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseFailure;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseSuccess;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
 import seedu.address.logic.Messages;
 import seedu.address.logic.commands.FindCommand;
+import seedu.address.model.person.AllConditionsPredicate;
 import seedu.address.model.person.EmailContainsSubstringPredicate;
+import seedu.address.model.person.HasAllTagsPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
+import seedu.address.model.person.Status;
+import seedu.address.model.person.StatusMatchesPredicate;
+import seedu.address.model.tag.Tag;
 
 public class FindCommandParserTest {
 
@@ -115,13 +123,12 @@ public class FindCommandParserTest {
     }
 
     @Test
-    public void parse_nameAndPhonePrefixes_throwsParseException() {
-        String expectedMessage = "Specify only one search field per find command.";
-        assertParseFailure(parser, "n/Alice p/9123", expectedMessage);
-        assertParseFailure(parser, "p/9123 n/Alice", expectedMessage);
-        assertParseFailure(parser, "n/Alice\tp/9123", expectedMessage);
-        assertParseFailure(parser, "n/ p/9123", expectedMessage);
-        assertParseFailure(parser, "n/Alice p/", expectedMessage);
+    public void parse_nameAndPhonePrefixes_returnsCombinedCommand() {
+        FindCommand expected = new FindCommand(new AllConditionsPredicate(List.of(
+                new NameContainsKeywordsPredicate(List.of("Alice")), new PhoneContainsSubstringPredicate("9123"))));
+        assertParseSuccess(parser, "n/Alice p/9123", expected);
+        assertParseSuccess(parser, "p/9123 n/Alice", expected);
+        assertParseSuccess(parser, "n/Alice\tp/9123", expected);
     }
 
     @Test
@@ -179,12 +186,64 @@ public class FindCommandParserTest {
     }
 
     @Test
-    public void parse_emailAndOtherPrefixes_throwsParseException() {
-        String expectedMessage = "Specify only one search field per find command.";
-        for (String args : List.of("e/alice n/Alice", "n/Alice e/alice", "e/alice p/9123", "p/9123 e/alice",
-                "n/Alice p/9123 e/alice", "e/alice\tn/Alice", "p/9123\ne/alice", "e/ n/Alice", "e/alice n/",
-                "e/ p/9123", "e/alice p/")) {
-            assertParseFailure(parser, args, expectedMessage);
+    public void parse_allFields_returnsCombinedCommandInCanonicalOrder() {
+        FindCommand expected = new FindCommand(new AllConditionsPredicate(List.of(
+                new NameContainsKeywordsPredicate(List.of("Alice", "Bob")),
+                new PhoneContainsSubstringPredicate("9123"), new EmailContainsSubstringPredicate("alice"),
+                new HasAllTagsPredicate(Set.of(new Tag("publicity"), new Tag("president"))),
+                new StatusMatchesPredicate(Status.ACTIVE))));
+        assertParseSuccess(parser, "n/Alice Bob p/9123 e/alice t/Publicity t/President s/active", expected);
+        assertParseSuccess(parser, "s/ACTIVE t/president e/ALICE p/9123 t/publicity n/Alice Bob", expected);
+        assertParseSuccess(parser, "t/Publicity\tt/PUBLICITY\ns/active t/president n/Alice Bob e/alice p/9123",
+                expected);
+    }
+
+    @Test
+    public void parse_tagAndStatusAlone_returnsFindCommand() {
+        assertParseSuccess(parser, "t/Publicity t/PUBLICITY",
+                new FindCommand(new HasAllTagsPredicate(Set.of(new Tag("publicity")))));
+        assertParseSuccess(parser, "s/ArChIvEd", new FindCommand(new StatusMatchesPredicate(Status.ARCHIVED)));
+        assertParseSuccess(parser, "s/active", new FindCommand(new StatusMatchesPredicate(Status.ACTIVE)));
+    }
+
+    @Test
+    public void parse_invalidCombinedConditions_throwsParseException() {
+        String formatError = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        for (String args : List.of("n/ p/9123", "n/Alice p/", "e/ n/Alice", "e/alice n/", "e/ p/9123",
+                "e/alice p/", "t/", "s/", "t/publicity t/", "t/ t/publicity", "t/publicity s/",
+                "n/Alice t/ s/active", "Alice t/publicity")) {
+            assertParseFailure(parser, args, formatError);
+        }
+        for (String args : List.of("s/former", "s/unknown", "s/active archived", "t/publicity s/act")) {
+            assertParseFailure(parser, args, FindCommand.MESSAGE_INVALID_STATUS);
+        }
+        assertParseFailure(parser, "s/active s/archived", Messages.getErrorMessageForDuplicatePrefixes(PREFIX_STATUS));
+        assertParseFailure(parser, "s/active s/ACTIVE", Messages.getErrorMessageForDuplicatePrefixes(PREFIX_STATUS));
+        assertParseFailure(parser, "t/Publicity Team", Tag.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, "t/publicity t/president! s/active", Tag.MESSAGE_CONSTRAINTS);
+        assertParseFailure(parser, "s/active p/9123 4567", FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS);
+        assertParseFailure(parser, "s/active e/alice bob", FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS);
+    }
+
+    @Test
+    public void parse_unsupportedPrefix_throwsHelpfulError() {
+        for (String prefix : List.of("a/", "x/", "N/", "status/")) {
+            String message = String.format(FindCommand.MESSAGE_UNSUPPORTED_PREFIX, prefix);
+            assertParseFailure(parser, prefix + "value", message);
+            assertParseFailure(parser, "n/Alice " + prefix + "value t/publicity", message);
+        }
+    }
+
+    @Test
+    public void parse_turkishDefaultLocale_matchesCanonicalTagsAndStatus() {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr"));
+            FindCommand expected = new FindCommand(new AllConditionsPredicate(List.of(
+                    new HasAllTagsPredicate(Set.of(new Tag("publicity"))), new StatusMatchesPredicate(Status.ACTIVE))));
+            assertParseSuccess(parser, "t/PUBLICITY s/ACTIVE", expected);
+        } finally {
+            Locale.setDefault(originalLocale);
         }
     }
 

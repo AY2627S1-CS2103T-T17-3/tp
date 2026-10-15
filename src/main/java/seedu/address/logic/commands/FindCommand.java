@@ -16,13 +16,16 @@ public class FindCommand extends Command {
 
     public static final String COMMAND_WORD = "find";
 
-    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members using one field.\n"
+    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members matching all supplied conditions.\n"
             + "Name:  " + COMMAND_WORD + " [n/]KEYWORD [MORE_KEYWORDS]...\n"
-            + "Phone: " + COMMAND_WORD + " p/SUBSTRING\n"
-            + "Email: " + COMMAND_WORD + " e/SUBSTRING\n"
-            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice";
+            + "Combined: " + COMMAND_WORD + " [n/KEYWORDS] [p/SUBSTRING] [e/SUBSTRING] [t/TAG]... [s/STATUS]\n"
+            + "Supply at least one condition. Use n/ when combining names with other fields.\n"
+            + "All tags must match exactly; STATUS is active or archived.\n"
+            + "Example: " + COMMAND_WORD + " n/Alice Bob t/publicity t/president s/active";
 
-    public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
+    public static final String MESSAGE_UNSUPPORTED_PREFIX =
+            "Unsupported search prefix: %1$s. Use n/, p/, e/, t/ or s/.";
+    public static final String MESSAGE_INVALID_STATUS = "Search status must be active or archived (case-insensitive).";
 
     public static final String MESSAGE_MULTIPLE_PHONE_SUBSTRINGS = "Phone searches accept only one substring. "
             + "Search each substring in a separate find command.";

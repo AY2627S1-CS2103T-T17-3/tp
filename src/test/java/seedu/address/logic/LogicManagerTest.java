@@ -104,8 +104,8 @@ public class LogicManagerTest {
 
         assertCommandFailure("find e/alice bob", ParseException.class,
                 FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS, expectedModel);
-        assertCommandFailure("find e/alice n/Amy", ParseException.class,
-                FindCommand.MESSAGE_MULTIPLE_FIELDS, expectedModel);
+        assertCommandFailure("find e/alice s/former", ParseException.class,
+                FindCommand.MESSAGE_INVALID_STATUS, expectedModel);
         assertCommandFailure("find e/", ParseException.class,
                 String.format(Messages.MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE), expectedModel);
     }
