@@ -6,7 +6,7 @@ package seedu.address.model.person;
  */
 public enum Status {
     ACTIVE("active", "ACTIVE"),
-    ARCHIVED("archived", "FORMER");
+    ARCHIVED("archived", "ARCHIVED");
 
     public static final String MESSAGE_CONSTRAINTS = "Status should be either active or archived only.";
 

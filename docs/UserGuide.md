@@ -190,7 +190,7 @@ A [sample CSV](samples/members.csv) is available to copy or download. Replace it
   Each tag must be alphanumeric. Tags and emails are normalized to lowercase; case variants of tags are merged.
   Empty tags inside a list, such as `publicity;`, are rejected.
 * Status is required and must be exactly `active` or `archived`. It is preserved during import;
-  `archived` members display the existing `FORMER` badge. Status is separate from tags.
+  `archived` members display the `ARCHIVED` badge. Status is separate from tags.
 * Quote cells containing commas or double quotes. Inside a quoted cell, write a double quote as `""`.
   Embedded line breaks are parsed as part of a cell, but existing contact-field rules reject multiline values.
 * A UTF-8 byte order mark and empty lines are accepted. An empty file or a header without members is rejected.
@@ -357,7 +357,7 @@ Examples:
 
 ### Archiving a member: `archive`
 
-Marks a member as archived while keeping their contact details and tags. The badge changes to `FORMER`.
+Marks a member as archived while keeping their contact details and tags. The badge changes to `ARCHIVED`.
 
 Format: `archive INDEX`
 
