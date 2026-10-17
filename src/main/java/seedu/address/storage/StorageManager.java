@@ -60,6 +60,16 @@ public class StorageManager implements Storage {
     }
 
     @Override
+    public AddressBookLoadResult loadAddressBook() {
+        return addressBookStorage.loadAddressBook();
+    }
+
+    @Override
+    public boolean isAddressBookSaveAllowed() {
+        return addressBookStorage.isSaveAllowed();
+    }
+
+    @Override
     public void saveAddressBook(ReadOnlyAddressBook addressBook) throws IOException {
         logger.fine("Attempting to write to data file: " + addressBookStorage.getAddressBookFilePath());
         addressBookStorage.saveAddressBook(addressBook);

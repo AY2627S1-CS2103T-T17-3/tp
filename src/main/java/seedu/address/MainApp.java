@@ -13,13 +13,13 @@ import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.commons.util.StringUtil;
 import seedu.address.logic.Logic;
 import seedu.address.logic.LogicManager;
-import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.ReadOnlyUserPrefs;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.util.SampleDataUtil;
+import seedu.address.storage.AddressBookLoadResult;
 import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.JsonUserPrefsStorage;
 import seedu.address.storage.Storage;
@@ -42,6 +42,7 @@ public class MainApp extends Application {
     protected Logic logic;
     protected Storage storage;
     protected Model model;
+    private String dataLoadingWarning;
 
     @Override
     public void init() throws Exception {
@@ -57,33 +58,34 @@ public class MainApp extends Application {
 
         logic = new LogicManager(model, storage);
 
-        ui = new UiManager(logic, storage.getAddressBookFilePath());
+        ui = new UiManager(logic, storage.getAddressBookFilePath(), dataLoadingWarning);
     }
 
     /**
      * Returns a {@code ModelManager} with the data from {@code storage}'s address book and {@code userPrefs}. <br>
-     * The data from the sample address book will be used instead if {@code storage}'s address book is not found,
-     * or an empty address book will be used instead if errors occur when reading {@code storage}'s address book.
+     * Uses sample data for a missing file. If loading fails, recovers valid records where possible and
+     * prepares a warning; storage protects the original file for the remainder of the session.
      */
-    private Model initModelManager(Storage storage, ReadOnlyUserPrefs userPrefs) {
+    protected Model initModelManager(Storage storage, ReadOnlyUserPrefs userPrefs) {
         logger.info("Using data file : " + storage.getAddressBookFilePath());
 
-        Optional<ReadOnlyAddressBook> addressBookOptional;
-        ReadOnlyAddressBook initialData;
-        try {
-            addressBookOptional = storage.readAddressBook();
-            if (addressBookOptional.isEmpty()) {
-                logger.info("Creating a new data file " + storage.getAddressBookFilePath()
-                        + " populated with a sample AddressBook.");
-            }
-            initialData = addressBookOptional.orElseGet(SampleDataUtil::getSampleAddressBook);
-        } catch (DataLoadingException e) {
-            logger.warning("Data file at " + storage.getAddressBookFilePath() + " could not be loaded."
-                    + " Will be starting with an empty AddressBook.");
-            initialData = new AddressBook();
+        AddressBookLoadResult result = storage.loadAddressBook();
+        ReadOnlyAddressBook initialData = result.getStatus() == AddressBookLoadResult.Status.MISSING
+                ? SampleDataUtil.getSampleAddressBook() : result.getAddressBook();
+        dataLoadingWarning = null;
+        if (result.hasErrors()) {
+            dataLoadingWarning = "Could not fully load " + storage.getAddressBookFilePath().toAbsolutePath()
+                    + "\nRecovered " + initialData.getPersonList().size() + " member(s).\n\n"
+                    + "The original file has been preserved. Viewing and searching are available, "
+                    + "but changes and saving are disabled. Repair the file and restart the application.\n\n"
+                    + String.join("\n", result.getErrors());
         }
 
         return new ModelManager(initialData, userPrefs);
+    }
+
+    protected String getDataLoadingWarning() {
+        return dataLoadingWarning;
     }
 
     /**
