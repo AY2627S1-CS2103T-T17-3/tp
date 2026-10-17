@@ -47,6 +47,12 @@ public interface Storage {
      */
     Optional<ReadOnlyAddressBook> readAddressBook() throws DataLoadingException;
 
+    /** Loads valid records, reporting errors and protecting the original file if loading is incomplete. */
+    AddressBookLoadResult loadAddressBook();
+
+    /** Returns whether address-book changes can be saved in this session. */
+    boolean isAddressBookSaveAllowed();
+
     /**
      * Saves the given {@link ReadOnlyAddressBook} to the storage.
      * @param addressBook cannot be null.

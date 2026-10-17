@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import seedu.address.MainApp;
@@ -26,14 +27,21 @@ public class UiManager implements Ui {
     private Logic logic;
     private Path dataFilePath;
     private MainWindow mainWindow;
+    private final String startupWarning;
 
     /**
      * Creates a {@code UiManager} with the given {@code Logic} and the data file path
      * to show in the status bar.
      */
     public UiManager(Logic logic, Path dataFilePath) {
+        this(logic, dataFilePath, null);
+    }
+
+    /** Creates a UI manager with an optional warning to show after the main window opens. */
+    public UiManager(Logic logic, Path dataFilePath, String startupWarning) {
         this.logic = logic;
         this.dataFilePath = dataFilePath;
+        this.startupWarning = startupWarning;
     }
 
     @Override
@@ -47,11 +55,31 @@ public class UiManager implements Ui {
             mainWindow = new MainWindow(primaryStage, logic, dataFilePath);
             mainWindow.show(); //This should be called before creating other UI parts
             mainWindow.fillInnerParts();
+            if (startupWarning != null) {
+                showDataLoadingWarning();
+            }
 
         } catch (Throwable e) {
             logger.severe(StringUtil.getDetails(e));
             showFatalErrorDialogAndShutdown("Fatal error during initializing", e);
         }
+    }
+
+    private void showDataLoadingWarning() {
+        Alert alert = new Alert(AlertType.WARNING);
+        alert.initOwner(mainWindow.getPrimaryStage());
+        alert.setTitle("Data loading warning");
+        alert.setHeaderText("Some data could not be loaded. The original file is protected.");
+        TextArea details = new TextArea(startupWarning);
+        details.setEditable(false);
+        details.setWrapText(true);
+        details.setPrefRowCount(14);
+        details.setPrefColumnCount(70);
+        alert.getDialogPane().setContent(details);
+        alert.getDialogPane().setId(ALERT_DIALOG_PANE_FIELD_ID);
+        alert.getDialogPane().getStylesheets().add("view/DarkTheme.css");
+        alert.setResizable(true);
+        alert.showAndWait();
     }
 
     private Image getImage(String imagePath) {
