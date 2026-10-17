@@ -410,7 +410,8 @@ Format: `exit`
 
 ### Saving the data
 
-AddressBook automatically saves data after every command. You do not need to save manually.
+AddressBook automatically saves data after every successful command. You do not need to save manually.
+If the data file cannot be fully loaded, saving and changes to members are disabled to protect the original file.
 
 ### Editing the data file
 
@@ -442,10 +443,13 @@ and absent optional fields as explicit `null` values.
 <box type="warning" seamless>
 
 **Caution:**
-If your changes make the data file invalid, AddressBook opens with an empty address book at the next run. This
-includes files with duplicate emails that differ only in letter case. Loading alone leaves the invalid file
-unchanged, but the next successful command, including `list`, saves the current in-memory address book over it.
-Back up the file and correct it before running commands.<br>
+If some records are invalid, AddressBook loads the valid records and shows a warning with the file path,
+recovered-member count, and each rejected record's original position and reason. For duplicate emails
+(including case variants), the first valid record is retained. If the JSON syntax or overall structure is
+invalid, or the file cannot be read, the app shows an empty member list and a warning.<br>
+The original file is preserved. You can use `list`, `find`, `help`, and `exit`, but member changes and saving
+are disabled for that session. Close the app, back up and repair the file, then restart. Normal saving resumes
+only when the entire file loads successfully. A missing file still starts with sample members.<br>
 Furthermore, certain edits can cause the AddressBook to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </box>
 
