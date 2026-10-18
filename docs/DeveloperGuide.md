@@ -258,12 +258,13 @@ represented as `{"name":null,"phone":null,"email":"alex@u.nus.edu","address":nul
 Reading does not rewrite the file; the next successful command saves explicit nulls. Older versions requiring
 complete contact details reject the entire file if it contains an incomplete member. With their existing loading
 behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
+
 Automatic saving uses the recovery behavior described under "Saving member data safely" below.
-CSV import continues to require complete contact details and explicit status.
+CSV import also accepts absent name, phone and address details, but requires explicit status.
 
 Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
 incremental completion across reloads, filtered edits, unnamed duplicates, email reuse, searches, tags and deletion.
-The import regression checks that CSV requirements remain strict and that imported emails conflict with existing
+The import regression checks supplied-field validation and that imported emails conflict with existing
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
 
@@ -292,27 +293,38 @@ backslashes and performs no file I/O. `AddressBookParser` dispatches `import` th
 
 `CsvMemberReader` uses Apache Commons CSV 1.14.1 to parse UTF-8 input with standard CSV quoting. It accepts an optional
 byte order mark and ignores empty lines. The header must be `name,phone,email,address,tags,status` in that order.
-The reader parses the entire file, checks column counts, trims field values, and constructs existing model objects to
-reuse their validation and canonicalization. Semicolon-separated tags use a `Set<Tag>`. Status is validated through
+The reader parses the entire file before returning any outcomes, then checks column counts, trims field values,
+and constructs existing model objects to reuse their validation and canonicalization. Blank names, phones and
+addresses become empty optionals; supplied values are validated normally. Email remains required.
+Semicolon-separated tags use a `Set<Tag>`. Status is validated through
 `Status.isValidStatus` and supplied explicitly to `Person`; it never defaults to active. Record errors include the
-logical CSV record number, counting the header as 1. Empty and header-only files are rejected.
+logical CSV record number, counting the header as 1. Each `CsvMemberRecord` retains its original number and either
+a validated `Person` or its first validation failure. The immutable result list retains valid and rejected records
+in source order, so later duplicate errors use original numbers even after invalid or multiline records.
+Empty and header-only files are rejected. Invalid headers, malformed CSV, decoding errors and read failures remain
+fatal; no outcomes are applied to the live directory if the file cannot be parsed completely.
 
 `ImportCommand` reads the members and copies the complete existing directory into a temporary `AddressBook`.
-It checks each imported member against that copy using the existing canonical-email identity rule before appending
-them. This includes archived members, members outside the current filter, and earlier CSV records.
-Only after all records pass does it call `Model.setAddressBook` and reset the filter to show the complete directory.
-No model or storage-schema changes are needed. Parsing, validation, and duplicate failures throw `CommandException`
-before the live directory is changed, so `LogicManager` does not save rejected imports.
+It collects validation rejections and checks each valid member against that copy using the existing canonical-email
+identity rule. Conflicting records are skipped without updating existing members. Duplicate checks include archived
+members, members outside the current filter, and earlier accepted CSV records. Invalid earlier records do not reserve
+an email; the first valid occurrence wins. Rejection feedback remains in CSV order.
+If at least one record is accepted, it calls `Model.setAddressBook`, resets the filter to show the complete directory,
+and returns the imported/rejected counts with every rejected record's number and reason. If all records are rejected,
+it throws `CommandException` with zero imports and the rejection details before changing the model; this also prevents
+`LogicManager` from rewriting JSON. Fatal file errors likewise throw before model changes.
+No model or storage-schema changes are needed. Logs record preparation counts and fatal file failures without
+including member fields or rejection details; the preparation log does not claim the later JSON save succeeded.
 
 Before executing an import, `LogicManager` checks that its source differs from the JSON save file. Normalized paths
 and `Files.isSameFile` detect path aliases and links; this prevents subsequent automatic saving from overwriting the
 import source. The reader only opens the CSV for reading. Successful imports use existing automatic JSON persistence.
 As with other commands, a subsequent save failure restores the previous member records and search filter.
 
-Tests cover quoted fields, BOM/CRLF input, fixed headers, existing validators, required statuses, duplicate emails,
-late CSV errors, source preservation, unchanged filters/files on rejection, successful JSON round trips, source/save
-file aliases, and save failures. The first increment intentionally rejects the entire file on any bad record;
-partial import with aggregate rejection feedback is a future increment.
+Tests cover quoted fields, BOM/CRLF input, fixed headers, optional-field combinations, existing validators, required
+statuses, duplicate emails, original record numbers, and late fatal CSV errors. Integration tests verify partial
+imports, incomplete-member JSON round trips, source preservation, zero saves when all records are rejected,
+source/save file aliases, and save failures.
 
 ### Saving member data safely
 
@@ -614,7 +626,8 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * **Member directory**: The complete collection of member records stored in NUSocietyDesk
 * **Member record**: The information stored for one member, including their contact details and any society-related tags
 * **Membership status**: A classification indicating a member's current relationship with the society, such as active or former
-* **Rejected record**: A record that is not imported because it contains invalid, missing, or conflicting information
+* **Rejected record**: A record that is not imported because it contains an invalid supplied value,
+  is missing a required field, or has a duplicate email. Missing optional contact details alone do not cause rejection
 * **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
 * **Tag**: A label attached to a member record to represent information such as a committee or role
 
@@ -674,24 +687,40 @@ Use a disposable application folder. Before launching, create `data/addressbook.
 ### Importing member directories
 
 Use a disposable application folder. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
-Keep a separate copy of this source file for comparison.
+Keep a separate copy of this source file for comparison. Start with neither sample email in the directory.
+For independent cases below, use a fresh disposable directory or remove members added by earlier imports.
+CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.
 
 1. Test case: `import "member contacts.csv"`<br>
    Expected: Two members are appended after existing members, all members are displayed, and feedback states
-   `Imported 2 member(s)`. Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
+   `Imported 2 member(s); rejected 0 record(s) from member contacts.csv.`
+   Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
    status, displays `ARCHIVED`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
 
 1. Test case: `find Existing`, followed by importing the same CSV again.<br>
-   Expected: The import is rejected as a duplicate email. Member records, search results, and saved JSON are unchanged.
+   Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
+   Member records, search results, and saved JSON are unchanged.
 
 1. In a fresh copy of the CSV, change the second member's status to `former`. Run the import in a fresh disposable
    directory, or first remove the previously imported example members.<br>
-   Expected: A status validation error identifies CSV record 3. Neither member is imported. The original directory,
-   current search results, saved JSON, and source CSV remain unchanged.
+   Expected: Alex is imported and Jamie is skipped. Feedback reports one import and one rejection, with a status
+   validation error for CSV record 3. Existing members and the source CSV are unchanged; all members are displayed.
+   Restart and confirm only Alex was added.
 
-1. Repeat with a non-NUS email, missing status, a duplicate case-variant email, missing/extra columns, a reordered
-   header, a header-only file, and an unterminated quoted cell after a valid record.<br>
-   Expected: Each import is rejected with a useful reason and does not import a valid prefix of the file.
+1. In fresh copies, repeat with a non-NUS email, missing status, a duplicate case-variant email, or missing/extra
+   columns in one member record.<br>
+   Expected: Valid records are imported; each rejected record has its original number and a useful reason.
+1. Repeat with a reordered header, a header-only file, and an unterminated quoted cell after a valid record.<br>
+   Expected: The whole import fails; no valid prefix is imported and records, search results and JSON are unchanged.
+
+1. In a fresh disposable directory, copy `docs/samples/members-partial.csv` into the application folder and run
+   `import members-partial.csv`.<br>
+   Expected: Two imports and two rejections. Record 3 has an invalid phone; record 4 duplicates record 2's email.
+   The final member has no name, phone or address, retains archived status and the publicity tag, and shows its email
+   as its heading. Every rejection is readable by scrolling the feedback pane. Restart and confirm both imports persist.
+1. Correct the invalid phone in a copy of that CSV and import it again.<br>
+   Expected: Only the corrected Jamie record is added. Previously imported emails and the duplicate Alex row are
+   rejected. Existing member details and statuses are not overwritten.
 
 1. Test cases: `import`, `import ""`, `import member contacts.csv`, and `import missing.csv`.<br>
    Expected: Format errors explain the command syntax; a missing file gives a file-reading error.

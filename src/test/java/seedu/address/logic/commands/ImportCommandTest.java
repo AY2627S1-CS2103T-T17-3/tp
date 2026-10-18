@@ -1,18 +1,25 @@
 package seedu.address.logic.commands;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.StreamHandler;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import seedu.address.commons.core.LogsCenter;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
@@ -47,7 +54,7 @@ public class ImportCommandTest {
         CommandResult result = new ImportCommand(file).execute(model);
         List<Person> members = model.getAddressBook().getPersonList();
 
-        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 2, file), result.getFeedbackToUser());
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 2, 0, file), result.getFeedbackToUser());
         assertEquals(3, members.size());
         assertEquals(existingMember, members.getFirst());
         assertEquals("alex@u.nus.edu", members.get(1).getEmail().value);
@@ -56,20 +63,33 @@ public class ImportCommandTest {
     }
 
     @Test
-    public void execute_duplicateExistingArchivedMemberOutsideFilter_rejectsEntireImport() throws Exception {
+    public void execute_duplicateExistingArchivedMemberOutsideFilter_skipsDuplicate() throws Exception {
         Person archivedMember = new Person(existingMember.getName(), existingMember.getPhone(),
                 existingMember.getEmail(), existingMember.getAddress(), Status.ARCHIVED, existingMember.getTags());
         model.setPerson(existingMember, archivedMember);
         Path file = writeCsv(HEADER + FIRST_ROW
                 + "Jamie Lee,98765432,EXISTING@U.NUS.EDU,Clementi,,active\n");
-        assertRejectedWithoutChanges(file, "CSV record 3: email \"existing@u.nus.edu\" duplicates");
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 3: email \"existing@u.nus.edu\" duplicates"));
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+        assertEquals(archivedMember, model.getAddressBook().getPersonList().getFirst());
+        assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().get(1).getEmail().value);
     }
 
     @Test
-    public void execute_duplicateEmailWithinCsv_rejectsEntireImport() throws Exception {
+    public void execute_duplicateEmailWithinCsv_keepsFirstValidOccurrence() throws Exception {
         Path file = writeCsv(HEADER + FIRST_ROW
                 + "Jamie Lee,98765432,ALEX@U.NUS.EDU,Clementi,,archived\n");
-        assertRejectedWithoutChanges(file, "CSV record 3: email \"alex@u.nus.edu\" duplicates");
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 3: email \"alex@u.nus.edu\" duplicates"));
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+        Person imported = model.getAddressBook().getPersonList().get(1);
+        assertEquals("Alex Tan", imported.getName().orElseThrow().fullName);
+        assertEquals(Status.ACTIVE, imported.getStatus());
     }
 
     @Test
@@ -81,9 +101,104 @@ public class ImportCommandTest {
     }
 
     @Test
-    public void execute_invalidLateRecord_rejectsEntireImport() throws Exception {
+    public void execute_invalidLateRecord_importsValidPrefix() throws Exception {
         Path file = writeCsv(HEADER + FIRST_ROW + "Jamie Lee,12,jamie@u.nus.edu,Clementi,,active\n");
-        assertRejectedWithoutChanges(file, "CSV record 3: Phone numbers");
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().contains("CSV record 3: Phone numbers"));
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+    }
+
+    @Test
+    public void execute_mixedRecords_reportsEveryRejectionInCsvOrder() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW
+                + "Bad!,91234567,bad@u.nus.edu,Kent Ridge,,active\n"
+                + ",,EXISTING@U.NUS.EDU,,,active\n"
+                + "too,few,columns\n"
+                + ",,last@u.nus.edu,,,archived\n");
+        String sourceBefore = Files.readString(file);
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        String feedback = result.getFeedbackToUser();
+        assertTrue(feedback.startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 2, 3, file)));
+        assertTrue(feedback.indexOf("CSV record 3:") < feedback.indexOf("CSV record 4:"));
+        assertTrue(feedback.indexOf("CSV record 4:") < feedback.indexOf("CSV record 5:"));
+        assertEquals(List.of("existing@u.nus.edu", "alex@u.nus.edu", "last@u.nus.edu"),
+                model.getAddressBook().getPersonList().stream().map(person -> person.getEmail().value).toList());
+        Person incomplete = model.getAddressBook().getPersonList().get(2);
+        assertTrue(incomplete.getName().isEmpty());
+        assertTrue(incomplete.getPhone().isEmpty());
+        assertTrue(incomplete.getAddress().isEmpty());
+        assertEquals(Status.ARCHIVED, incomplete.getStatus());
+        assertEquals(model.getAddressBook().getPersonList(), model.getFilteredPersonList());
+        assertEquals(sourceBefore, Files.readString(file));
+    }
+
+    @Test
+    public void execute_invalidEarlierOccurrence_doesNotReserveEmail() throws Exception {
+        Path file = writeCsv(HEADER + "Alex Tan,12,alex@u.nus.edu,Kent Ridge,,active\n" + FIRST_ROW);
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 2: Phone numbers"));
+        assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().get(1).getEmail().value);
+    }
+
+    @Test
+    public void execute_duplicateAfterInvalidMultilineRecord_reportsOriginalRecordNumber() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW
+                + "Bad Name,91234567,bad@u.nus.edu,\"Clemen\nti\",,active\n\n"
+                + ",,ALEX@U.NUS.EDU,,,active\n");
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().contains("CSV record 3: Addresses"));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 4: email \"alex@u.nus.edu\" duplicates"));
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+    }
+
+    @Test
+    public void execute_allRejected_reportsCountsAndPreservesRecordsAndFilter() throws Exception {
+        Path file = writeCsv(HEADER + ",,existing@u.nus.edu,,,active\n"
+                + ",12,invalid@u.nus.edu,,,active\n");
+
+        assertRejectedWithoutChanges(file, String.format(ImportCommand.MESSAGE_SUCCESS, 0, 2, file));
+    }
+
+    @Test
+    public void execute_partialImportSample_matchesDocumentedCounts() throws Exception {
+        Path file = Path.of("docs", "samples", "members-partial.csv");
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 2, 2, file)));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 3: Phone numbers"));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 4: email \"alex@u.nus.edu\" duplicates"));
+        assertEquals(3, model.getAddressBook().getPersonList().size());
+    }
+
+    @Test
+    public void execute_mixedRecords_logsCountsWithoutMemberDetails() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW + ",,EXISTING@U.NUS.EDU,,,active\n");
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        StreamHandler handler = new StreamHandler(output, new SimpleFormatter());
+        Logger logger = LogsCenter.getLogger(ImportCommand.class).getParent();
+        logger.addHandler(handler);
+        try {
+            new ImportCommand(file).execute(model);
+            handler.flush();
+        } finally {
+            logger.removeHandler(handler);
+            handler.close();
+        }
+
+        String logs = output.toString(StandardCharsets.UTF_8);
+        assertTrue(logs.contains("Prepared CSV import: 1 accepted, 1 rejected."));
+        assertFalse(logs.contains("alex@u.nus.edu"));
+        assertFalse(logs.contains("existing@u.nus.edu"));
+        assertFalse(logs.contains("Alex Tan"));
     }
 
     @Test

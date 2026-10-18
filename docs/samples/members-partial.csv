@@ -1,0 +1,5 @@
+name,phone,email,address,tags,status
+Alex Tan,91234567,alex@u.nus.edu,"NUS, Kent Ridge",Publicity;Exco,active
+Jamie Lee,12,jamie@u.nus.edu,Clementi,,active
+Duplicate Alex,98765432,ALEX@U.NUS.EDU,Clementi,,archived
+,,incomplete@u.nus.edu,,Publicity,archived

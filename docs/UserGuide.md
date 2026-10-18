@@ -158,8 +158,8 @@ Examples:
 
 ### Importing member contacts from CSV: `import`
 
-Appends an existing member directory from a CSV file. The entire import is rejected if any member is invalid
-or has a duplicate email; valid records are not imported separately in this version.
+Appends valid member records from a CSV file, skipping invalid records and duplicate emails.
+Feedback reports the imported and rejected counts, followed by each rejected record's number and reason.
 
 Format: `import FILE_PATH`
 
@@ -181,10 +181,13 @@ Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
 ```
 
 A [sample CSV](samples/members.csv) is available to copy or download. Replace its example members with your own data.
+The [partial-import sample](samples/members-partial.csv) intentionally includes an invalid phone number and a duplicate
+email to demonstrate rejection feedback. In a directory without its example members, it imports two records and
+rejects two.
 
-* Every member must have all six columns. Name, phone, email, address, and status must be nonempty.
-  Incomplete records are supported through `add` and JSON storage; CSV import still requires complete contact details.
-* Contact fields follow the same validation rules as `add`. Surrounding field whitespace is removed.
+* Every member must have all six columns. Email and status must be nonempty. Name, phone, and address may be blank;
+  blank or whitespace-only cells for these optional fields mean the detail is absent, as with an omitted field in `add`.
+* Supplied contact fields follow the same validation rules as `add`. Surrounding field whitespace is removed.
   Phone numbers contain digits only and have at least three digits. Emails must end with exactly `@u.nus.edu`.
 * Separate tags with semicolons, for example `Publicity;Exco`. Leave the tags cell empty for a member with no tags.
   Each tag must be alphanumeric. Tags and emails are normalized to lowercase; case variants of tags are merged.
@@ -192,21 +195,39 @@ A [sample CSV](samples/members.csv) is available to copy or download. Replace it
 * Status is required and must be exactly `active` or `archived`. It is preserved during import;
   `archived` members display the `ARCHIVED` badge. Status is separate from tags.
 * Quote cells containing commas or double quotes. Inside a quoted cell, write a double quote as `""`.
-  Embedded line breaks are parsed as part of a cell, but existing contact-field rules reject multiline values.
+  Embedded line breaks are parsed as part of a cell. After surrounding whitespace is removed, line breaks inside
+  a name, phone, email or address fail the existing field validation rules.
 * A UTF-8 byte order mark and empty lines are accepted. An empty file or a header without members is rejected.
 
 On success, members are appended in CSV order, existing records remain unchanged, and the full directory is displayed.
-The feedback states how many members were imported. The combined directory is automatically saved as JSON.
+The feedback states how many members were imported and how many records were rejected.
+The combined directory is automatically saved as JSON when at least one member is imported.
 The source CSV is never changed. An import source that points to the application's JSON save file is rejected.
 
 Duplicate checks include every existing member, including archived members and members outside the current search
-results, as well as other records in the CSV. Matching is by case-insensitive email; shared names or phone numbers
-are allowed when emails differ. Re-importing the same CSV is rejected rather than updating existing members.
+results, as well as earlier accepted records in the CSV. Matching is by case-insensitive email; shared names or phone
+numbers are allowed when emails differ. Existing members are never updated or merged. Within the CSV, the first valid
+occurrence of an email is accepted and subsequent valid occurrences are rejected. An invalid earlier record does not
+reserve its email. Re-importing an unchanged CSV adds no more members.
 
-Invalid records produce a message with a CSV record number and the reason. The header counts as record 1,
-empty lines do not count, and record numbers can differ from physical line numbers when quoted cells span lines.
-Correct the reported problem and retry the complete file. Invalid headers, malformed CSV, and unreadable files also
-reject the import. Rejected imports leave member records, the current search results, and saved JSON unchanged.
+Every invalid or duplicate record produces a message with a CSV record number and the first reason it was rejected.
+Rejections are listed in CSV order. The header counts as record 1; the first member is record 2.
+Empty lines do not count, and record numbers can differ from physical line numbers when quoted cells span lines.
+For example, the partial-import sample reports Jamie as CSV record 3 and Duplicate Alex as CSV record 4:
+
+```text
+Imported 2 member(s); rejected 2 record(s) from members-partial.csv.
+Rejected records:
+CSV record 3: Phone numbers should only contain digits, and should be at least 3 digits long
+CSV record 4: email "alex@u.nus.edu" duplicates an existing member or an earlier accepted CSV record.
+```
+
+Correct the rejected records and import them again; previously imported members are skipped as duplicates if you
+retry the complete file. A syntactically valid record with missing or extra columns is rejected individually.
+Unreadable or non-UTF-8 files, invalid headers, malformed CSV, empty files, and header-only files reject the whole
+operation before any members are added, even when the file starts with valid records.
+If every record is rejected, feedback reports zero imports and all rejection reasons; member records, the current
+search results, and saved JSON remain unchanged.
 
 If automatic saving fails, an error is shown and the imported members are removed from the current session.
 The previous directory, search filter, saved JSON, and source CSV are preserved. Resolve the saving problem

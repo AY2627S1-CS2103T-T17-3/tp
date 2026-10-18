@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.csv.CSVFormat;
@@ -40,15 +41,15 @@ public class CsvMemberReader {
             .get();
 
     /**
-     * Reads and validates all member records, preserving their order and membership statuses.
+     * Reads the complete CSV and collects validated members and record-level rejection reasons in CSV order.
      * CSV record numbers include the header as record 1 and exclude empty lines.
      *
      * @param path The UTF-8 CSV file to read.
-     * @return Validated members in CSV order.
+     * @return Every member record's original number and either its member or rejection reason.
      * @throws IOException If the file cannot be read or contains malformed CSV.
-     * @throws IllegalValueException If the header or a member record is invalid, or no members are present.
+     * @throws IllegalValueException If the header is invalid or no member records are present.
      */
-    public List<Person> read(Path path) throws IOException, IllegalValueException {
+    public List<CsvMemberRecord> read(Path path) throws IOException, IllegalValueException {
         requireNonNull(path);
         try (PushbackReader reader = new PushbackReader(Files.newBufferedReader(path, StandardCharsets.UTF_8))) {
             // Spreadsheet tools may prefix UTF-8 CSV files with a byte order mark.
@@ -67,9 +68,13 @@ public class CsvMemberReader {
                 if (records.size() == 1) {
                     throw new IllegalValueException(MESSAGE_EMPTY);
                 }
-                List<Person> members = new ArrayList<>();
+                List<CsvMemberRecord> members = new ArrayList<>();
                 for (CSVRecord record : records.subList(1, records.size())) {
-                    members.add(parseMember(record));
+                    try {
+                        members.add(CsvMemberRecord.accepted(record.getRecordNumber(), parseMember(record)));
+                    } catch (IllegalValueException e) {
+                        members.add(CsvMemberRecord.rejected(record.getRecordNumber(), e.getMessage()));
+                    }
                 }
                 return List.copyOf(members);
             }
@@ -83,10 +88,14 @@ public class CsvMemberReader {
             if (record.size() != 6) {
                 throw new IllegalArgumentException("Expected exactly six columns: " + HEADER);
             }
-            Name name = new Name(record.get(0).trim());
-            Phone phone = new Phone(record.get(1).trim());
+            String nameValue = record.get(0).trim();
+            Optional<Name> name = nameValue.isEmpty() ? Optional.empty() : Optional.of(new Name(nameValue));
+            String phoneValue = record.get(1).trim();
+            Optional<Phone> phone = phoneValue.isEmpty() ? Optional.empty() : Optional.of(new Phone(phoneValue));
             Email email = new Email(record.get(2).trim());
-            Address address = new Address(record.get(3).trim());
+            String addressValue = record.get(3).trim();
+            Optional<Address> address = addressValue.isEmpty()
+                    ? Optional.empty() : Optional.of(new Address(addressValue));
             Set<Tag> tags = parseTags(record.get(4).trim());
             String statusValue = record.get(5).trim();
             if (!Status.isValidStatus(statusValue)) {
