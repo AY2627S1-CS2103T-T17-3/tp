@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.commons.exceptions.IllegalValueException;
-import seedu.address.commons.util.FileUtil;
 import seedu.address.commons.util.JsonUtil;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ReadOnlyAddressBook;
@@ -39,10 +38,16 @@ public class JsonAddressBookStorage {
     private static final ObjectMapper treeMapper = new ObjectMapper();
 
     private Path filePath;
+    private final AtomicFileWriter fileWriter;
     private boolean saveAllowed = true;
 
     public JsonAddressBookStorage(Path filePath) {
-        this.filePath = filePath;
+        this(filePath, new AtomicFileWriter());
+    }
+
+    JsonAddressBookStorage(Path filePath, AtomicFileWriter fileWriter) {
+        this.filePath = requireNonNull(filePath);
+        this.fileWriter = requireNonNull(fileWriter);
     }
 
     public Path getAddressBookFilePath() {
@@ -172,8 +177,8 @@ public class JsonAddressBookStorage {
         if (!saveAllowed) {
             throw new IOException(MESSAGE_SAVE_DISABLED);
         }
-        FileUtil.createIfMissing(filePath);
-        JsonUtil.saveJsonFile(new JsonSerializableAddressBook(addressBook), filePath);
+        String json = JsonUtil.toJsonString(new JsonSerializableAddressBook(addressBook));
+        fileWriter.write(filePath, json);
     }
 
 }

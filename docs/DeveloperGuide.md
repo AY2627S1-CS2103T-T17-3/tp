@@ -258,8 +258,8 @@ represented as `{"name":null,"phone":null,"email":"alex@u.nus.edu","address":nul
 Reading does not rewrite the file; the next successful command saves explicit nulls. Older versions requiring
 complete contact details reject the entire file if it contains an incomplete member. With their existing loading
 behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
-Automatic saving and save-failure behavior are unchanged: a save failure is reported without rolling back the
-in-memory command. CSV import continues to require complete contact details and explicit status.
+Automatic saving uses the recovery behavior described under "Saving member data safely" below.
+CSV import continues to require complete contact details and explicit status.
 
 Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
 incremental completion across reloads, filtered edits, unnamed duplicates, email reuse, searches, tags and deletion.
@@ -307,12 +307,37 @@ before the live directory is changed, so `LogicManager` does not save rejected i
 Before executing an import, `LogicManager` checks that its source differs from the JSON save file. Normalized paths
 and `Files.isSameFile` detect path aliases and links; this prevents subsequent automatic saving from overwriting the
 import source. The reader only opens the CSV for reading. Successful imports use existing automatic JSON persistence.
-As with other mutating commands, a subsequent save failure is reported but does not roll back the in-memory change.
+As with other commands, a subsequent save failure restores the previous member records and search filter.
 
 Tests cover quoted fields, BOM/CRLF input, fixed headers, existing validators, required statuses, duplicate emails,
 late CSV errors, source preservation, unchanged filters/files on rejection, successful JSON round trips, source/save
 file aliases, and save failures. The first increment intentionally rejects the entire file on any bad record;
 partial import with aggregate rejection feedback is a future increment.
+
+### Saving member data safely
+
+`LogicManager` copies the directory and captures `Model.getFilteredPersonListPredicate()` before executing a command.
+If the subsequent save throws `IOException` (including `AccessDeniedException`) or `SecurityException`, it restores
+the directory and the actual predicate, reports that the command was not saved, and logs the failure type and recovery.
+Restoring the predicate preserves search behavior for future changes, including searches with no matches.
+The command's success result is returned only after saving succeeds. Command logs identify the command class rather
+than including raw input or member details.
+
+`JsonAddressBookStorage` serializes the complete directory before calling the package-private `AtomicFileWriter`.
+The writer creates a temporary file in the destination's directory, writes and closes its UTF-8 contents, and uses
+`Files.move` with `ATOMIC_MOVE` and `REPLACE_EXISTING`. Existing symbolic links are followed so the configured link
+is retained. There is no non-atomic fallback: unsupported atomic replacement is a save failure. No fallible cleanup
+is performed after successful replacement. Failed writes or moves remove the temporary file where possible; a cleanup
+failure is attached to the original exception and logged. A failed first save leaves the destination absent.
+This protects against ordinary write/replacement errors; it does not promise recovery from power loss or concurrent
+edits by another application. User-preference saving is unchanged.
+
+The startup recovery guard remains in effect: partial or failed loads disable member changes and saves before
+execution. This behavior is separate from restoring a command after a normal-session save failure.
+
+Tests inject partial writes and replacement failures, check that the original JSON remains byte-for-byte unchanged,
+and verify restoration across add, edit, delete, clear, status, tag and import commands. They also cover permissions,
+unsupported atomic moves, a failed first save, continued predicate behavior, retry/reload, and startup protection.
 
 ### \[Proposed\] Undo/redo feature
 
@@ -673,6 +698,33 @@ Keep a separate copy of this source file for comparison.
    Member records, current search results, and saved JSON remain unchanged.
 
 These GUI checks are documented for manual execution; automated tests exercise the command and persistence paths.
+
+### Recovering from a failed save
+
+Use the current application build in a disposable folder on a filesystem that supports atomic replacement.
+Use the default data-file location, `data/addressbook.json`, and keep a separate backup of that file.
+The following steps use a file manager and do not require a particular operating system or shell.
+
+1. Launch with at least two members, including one matching `find e/alex`. Ensure `retry@u.nus.edu` is not already
+   present. Run `find e/alex` and note the displayed records.
+1. Keep the app running. In a file manager, rename `data/addressbook.json` to `data/addressbook.saved.json`.
+   Create a folder named `addressbook.json` inside `data`, and place a text file named `keep.txt` in that folder.
+   The nonempty folder prevents the app from replacing the destination with a JSON file.
+1. In the app, run `add e/retry@u.nus.edu`.<br>
+   Expected: Saving fails; feedback says records and the previous search filter were restored. The original search
+   results remain visible and no new member remains in the directory. No success confirmation is displayed.
+1. Compare `data/addressbook.saved.json` with the backup.<br>
+   Expected: The original JSON is unchanged, the test folder and `keep.txt` still exist, and there is no leftover
+   `.nusocietydesk-*.tmp` file in `data` (enable hidden-file display if necessary).
+1. Remove only the test folder `data/addressbook.json` and its `keep.txt`, then rename `data/addressbook.saved.json`
+   back to `data/addressbook.json`. Restore this path before restarting the app.
+1. Retry `add e/retry@u.nus.edu`, then close and restart the app.<br>
+   Expected: The add succeeds, all members are displayed, and exactly one new member survives restarting.
+1. Make a fresh backup and repeat the path-conflict steps with a valid CSV containing a new member email.<br>
+   Expected: The previous records and filter are restored; the original JSON and source CSV remain unchanged.
+   Remove the test folder and restore the original JSON filename before closing the app.
+
+These GUI checks require manual execution; automated tests inject failures in the write and replacement operations.
 
 ### Finding members by email
 

@@ -120,7 +120,7 @@ public class ImportIntegrationTest {
     }
 
     @Test
-    public void execute_saveFailure_reportsErrorAndRetainsExistingPersistenceBehavior() throws Exception {
+    public void execute_saveFailure_restoresRecordsAndFilterAndPreservesFiles() throws Exception {
         JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(dataFile) {
             @Override
             public void saveAddressBook(ReadOnlyAddressBook addressBook) throws IOException {
@@ -131,11 +131,14 @@ public class ImportIntegrationTest {
         Path file = writeCsv(HEADER + FIRST_ROW);
         String savedBefore = Files.readString(dataFile);
         String sourceBefore = Files.readString(file);
+        AddressBook recordsBefore = new AddressBook(model.getAddressBook());
+        List<Person> filteredBefore = List.copyOf(model.getFilteredPersonList());
 
         CommandException error = assertThrows(CommandException.class, () -> failingLogic.execute(importCommand(file)));
 
         assertEquals(String.format(LogicManager.FILE_OPS_ERROR_FORMAT, "Simulated save failure"), error.getMessage());
-        assertEquals(2, model.getAddressBook().getPersonList().size());
+        assertEquals(recordsBefore, model.getAddressBook());
+        assertEquals(filteredBefore, model.getFilteredPersonList());
         assertEquals(savedBefore, Files.readString(dataFile));
         assertEquals(sourceBefore, Files.readString(file));
     }
