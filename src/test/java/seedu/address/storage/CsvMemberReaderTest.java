@@ -37,7 +37,7 @@ public class CsvMemberReaderTest {
                 + "Publicity;publicity;Exco, active \n"
                 + "Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived\n");
         String original = Files.readString(file);
-        List<Person> members = reader.read(file);
+        List<Person> members = reader.read(file).stream().map(record -> record.getMember().orElseThrow()).toList();
 
         assertEquals(2, members.size());
         assertEquals("Alex Tan", members.getFirst().getName().orElseThrow().fullName);
@@ -55,13 +55,15 @@ public class CsvMemberReaderTest {
     public void read_bomCrLfAndBlankLines_acceptsSpreadsheetCsv() throws Exception {
         Path file = writeCsv("\uFEFF" + (HEADER + "\n" + ACTIVE_ROW).replace("\n", "\r\n"));
         assertEquals(1, reader.read(file).size());
+        assertTrue(reader.read(file).getFirst().getMember().isPresent());
     }
 
     @Test
     public void read_quotedAddressAndEscapedQuotes_preservesValue() throws Exception {
         Path file = writeCsv(HEADER
                 + "Alex Tan,91234567,alex@u.nus.edu,\"Block \"\"A\"\", Kent Ridge\",,active\n");
-        assertEquals("Block \"A\", Kent Ridge", reader.read(file).getFirst().getAddress().orElseThrow().value);
+        assertEquals("Block \"A\", Kent Ridge",
+                reader.read(file).getFirst().getMember().orElseThrow().getAddress().orElseThrow().value);
     }
 
     @Test
@@ -88,19 +90,19 @@ public class CsvMemberReaderTest {
     public void read_wrongColumnCount_identifiesRecord() throws Exception {
         for (String row : List.of("Alex Tan,91234567,alex@u.nus.edu,Kent Ridge,",
                 "Alex Tan,91234567,alex@u.nus.edu,Kent Ridge,,active,extra")) {
-            IllegalValueException error = assertThrows(IllegalValueException.class, () ->
-                    reader.read(writeCsv(HEADER + row)));
-            assertTrue(error.getMessage().startsWith("CSV record 2: Expected exactly six columns:"));
+            CsvMemberRecord record = reader.read(writeCsv(HEADER + row)).getFirst();
+            assertTrue(record.getMember().isEmpty());
+            assertTrue(record.getRejectionReason().startsWith("CSV record 2: Expected exactly six columns:"));
         }
     }
 
     @Test
     public void read_invalidMemberField_usesExistingConstraints() throws Exception {
         String[][] invalidFields = {
-            {"", Name.MESSAGE_CONSTRAINTS},
+            {"Alex!", Name.MESSAGE_CONSTRAINTS},
             {"12", Phone.MESSAGE_CONSTRAINTS},
             {"alex@gmail.com", Email.MESSAGE_CONSTRAINTS},
-            {"", Address.MESSAGE_CONSTRAINTS},
+            {"\"Clemen\nti\"", Address.MESSAGE_CONSTRAINTS},
             {"publicity;", Tag.MESSAGE_CONSTRAINTS},
             {"", Status.MESSAGE_CONSTRAINTS}
         };
@@ -108,17 +110,19 @@ public class CsvMemberReaderTest {
             String[] fields = {"Alex Tan", "91234567", "alex@u.nus.edu", "Kent Ridge", "", "active"};
             fields[i] = invalidFields[i][0];
             Path file = writeCsv(HEADER + String.join(",", fields));
-            IllegalValueException error = assertThrows(IllegalValueException.class, () -> reader.read(file));
-            assertEquals("CSV record 2: " + invalidFields[i][1], error.getMessage());
+            CsvMemberRecord record = reader.read(file).getFirst();
+            assertTrue(record.getMember().isEmpty());
+            assertEquals("CSV record 2: " + invalidFields[i][1], record.getRejectionReason());
         }
     }
 
     @Test
     public void read_invalidStatuses_rejectsRatherThanDefaulting() throws Exception {
-        for (String status : List.of("former", "ACTIVE", "inactive")) {
+        for (String status : List.of("", "former", "ACTIVE", "inactive")) {
             Path file = writeCsv(HEADER + ACTIVE_ROW.replace(",active", "," + status));
-            IllegalValueException error = assertThrows(IllegalValueException.class, () -> reader.read(file));
-            assertEquals("CSV record 2: " + Status.MESSAGE_CONSTRAINTS, error.getMessage());
+            CsvMemberRecord record = reader.read(file).getFirst();
+            assertTrue(record.getMember().isEmpty());
+            assertEquals("CSV record 2: " + Status.MESSAGE_CONSTRAINTS, record.getRejectionReason());
         }
     }
 
@@ -126,8 +130,51 @@ public class CsvMemberReaderTest {
     public void read_multilineField_reportsLogicalRecordNumberAndExistingConstraint() throws Exception {
         Path file = writeCsv(HEADER + ACTIVE_ROW + "\n"
                 + "Jamie Lee,98765432,jamie@u.nus.edu,\"Clemen\nti\",,active\n");
-        IllegalValueException error = assertThrows(IllegalValueException.class, () -> reader.read(file));
-        assertEquals("CSV record 3: " + Address.MESSAGE_CONSTRAINTS, error.getMessage());
+        List<CsvMemberRecord> records = reader.read(file);
+        assertTrue(records.getFirst().getMember().isPresent());
+        assertEquals("CSV record 3: " + Address.MESSAGE_CONSTRAINTS, records.get(1).getRejectionReason());
+    }
+
+    @Test
+    public void read_optionalContactCombinations_acceptsBlankAndWhitespaceOnlyCells() throws Exception {
+        for (int fieldsPresent = 0; fieldsPresent < 8; fieldsPresent++) {
+            boolean hasName = (fieldsPresent & 1) != 0;
+            boolean hasPhone = (fieldsPresent & 2) != 0;
+            boolean hasAddress = (fieldsPresent & 4) != 0;
+            String row = String.join(",", hasName ? " Alex Tan " : "   ", hasPhone ? " 91234567 " : "",
+                    " Alex@U.NUS.EDU ", hasAddress ? " Kent Ridge " : "   ", "", "archived");
+
+            Person member = reader.read(writeCsv(HEADER + row)).getFirst().getMember().orElseThrow();
+
+            assertEquals(hasName, member.getName().isPresent());
+            assertEquals(hasPhone, member.getPhone().isPresent());
+            assertEquals(hasAddress, member.getAddress().isPresent());
+            assertEquals("alex@u.nus.edu", member.getEmail().value);
+            assertEquals(Status.ARCHIVED, member.getStatus());
+        }
+    }
+
+    @Test
+    public void read_missingEmail_rejectsRecord() throws Exception {
+        CsvMemberRecord record = reader.read(writeCsv(HEADER + ",,   ,,,active\n")).getFirst();
+
+        assertTrue(record.getMember().isEmpty());
+        assertEquals("CSV record 2: " + Email.MESSAGE_CONSTRAINTS, record.getRejectionReason());
+    }
+
+    @Test
+    public void read_multipleInvalidRecords_preservesOutcomesAndOriginalRecordNumbers() throws Exception {
+        Path file = writeCsv(HEADER + "\n" + ACTIVE_ROW + "\n"
+                + "Jamie Lee,12,jamie@u.nus.edu,\"Clemen\nti\",,active\n"
+                + "too,few,columns\n" + ",,last@u.nus.edu,,,active\n");
+
+        List<CsvMemberRecord> records = reader.read(file);
+
+        assertEquals(List.of(2L, 3L, 4L, 5L), records.stream().map(CsvMemberRecord::getRecordNumber).toList());
+        assertTrue(records.get(0).getMember().isPresent());
+        assertEquals("CSV record 3: " + Phone.MESSAGE_CONSTRAINTS, records.get(1).getRejectionReason());
+        assertTrue(records.get(2).getRejectionReason().startsWith("CSV record 4: Expected exactly six columns:"));
+        assertEquals("last@u.nus.edu", records.get(3).getMember().orElseThrow().getEmail().value);
     }
 
     @Test

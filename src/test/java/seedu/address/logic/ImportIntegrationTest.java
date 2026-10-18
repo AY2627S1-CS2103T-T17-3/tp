@@ -1,5 +1,6 @@
 package seedu.address.logic;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +66,7 @@ public class ImportIntegrationTest {
 
         CommandResult result = logic.execute(importCommand(file));
 
-        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 2, file), result.getFeedbackToUser());
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 2, 0, file), result.getFeedbackToUser());
         ReadOnlyAddressBook reloaded = storage.readAddressBook().orElseThrow();
         assertEquals(model.getAddressBook(), reloaded);
         assertEquals(3, reloaded.getPersonList().size());
@@ -78,14 +81,67 @@ public class ImportIntegrationTest {
     @Test
     public void execute_rejectedImports_preservesRecordsFilterSourceAndSavedFile() throws Exception {
         for (String contents : List.of("", HEADER, "name,email\nAlex,alex@u.nus.edu\n",
-                HEADER + FIRST_ROW + "Jamie Lee,98765432,jamie@gmail.com,Clementi,,active\n",
-                HEADER + FIRST_ROW + "Jamie Lee,98765432,EXISTING@U.NUS.EDU,Clementi,,active\n",
-                HEADER + FIRST_ROW + "Jamie Lee,98765432,ALEX@U.NUS.EDU,Clementi,,archived\n",
-                HEADER + FIRST_ROW + "Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,\n",
+                HEADER + "Jamie Lee,98765432,jamie@gmail.com,Clementi,,active\n",
+                HEADER + "Jamie Lee,98765432,EXISTING@U.NUS.EDU,Clementi,,active\n",
+                HEADER + "Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,\n",
                 HEADER + FIRST_ROW + "\"unterminated")) {
             Path file = writeCsv(contents);
             assertRejectedWithoutChanges(file);
         }
+    }
+
+    @Test
+    public void execute_partialImport_savesOnlyAcceptedMembersAndPreservesSource() throws Exception {
+        Path file = writeCsv(HEADER + "Bad!,91234567,alex@u.nus.edu,Kent Ridge,,active\n" + FIRST_ROW
+                + ",,EXISTING@U.NUS.EDU,,,active\n"
+                + ",,ALEX@U.NUS.EDU,,,archived\n"
+                + ",,incomplete@u.nus.edu,,Publicity,archived\n");
+        String sourceBefore = Files.readString(file);
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 2, 3, file)));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 2: Names"));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 4: email \"existing@u.nus.edu\" duplicates"));
+        assertTrue(result.getFeedbackToUser().contains("CSV record 5: email \"alex@u.nus.edu\" duplicates"));
+        ReadOnlyAddressBook reloaded = new JsonAddressBookStorage(dataFile).readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), reloaded);
+        assertEquals(List.of("existing@u.nus.edu", "alex@u.nus.edu", "incomplete@u.nus.edu"),
+                reloaded.getPersonList().stream().map(person -> person.getEmail().value).toList());
+        Person incomplete = reloaded.getPersonList().get(2);
+        assertTrue(incomplete.getName().isEmpty());
+        assertTrue(incomplete.getPhone().isEmpty());
+        assertTrue(incomplete.getAddress().isEmpty());
+        assertEquals(Status.ARCHIVED, incomplete.getStatus());
+        assertEquals(List.of(new Tag("publicity")), List.copyOf(incomplete.getTags()));
+        assertEquals(reloaded.getPersonList(), model.getFilteredPersonList());
+        assertEquals(sourceBefore, Files.readString(file));
+    }
+
+    @Test
+    public void execute_allRejected_doesNotAttemptSaving() throws Exception {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        JsonAddressBookStorage countingStorage = new JsonAddressBookStorage(dataFile) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) {
+                saveAttempts.incrementAndGet();
+            }
+        };
+        logic = createLogic(countingStorage);
+        Path file = writeCsv(HEADER + ",,existing@u.nus.edu,,,active\n"
+                + "Invalid!,12,invalid@u.nus.edu,,,active\n");
+
+        assertRejectedWithoutChanges(file);
+
+        assertEquals(0, saveAttempts.get());
+    }
+
+    @Test
+    public void execute_invalidUtf8AfterValidRecord_rejectsWithoutChangingDirectory() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW);
+        Files.write(file, new byte[] {(byte) 0xc3, (byte) 0x28}, StandardOpenOption.APPEND);
+
+        assertRejectedWithoutChanges(file);
     }
 
     @Test
@@ -144,7 +200,7 @@ public class ImportIntegrationTest {
         AddressBook before = new AddressBook(model.getAddressBook());
         List<Person> filteredBefore = List.copyOf(model.getFilteredPersonList());
         String savedBefore = Files.readString(dataFile);
-        String sourceBefore = Files.readString(file);
+        byte[] sourceBefore = Files.readAllBytes(file);
 
         CommandException error = assertThrows(CommandException.class, () -> logic.execute(importCommand(file)));
 
@@ -152,7 +208,7 @@ public class ImportIntegrationTest {
         assertEquals(before, model.getAddressBook());
         assertEquals(filteredBefore, model.getFilteredPersonList());
         assertEquals(savedBefore, Files.readString(dataFile));
-        assertEquals(sourceBefore, Files.readString(file));
+        assertArrayEquals(sourceBefore, Files.readAllBytes(file));
     }
 
     private Logic createLogic(JsonAddressBookStorage addressBookStorage) {
