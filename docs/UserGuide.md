@@ -229,8 +229,9 @@ operation before any members are added, even when the file starts with valid rec
 If every record is rejected, feedback reports zero imports and all rejection reasons; member records, the current
 search results, and saved JSON remain unchanged.
 
-If automatic saving fails after a successful validation, an error is shown. Imported members may remain in the current
-session without being saved, as with `add`; confirm that saving succeeds before closing the application.
+If automatic saving fails, an error is shown and the imported members are removed from the current session.
+The previous directory, search filter, saved JSON, and source CSV are preserved. Resolve the saving problem
+and retry the import.
 
 ### Listing all persons: `list`
 
@@ -437,6 +438,10 @@ Format: `exit`
 ### Saving the data
 
 AddressBook automatically saves data after every successful command. You do not need to save manually.
+If saving fails, the app reports the error and restores the member records and search filter from before the command.
+The previous data file is preserved. Resolve the reported problem (for example, insufficient permissions or disk space)
+and retry the command. The app requires the data folder's filesystem to support atomic file replacement; it reports
+a saving error if this is unavailable.
 If the data file cannot be fully loaded, saving and changes to members are disabled to protect the original file.
 
 ### Editing the data file
