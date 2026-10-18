@@ -42,7 +42,8 @@ This project has three types of tests:
 
 ## Command history checks
 
-Use JDK 25 and run `./gradlew checkstyleMain checkstyleTest test commandHistoryWithoutAssertions`.
+Use JDK 25 and run `./gradlew.bat checkstyleMain checkstyleTest test commandHistoryWithoutAssertions`
+on Windows, or `./gradlew checkstyleMain checkstyleTest test commandHistoryWithoutAssertions` elsewhere.
 The regular `test` task explicitly enables Java assertions. `commandHistoryWithoutAssertions` reruns only
 `CommandHistoryTest` with assertions disabled, verifying recording, eviction, navigation and draft restoration
 without relying on `assert` for required behavior. The `check` task also includes this verification.
