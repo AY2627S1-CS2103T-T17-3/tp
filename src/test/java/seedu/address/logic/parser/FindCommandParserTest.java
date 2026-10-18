@@ -25,6 +25,41 @@ public class FindCommandParserTest {
     private FindCommandParser parser = new FindCommandParser();
 
     @Test
+    public void parse_uppercasePrefix_throwsParseException() {
+        String expectedMessage = "Search prefixes must be lowercase. Use n/, p/, e/ or t/.";
+        for (String args : List.of("N/", "P/", "E/", "T/", "N/Alice", "P/9123", "E/alice", "T/publicity")) {
+            assertParseFailure(parser, args, expectedMessage);
+            assertParseFailure(parser, " \t\n " + args + " \t\n ", expectedMessage);
+        }
+    }
+
+    @Test
+    public void parse_uppercasePrefixAfterOtherArguments_throwsParseException() {
+        for (String args : List.of("T/ E/", "T/publicity E/alice", "n/Alice N/Bob", "p/9123 P/4567",
+                "e/alice E/bob", "t/publicity T/exco", "Alice N/Bob", "Alice P/9123",
+                "Alice E/alice", "Alice T/publicity")) {
+            for (String separator : List.of(" ", "\t", "\n")) {
+                assertParseFailure(parser, args.replace(" ", separator), FindCommand.MESSAGE_UPPERCASE_PREFIX);
+            }
+        }
+    }
+
+    @Test
+    public void parse_lowercasePrefixWithUppercaseValue_returnsFindCommand() {
+        assertParseSuccess(parser, "n/ALICE", new FindCommand(new NameContainsKeywordsPredicate(List.of("ALICE"))));
+        assertParseSuccess(parser, "e/ALICE", new FindCommand(new EmailContainsSubstringPredicate("alice")));
+        assertParseSuccess(parser, "t/PUBLICITY", new FindCommand(new TagMatchesPredicate(new Tag("publicity"))));
+        assertParseSuccess(parser, "ALICE", new FindCommand(new NameContainsKeywordsPredicate(List.of("ALICE"))));
+    }
+
+    @Test
+    public void parse_uppercasePrefixInsideValue_returnsFindCommand() {
+        assertParseSuccess(parser, "AN/NA", new FindCommand(new NameContainsKeywordsPredicate(List.of("AN/NA"))));
+        assertParseSuccess(parser, "n/AN/NA", new FindCommand(new NameContainsKeywordsPredicate(List.of("AN/NA"))));
+        assertParseSuccess(parser, "e/N/", new FindCommand(new EmailContainsSubstringPredicate("N/")));
+    }
+
+    @Test
     public void parse_tagPrefix_returnsFindCommand() {
         FindCommand expectedFindCommand = new FindCommand(new TagMatchesPredicate(new Tag("publicity")));
         assertParseSuccess(parser, "t/publicity", expectedFindCommand);

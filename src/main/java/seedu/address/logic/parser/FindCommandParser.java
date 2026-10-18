@@ -7,6 +7,7 @@ import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
@@ -20,6 +21,8 @@ import seedu.address.model.person.TagMatchesPredicate;
  */
 public class FindCommandParser implements Parser<FindCommand> {
 
+    private static final Pattern UPPERCASE_SEARCH_PREFIX = Pattern.compile("(^|\\s)[NPET]/");
+
     /**
      * Parses name keywords, a {@code p/} phone substring, an {@code e/} email substring or a {@code t/} tag
      * into a FindCommand.
@@ -28,6 +31,10 @@ public class FindCommandParser implements Parser<FindCommand> {
      */
     public FindCommand parse(String args) throws ParseException {
         String trimmedArgs = args.trim();
+        // Reject uppercase prefixes at argument boundaries before they can become name keywords.
+        if (UPPERCASE_SEARCH_PREFIX.matcher(trimmedArgs).find()) {
+            throw new ParseException(FindCommand.MESSAGE_UPPERCASE_PREFIX);
+        }
         // Normalize whitespace so prefixes after tabs and newlines are recognized by the tokenizer.
         ArgumentMultimap argMultimap =
                 ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "),
