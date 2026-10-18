@@ -316,6 +316,11 @@ Formats:
   The same applies to substrings separated by tabs or line breaks.
   Search separately with `find p/9123` and `find p/1234`.
 * Both partial and full phone numbers are accepted. Even one or two digits can be used, such as `find p/9` or `find p/91`.
+* Use only ASCII digits (`0-9`). Letters, punctuation and non-ASCII digits are rejected, for example,
+  `find p/abc`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.
+  The error is: "Phone searches accept digits (0-9) only. Example: find p/9123."
+* Leading zeros are preserved: `find p/001` searches for the exact sequence `001`.
+  Surrounding whitespace is ignored. Rejected searches leave the displayed member list and member records unchanged.
 * Include `p/` to search phone numbers: `find 9103` searches names, while `find p/9103` searches phone numbers.
 
 **Email searches**

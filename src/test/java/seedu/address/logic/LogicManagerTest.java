@@ -111,6 +111,23 @@ public class LogicManagerTest {
     }
 
     @Test
+    public void execute_invalidPhoneSearch_preservesRecordsAndFilter() throws Exception {
+        Person matchingPerson = new PersonBuilder().withPhone("91234567").withEmail("alice@u.nus.edu").build();
+        Person otherPerson = new PersonBuilder().withPhone("87654321").withEmail("bob@u.nus.edu").build();
+        model.addPerson(matchingPerson);
+        model.addPerson(otherPerson);
+        logic.execute("find p/9123");
+        assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
+
+        for (String substring : List.of("abc", "91a3", "+659123", "9123-4567", "９１２３", "٩١٢٣")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING, () ->
+                    logic.execute("find p/" + substring));
+            assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
+            assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());
+        }
+    }
+
+    @Test
     public void execute_invalidEmailSearch_preservesRecordsAndFilter() throws Exception {
         model.addPerson(new PersonBuilder().withEmail("alice@u.nus.edu").build());
         model.addPerson(new PersonBuilder().withEmail("bob@u.nus.edu").build());
