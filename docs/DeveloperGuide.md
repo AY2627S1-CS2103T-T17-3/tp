@@ -271,6 +271,10 @@ incomplete members. `PersonBuilder` supports absent fields and preserves status 
 ### Finding members by contact details or tag
 
 `FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/`, `e/` and `t/` search fields.
+Unprefixed name searches accept multiple keywords with OR semantics; `n/` accepts exactly one nonempty keyword.
+After the existing prefix and empty-value checks, the parser rejects multiple whitespace-separated `n/` keywords
+with guidance to use the unprefixed form for OR searching. This includes repeated identical keywords.
+Surrounding whitespace, including whitespace between the prefix and its value, is ignored.
 It validates prefix-like tokens at argument boundaries against the four supported prefixes before they can be
 interpreted as search values. A nonempty label followed by `/` at the start of the arguments or after whitespace
 is treated as a prefix. Uppercase variants (`N/`, `P/`, `E/` and `T/`) receive lowercase-prefix guidance;
@@ -278,6 +282,8 @@ other prefixes such as `G/`, `g/`, `a/` and `name/` receive an unsupported-prefi
 Slashes within values attached to valid prefixes, such as `e/G/`, retain their literal meaning.
 Search values retain their field-specific case rules.
 It normalizes whitespace before tokenizing prefixes, so spaces, tabs and line breaks separate fields consistently.
+`AddressBookParser` also passes multiline `find` arguments to this parser, allowing field-specific validation and
+error messages for line-separated values. Other commands retain their existing input handling.
 Duplicate prefixes, multiple selected fields, text before a selected field and empty search values are rejected.
 Phone and email searches each accept one substring; multiple whitespace-separated fragments are rejected.
 Tag searches accept one alphanumeric tag; multiple whitespace-separated tags are rejected with a single-tag error.
@@ -288,7 +294,8 @@ the matching members and their count, including an empty list and zero for a val
 After applying the filter, `FindCommand` logs the match count at `INFO` level through `LogsCenter`, for example,
 `Find completed: 3 members matched.`
 
-`NameContainsKeywordsPredicate` matches any whole name keyword, ignoring case.
+`NameContainsKeywordsPredicate` matches any whole name keyword, ignoring case. It retains support for multiple
+keywords because unprefixed searches still require OR matching; the single-keyword restriction belongs in the parser.
 `PhoneContainsSubstringPredicate` matches a literal phone substring.
 `EmailContainsSubstringPredicate` lowercases the search substring with `Locale.ROOT` and matches it anywhere in
 the canonical lowercase email. It does not construct an `Email` or validate the substring as a complete address,
@@ -301,8 +308,9 @@ stored tags or their equality behavior. A member with several tags matches if on
 a member with no tags does not match. Contact details and archive status do not affect tag matching.
 No member data or storage schema changes are required.
 
-Parser, predicate and command tests cover exact matching, mixed case, partial names, multiple or absent member tags,
-invalid input and searches after an earlier filter. Logic integration tests verify that rejected searches preserve
+Parser, predicate and command tests cover single-keyword prefixed name searches, unprefixed OR searches, spaces,
+tabs and line breaks, exact matching, mixed case, partial names, multiple or absent member tags, invalid input and
+searches after an earlier filter. Logic integration tests verify that rejected searches preserve
 the previous results, member records and saved data. Multiple-tag and multi-field searches remain unsupported.
 
 ### Importing member directories from CSV
@@ -607,6 +615,13 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
+* 1e. Secretary provides multiple name keywords in a prefixed name search.
+
+  * 1e1. NUSocietyDesk explains the single-keyword restriction and suggests an unprefixed search to match any keyword.
+  * 1e2. NUSocietyDesk keeps the previous results and member records unchanged.
+
+    Use case ends.
+
 * 2a. No members match the search.
 
   * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
@@ -780,6 +795,82 @@ The following steps use a file manager and do not require a particular operating
    Remove the test folder and restore the original JSON filename before closing the app.
 
 These GUI checks require manual execution; automated tests inject failures in the write and replacement operations.
+
+### Finding members by name
+
+Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Run these setup commands one at a time:
+
+```text
+add n/Alice Tan e/namealice@u.nus.edu
+add n/Bob Lee e/namebob@u.nus.edu
+add n/Alison Tan e/namealison@u.nus.edu
+```
+
+1. Test cases: `find n/Alice`, `find n/aLiCe`, `find Alice` and `find n/ Alice `.<br>
+   Expected: Only Alice Tan is displayed; the count is one. Case and surrounding whitespace do not affect matching.
+1. Test cases: `find Alice Bob` and `find Bob ALICE`.<br>
+   Expected: Alice Tan and Bob Lee are displayed; the count is two. Either keyword can match, in any order.
+1. Test cases: `find n/Ali` and `find Ali`.<br>
+   Expected: No members are displayed; the count is zero. Partial words match neither Alice nor Alison.
+1. Run `find n/Alice`, then record the displayed result and make a copy of `data/addressbook.json`.<br>
+   Try `find n/Alice Bob`, `find n/Alice  Bob` and `find n/Alice Alice`.<br>
+   Expected: Each reports "Prefixed name searches accept only one keyword. Use find Alice Bob to match names
+   containing Alice OR Bob." Alice Tan remains the only displayed member, and the saved JSON matches the copy.
+1. After running `find n/Alice`, try `find n/`, `find n/Alice n/Bob`, `find n/Alice p/9123` and
+   `find Alice n/Bob`.<br>
+   Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
+   Alice Tan remains displayed, and member records and saved JSON remain unchanged.
+1. Run `list`, then close and reopen the app.<br>
+   Expected: All three records retain their names and email addresses. Searching has not changed member data.
+
+Automated parser and logic tests also cover keywords separated by tabs, LF and CRLF line breaks, including the
+error guidance and preservation of previous results, records and saved JSON. The GUI checks above are provided
+for manual execution.
+
+### Finding members by phone number
+
+Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Run these setup commands one at a time:
+
+```text
+add n/Alice Tan p/91234567 e/phonealice@u.nus.edu
+add n/Bob Lee p/89123000 e/phonebob@u.nus.edu
+add n/Carol Lim p/00145678 e/phonecarol@u.nus.edu
+add n/9123 Member e/phonemissing@u.nus.edu
+```
+
+1. Test cases: `find p/9123` and `find p/ 9123 `.<br>
+   Expected: Alice Tan and Bob Lee are displayed; the count is two. A substring can occur anywhere in the phone
+   number, and surrounding whitespace is ignored. The member named 9123 Member has no phone and does not match.
+1. Test cases: `find p/91234567` and `find p/2345`.<br>
+   Expected: Only Alice Tan is displayed; the count is one. Both full numbers and consecutive digit fragments match.
+1. Test cases: `find p/9` and `find p/91`.<br>
+   Expected: The first displays Alice Tan and Bob Lee; the second displays only Alice Tan.
+   Search values may contain fewer than the three digits required when storing a phone number.
+1. Test case: `find p/001`.<br>
+   Expected: Only Carol Lim is displayed; the count is one. Leading zeros are preserved in the search value.
+1. Test cases: `find p/555` and `find p/923`.<br>
+   Expected: Each produces an empty list and a count of zero. Digits must occur consecutively, in the given order.
+1. Run `find 9123`, followed by `find p/9123`.<br>
+   Expected: The first displays only 9123 Member because unprefixed searches consider names.
+   The second displays Alice Tan and Bob Lee, searching the complete directory despite the earlier filter.
+1. After running `find p/9123`, make a copy of `data/addressbook.json` and try `find p/9123 1234`.<br>
+   Expected: The error is "Phone searches accept only one substring. Search each substring in a separate find command."
+   Alice Tan and Bob Lee remain displayed, and the saved JSON matches the copy.
+1. Test cases: `find p/abc`, `find p/91a3`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.<br>
+   Expected: Each reports "Phone searches accept digits (0-9) only. Example: find p/9123."
+   The previous results, member records and saved JSON remain unchanged.
+1. Test cases: `find p/`, `find p/9123 p/4567`, `find p/9123 n/Alice` and `find Alice p/9123`.<br>
+   Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
+   The previous results, member records and saved JSON remain unchanged.
+1. Run `list`, then close and reopen the app.<br>
+   Expected: All four records retain their contact details, including Carol's leading zeros and the missing phone
+   for 9123 Member. Searching has not changed member data.
+
+Automated parser tests also cover phone substrings and prefixes separated by tabs or line breaks. Logic tests
+verify that invalid phone values preserve member records and the previous results. The GUI checks above are
+provided for manual execution.
 
 ### Finding members by tag
 

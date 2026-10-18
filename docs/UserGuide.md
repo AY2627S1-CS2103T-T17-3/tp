@@ -315,19 +315,27 @@ Matching members are displayed in a list with index numbers, together with the n
 
 Formats:
 
-* `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
+* `find KEYWORD [MORE_KEYWORDS]...` for name searches matching any keyword.
+* `find n/KEYWORD` for a name search using one keyword.
 * `find p/PHONE_SUBSTRING` for phone searches.
 * `find e/EMAIL_SUBSTRING` for email searches.
 * `find t/TAG` for tag searches.
 
 **Name searches**
 
-* The `n/` prefix is optional: `find Alice Bob` and `find n/Alice Bob` return the same results.
+* Use `find n/Alice` or `find Alice` to search for one name keyword; both return the same results.
+* The `n/` prefix accepts exactly one nonempty keyword. Commands such as `find n/Alice Bob` and
+  `find n/Alice Alice` are rejected, including keywords separated by tabs or line breaks.
+  The error is: "Prefixed name searches accept only one keyword. Use find Alice Bob to match names containing
+  Alice OR Bob."
+* For multiple keywords, omit `n/`: `find Alice Bob` returns members whose names contain Alice or Bob.
+  Previously accepted commands such as `find n/Alice Bob` must now be written as `find Alice Bob`.
+* Surrounding whitespace is ignored, including whitespace between `n/` and its keyword.
 * Name matching is case-insensitive; for example, `hans` matches `Hans`.
-* Keyword order does not matter; for example, `Hans Bo` matches `Bo Hans`.
+* In an unprefixed search, keyword order does not matter: `find Hans Bo` and `find Bo Hans` return the same results.
 * Unprefixed searches and `n/` searches consider only names.
 * Only full words match; for example, `Han` does not match `Hans`.
-* Members matching at least one keyword are returned (an `OR` search); for example, `Hans Bo` returns
+* Unprefixed searches return members matching at least one keyword (an `OR` search); for example, `find Hans Bo` returns
   `Hans Gruber` and `Bo Yang`.
 
 **Phone searches**
@@ -400,7 +408,8 @@ Formats:
 Examples:
 
 * `find John` returns members named `john` and `John Doe`.
-* `find n/alex david` returns the same members as `find alex david`.
+* `find n/alex` returns members whose names contain the whole word `alex`, ignoring case.
+* `find n/alex david` is rejected; use `find alex david` to match either name keyword.
 * `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
 * `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
 * `find e/ALEX` returns members whose email addresses contain `alex`, including Alex Yeoh in the sample data.
@@ -550,7 +559,7 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
-**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING`, `find e/EMAIL_SUBSTRING` or `find t/TAG`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`, `find t/publicity`
+**Find**   | `find KEYWORD [MORE_KEYWORDS]...`, `find n/KEYWORD`, `find p/PHONE_SUBSTRING`, `find e/EMAIL_SUBSTRING` or `find t/TAG`<br> e.g., `find James Jake`, `find n/James`, `find p/9103`, `find e/alex`, `find t/publicity`
 **List**   | `list`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tag INDEX t/TAG`<br> e.g., `tag 1 t/Volunteer`
