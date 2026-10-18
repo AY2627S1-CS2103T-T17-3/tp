@@ -78,6 +78,19 @@ public class FindCommandParserTest {
         assertParseSuccess(parser, "p/91234567", new FindCommand(new PhoneContainsSubstringPredicate("91234567")));
         assertParseSuccess(parser, "p/9", new FindCommand(new PhoneContainsSubstringPredicate("9")));
         assertParseSuccess(parser, "p/91", new FindCommand(new PhoneContainsSubstringPredicate("91")));
+        assertParseSuccess(parser, "p/0", new FindCommand(new PhoneContainsSubstringPredicate("0")));
+        assertParseSuccess(parser, "p/001", new FindCommand(new PhoneContainsSubstringPredicate("001")));
+        assertParseSuccess(parser, " \t p/ \t001 \n ",
+                new FindCommand(new PhoneContainsSubstringPredicate("001")));
+    }
+
+    @Test
+    public void parse_nonDigitPhoneSubstring_throwsParseException() {
+        String expectedMessage = "Phone searches accept digits (0-9) only. Example: find p/9123.";
+        for (String substring : List.of("abc", "91a3", "+659123", "9123-4567", "9123.4567", "９１２３", "٩١٢٣")) {
+            assertParseFailure(parser, "p/" + substring, expectedMessage);
+        }
+        assertParseFailure(parser, " \t p/ \tabc \n ", expectedMessage);
     }
 
     @Test
@@ -102,6 +115,9 @@ public class FindCommandParserTest {
         assertParseFailure(parser, "p/9123\t1234", expectedMessage);
         assertParseFailure(parser, "p/9123\n1234", expectedMessage);
         assertParseFailure(parser, " p/ \t9123 \n1234 \t", expectedMessage);
+        assertParseFailure(parser, "p/abc 1234", expectedMessage);
+        assertParseFailure(parser, "p/9123\tabc", expectedMessage);
+        assertParseFailure(parser, "p/abc\n1234", expectedMessage);
     }
 
     @Test
@@ -112,6 +128,7 @@ public class FindCommandParserTest {
         assertParseFailure(parser, "p/9123\np/4567", expectedMessage);
         assertParseFailure(parser, "p/ p/4567", expectedMessage);
         assertParseFailure(parser, "p/9123 p/", expectedMessage);
+        assertParseFailure(parser, "p/abc p/4567", expectedMessage);
     }
 
     @Test
@@ -122,6 +139,8 @@ public class FindCommandParserTest {
         assertParseFailure(parser, "n/Alice\tp/9123", expectedMessage);
         assertParseFailure(parser, "n/ p/9123", expectedMessage);
         assertParseFailure(parser, "n/Alice p/", expectedMessage);
+        assertParseFailure(parser, "n/Alice p/abc", expectedMessage);
+        assertParseFailure(parser, "p/abc e/alice", expectedMessage);
     }
 
     @Test
@@ -129,6 +148,7 @@ public class FindCommandParserTest {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
         assertParseFailure(parser, "Alice p/9123", expectedMessage);
         assertParseFailure(parser, "Alice\tp/9123", expectedMessage);
+        assertParseFailure(parser, "Alice p/abc", expectedMessage);
     }
 
     @Test

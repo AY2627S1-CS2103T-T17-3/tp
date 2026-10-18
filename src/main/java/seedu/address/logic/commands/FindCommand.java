@@ -27,6 +27,9 @@ public class FindCommand extends Command {
     public static final String MESSAGE_MULTIPLE_PHONE_SUBSTRINGS = "Phone searches accept only one substring. "
             + "Search each substring in a separate find command.";
 
+    public static final String MESSAGE_INVALID_PHONE_SUBSTRING = "Phone searches accept digits (0-9) only. "
+            + "Example: find p/9123.";
+
     public static final String MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS = "Email searches accept only one substring. "
             + "Search each substring in a separate find command.";
 
