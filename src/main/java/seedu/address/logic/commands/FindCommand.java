@@ -22,7 +22,9 @@ public class FindCommand extends Command {
             + "Name:  " + COMMAND_WORD + " [n/]KEYWORD [MORE_KEYWORDS]...\n"
             + "Phone: " + COMMAND_WORD + " p/SUBSTRING\n"
             + "Email: " + COMMAND_WORD + " e/SUBSTRING\n"
-            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice";
+            + "Tag:   " + COMMAND_WORD + " t/TAG (one exact tag, ignoring case)\n"
+            + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice; "
+            + COMMAND_WORD + " t/publicity";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
 
@@ -34,6 +36,9 @@ public class FindCommand extends Command {
 
     public static final String MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS = "Email searches accept only one substring. "
             + "Search each substring in a separate find command.";
+
+    public static final String MESSAGE_MULTIPLE_TAGS = "Tag searches accept only one tag. "
+            + "Example: find t/publicity.";
 
     private static final Logger logger = LogsCenter.getLogger(FindCommand.class);
 

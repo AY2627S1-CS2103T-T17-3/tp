@@ -4,6 +4,7 @@ import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
+import seedu.address.model.person.TagMatchesPredicate;
 
 /**
  * Parses input arguments and creates a new FindCommand object.
@@ -19,7 +21,8 @@ import seedu.address.model.person.PhoneContainsSubstringPredicate;
 public class FindCommandParser implements Parser<FindCommand> {
 
     /**
-     * Parses name keywords, a {@code p/} phone substring or an {@code e/} email substring into a FindCommand.
+     * Parses name keywords, a {@code p/} phone substring, an {@code e/} email substring or a {@code t/} tag
+     * into a FindCommand.
      *
      * @throws ParseException if the user input does not conform to the expected format.
      */
@@ -28,10 +31,10 @@ public class FindCommandParser implements Parser<FindCommand> {
         // Normalize whitespace so prefixes after tabs and newlines are recognized by the tokenizer.
         ArgumentMultimap argMultimap =
                 ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "),
-                        PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL);
-        argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL);
+                        PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG);
+        argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG);
 
-        List<Prefix> searchPrefixes = List.of(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL).stream()
+        List<Prefix> searchPrefixes = List.of(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG).stream()
                 .filter(prefix -> argMultimap.getValue(prefix).isPresent())
                 .toList();
         if (searchPrefixes.size() > 1) {
@@ -67,6 +70,13 @@ public class FindCommandParser implements Parser<FindCommand> {
                 throw new ParseException(FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS);
             }
             return new FindCommand(new EmailContainsSubstringPredicate(trimmedArgs));
+        }
+
+        if (searchPrefixes.contains(PREFIX_TAG)) {
+            if (trimmedArgs.split("\\s+").length > 1) {
+                throw new ParseException(FindCommand.MESSAGE_MULTIPLE_TAGS);
+            }
+            return new FindCommand(new TagMatchesPredicate(ParserUtil.parseTag(trimmedArgs)));
         }
 
         String[] nameKeywords = trimmedArgs.split("\\s+");

@@ -4,6 +4,7 @@ import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
+import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseFailure;
 import static seedu.address.logic.parser.CommandParserTestUtil.assertParseSuccess;
 
@@ -16,10 +17,77 @@ import seedu.address.logic.commands.FindCommand;
 import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
+import seedu.address.model.person.TagMatchesPredicate;
+import seedu.address.model.tag.Tag;
 
 public class FindCommandParserTest {
 
     private FindCommandParser parser = new FindCommandParser();
+
+    @Test
+    public void parse_tagPrefix_returnsFindCommand() {
+        FindCommand expectedFindCommand = new FindCommand(new TagMatchesPredicate(new Tag("publicity")));
+        assertParseSuccess(parser, "t/publicity", expectedFindCommand);
+        assertParseSuccess(parser, "t/PUBLICITY", expectedFindCommand);
+        assertParseSuccess(parser, " \n \t t/ \t pUbLiCiTy \n ", expectedFindCommand);
+        for (String tag : List.of("pub", "exco2026", "123", "a")) {
+            assertParseSuccess(parser, "t/" + tag, new FindCommand(new TagMatchesPredicate(new Tag(tag))));
+        }
+    }
+
+    @Test
+    public void parse_emptyTagValue_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        assertParseFailure(parser, "t/", expectedMessage);
+        assertParseFailure(parser, " t/ \t \n ", expectedMessage);
+    }
+
+    @Test
+    public void parse_invalidTagName_throwsParseException() {
+        for (String tag : List.of("publicity!", "exco-2026", "exco_2026", "pub/exco", "pub,exco", "*", "ＰＵＢ")) {
+            assertParseFailure(parser, "t/" + tag, Tag.MESSAGE_CONSTRAINTS);
+        }
+    }
+
+    @Test
+    public void parse_multipleTags_throwsParseException() {
+        String expectedMessage = "Tag searches accept only one tag. Example: find t/publicity.";
+        for (String args : List.of("t/publicity exco", "t/publicity  exco", "t/publicity\texco",
+                "t/publicity\nexco", " t/ \tpublicity \nexco \t", "t/publicity publicity")) {
+            assertParseFailure(parser, args, expectedMessage);
+        }
+    }
+
+    @Test
+    public void parse_repeatedTagPrefix_throwsParseException() {
+        String expectedMessage = Messages.getErrorMessageForDuplicatePrefixes(PREFIX_TAG);
+        for (String args : List.of("t/publicity t/exco", "t/publicity t/publicity", "t/publicity\tt/exco",
+                "t/publicity\nt/exco", "t/ t/exco", "t/publicity t/")) {
+            assertParseFailure(parser, args, expectedMessage);
+        }
+    }
+
+    @Test
+    public void parse_tagAndOtherPrefixes_throwsParseException() {
+        String expectedMessage = "Specify only one search field per find command.";
+        for (String field : List.of("n/Alice", "p/9123", "e/alice", "n/", "p/", "e/")) {
+            for (String separator : List.of(" ", "\t", "\n")) {
+                assertParseFailure(parser, "t/publicity" + separator + field, expectedMessage);
+                assertParseFailure(parser, field + separator + "t/publicity", expectedMessage);
+            }
+        }
+        assertParseFailure(parser, "t/ n/Alice", expectedMessage);
+        assertParseFailure(parser, "t/ p/9123", expectedMessage);
+        assertParseFailure(parser, "t/ e/alice", expectedMessage);
+    }
+
+    @Test
+    public void parse_tagPrefixWithPreamble_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        assertParseFailure(parser, "Alice t/publicity", expectedMessage);
+        assertParseFailure(parser, "Alice\tt/publicity", expectedMessage);
+        assertParseFailure(parser, "Alice\nt/publicity", expectedMessage);
+    }
 
     @Test
     public void parse_emptyArg_throwsParseException() {
