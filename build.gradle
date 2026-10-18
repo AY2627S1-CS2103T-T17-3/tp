@@ -30,8 +30,23 @@ checkstyle {
 
 test {
     useJUnitPlatform()
+    enableAssertions = true
     finalizedBy jacocoTestReport
 }
+
+tasks.register('commandHistoryWithoutAssertions', Test) {
+    description = 'Checks command history behavior with Java assertions disabled.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    include '**/CommandHistoryTest.class'
+    enableAssertions = false
+    systemProperty 'history.assertions.enabled', 'false'
+    shouldRunAfter test
+}
+
+check.dependsOn commandHistoryWithoutAssertions
 
 task coverage(type: JacocoReport) {
     dependsOn test

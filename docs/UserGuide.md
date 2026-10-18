@@ -71,6 +71,55 @@ AddressBook Level 3 (AB3) is a **desktop application for managing contacts, opti
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </box>
 
+### Recalling commands: ↑ and ↓
+
+While the command box has focus, press **↑** to recall the newest submitted command, then press it again
+to browse older commands. Press **↓** to browse newer commands. These keys work at any caret position;
+they do not filter history by the text you have typed. Holding either key repeats navigation.
+After a failed submission, the failed command is already selected in history: one ↑ recalls the preceding
+entry, and ↓ can return to the failed command. If there is no preceding entry, ↑ leaves the field unchanged.
+At the newest failed entry, ↓ is a no-op, even if you have edited it. Repeated ↓ presses preserve the text
+and selection, and the next ↑ still reaches the preceding entry.
+Navigation stops at the oldest entry and at your draft, without wrapping or displaying a message.
+Shift/Ctrl/Alt/Meta combinations and arrow keys outside the command box retain their usual behavior.
+
+Every non-blank submission is recorded before execution, including commands with syntax errors, commands
+that cannot execute, and commands whose save fails. Recalling a command only fills the command box:
+it does not run the command or replace the previous result message. Press Enter to execute it against
+the current member list. Recalled text has the caret at the end and can be edited normally.
+
+For example:
+
+1. Submit `list`, then `lisst`. The result shows `Unknown command.` and the failed text remains in the command box.
+1. Press ↑ once to recall `list`, then ↓ to return to `lisst` with normal input styling.
+1. Correct it to `list` and press Enter. The result shows `Listed all persons.` and the command box clears.
+1. Press ↑ twice to recall `list`, then `lisst`.
+
+**Drafts:** When you first press ↑, the app remembers your unsent text and its caret/selection.
+Pressing ↓ past the newest entry restores that draft exactly. For example, type `find n/Alex`, browse
+older commands, then return to the newest end to recover `find n/Alex`.
+Edits to each recalled command are remembered as you navigate up and down, even if you return to your draft
+and browse again. This includes deleting all of a recalled command's text. The original submitted entries
+remain unchanged until you resubmit edited text as a new command.
+Pressing an arrow at a boundary leaves edits and selection unchanged. Submitting a non-blank command
+ends browsing and clears the earlier draft and temporary edits to other entries, even if the submission
+fails or repeats the newest command. A blank submission does not clear these edits.
+Successful submissions clear the field. Failed submissions remain editable, with history positioned on the
+failed entry and no duplicate draft position beyond it. Ordinary unsent drafts still restore when browsing
+from the command box after a successful submission.
+
+**Retention:** History keeps at most **100 entries**, dropping the oldest when a new entry exceeds that limit.
+Consecutive exact duplicates use one entry, but every submission still executes. Spaces and letter case
+are preserved, so `list`, ` list ` and `LIST` are distinct entries. Non-consecutive duplicates remain.
+Empty or whitespace-only submissions are ignored without changing the field, results or history;
+this uses Java whitespace rules (a non-breaking space is not considered blank).
+Ignored blanks and consecutive duplicates do not evict entries. The draft does not count toward the limit.
+
+History survives Help, focus changes, minimizing, and `clear` (which clears members only).
+It is kept only for the current application session, independently in each running instance, and is lost
+on restart. There is no history file or new history command. Existing application logging is unchanged;
+recall history is never restored from logs.
+
 ### Viewing help: `help`
 
 Shows a message explaining how to access the help page.
