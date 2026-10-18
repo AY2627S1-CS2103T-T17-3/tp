@@ -7,6 +7,9 @@ import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import seedu.address.logic.commands.FindCommand;
@@ -21,7 +24,9 @@ import seedu.address.model.person.TagMatchesPredicate;
  */
 public class FindCommandParser implements Parser<FindCommand> {
 
-    private static final Pattern UPPERCASE_SEARCH_PREFIX = Pattern.compile("(^|\\s)[NPET]/");
+    private static final Pattern SEARCH_PREFIX = Pattern.compile("(?:^|\\s)([^\\s/]+/)");
+    private static final Set<String> SUPPORTED_SEARCH_PREFIXES = Set.of(
+            PREFIX_NAME.getPrefix(), PREFIX_PHONE.getPrefix(), PREFIX_EMAIL.getPrefix(), PREFIX_TAG.getPrefix());
 
     /**
      * Parses name keywords, a {@code p/} phone substring, an {@code e/} email substring or a {@code t/} tag
@@ -31,10 +36,7 @@ public class FindCommandParser implements Parser<FindCommand> {
      */
     public FindCommand parse(String args) throws ParseException {
         String trimmedArgs = args.trim();
-        // Reject uppercase prefixes at argument boundaries before they can become name keywords.
-        if (UPPERCASE_SEARCH_PREFIX.matcher(trimmedArgs).find()) {
-            throw new ParseException(FindCommand.MESSAGE_UPPERCASE_PREFIX);
-        }
+        validateSearchPrefixes(trimmedArgs);
         // Normalize whitespace so prefixes after tabs and newlines are recognized by the tokenizer.
         ArgumentMultimap argMultimap =
                 ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "),
@@ -89,6 +91,25 @@ public class FindCommandParser implements Parser<FindCommand> {
         String[] nameKeywords = trimmedArgs.split("\\s+");
 
         return new FindCommand(new NameContainsKeywordsPredicate(List.of(nameKeywords)));
+    }
+
+    /**
+     * Rejects unsupported prefixes at argument boundaries before they can become search values.
+     *
+     * @throws ParseException if a prefix is uppercase or unsupported.
+     */
+    private void validateSearchPrefixes(String args) throws ParseException {
+        Matcher matcher = SEARCH_PREFIX.matcher(args);
+        while (matcher.find()) {
+            String prefix = matcher.group(1);
+            if (SUPPORTED_SEARCH_PREFIXES.contains(prefix)) {
+                continue;
+            }
+            if (SUPPORTED_SEARCH_PREFIXES.contains(prefix.toLowerCase(Locale.ROOT))) {
+                throw new ParseException(FindCommand.MESSAGE_UPPERCASE_PREFIX);
+            }
+            throw new ParseException(String.format(FindCommand.MESSAGE_UNSUPPORTED_PREFIX, prefix));
+        }
     }
 
 }

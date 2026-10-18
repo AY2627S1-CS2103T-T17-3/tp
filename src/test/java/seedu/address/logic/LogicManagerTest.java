@@ -126,7 +126,8 @@ public class LogicManagerTest {
         for (String command : List.of("find t/", "find t/publicity exco", "find t/publicity t/exco",
                 "find t/publicity n/Amy", "find p/9123 t/publicity", "find t/publicity e/alice",
                 "find t/publicity!", "find Amy t/publicity", "find N/", "find P/9123", "find E/alice",
-                "find T/publicity", "find T/ E/", "find n/Amy T/publicity")) {
+                "find T/publicity", "find T/ E/", "find n/Amy T/publicity", "find G/", "find F/value",
+                "find H/", "find g/value", "find name/Amy", "find n/Amy G/value", "find t/publicity h/value")) {
             assertThrows(ParseException.class, () -> logic.execute(command));
             assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
             assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());

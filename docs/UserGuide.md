@@ -308,16 +308,17 @@ Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [publicity]
 Tag removed: [publicity]; Email: 2@u.nus.edu
 ```
 
-### Locating members by name, phone or email: `find`
+### Locating members by name, phone, email or tag: `find`
 
-Finds members by name keywords, a phone number substring or an email address substring. Matching members are displayed
-in a list with index numbers, together with the number of matches.
+Finds members by name keywords, a phone number substring, an email address substring or one exact tag.
+Matching members are displayed in a list with index numbers, together with the number of matches.
 
 Formats:
 
 * `find [n/]KEYWORD [MORE_KEYWORDS]...` for name searches.
 * `find p/PHONE_SUBSTRING` for phone searches.
 * `find e/EMAIL_SUBSTRING` for email searches.
+* `find t/TAG` for tag searches.
 
 **Name searches**
 
@@ -359,17 +360,42 @@ Formats:
   while `find e/alex@u.nus.edu` searches emails.
 * `find e/@u.nus.edu` returns every member because all stored email addresses use that domain.
 
+**Tag searches**
+
+* The search considers only assigned tags and matches the complete tag name, ignoring case.
+  For example, `find t/publicity` and `find t/PUBLICITY` return the same members.
+* Partial names do not match: `find t/pub` matches only the tag `pub`, not `publicity`.
+* A member matches if any of their assigned tags equals the requested tag. Members with no tags do not match.
+* Supply one alphanumeric tag. Spaces and punctuation are not allowed within a tag name.
+* Commands such as `find t/publicity exco` are rejected, including values separated by tabs or line breaks.
+  The error is: "Tag searches accept only one tag. Example: find t/publicity."
+* Tag searches include active and archived members, as well as members with incomplete contact details.
+  Include `t/`: `find publicity` searches names, while `find t/publicity` searches tags.
+
 **Search rules**
 
-* Search one field per command. Combining fields, such as `find n/Alice p/9123` or `find e/alice n/Alice`, is rejected.
-* Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567` and
-  `find e/alice e/bob` are rejected.
-* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/` and `find e/` are rejected.
+* Search one field per command. Combining fields, such as `find n/Alice p/9123`, `find e/alice n/Alice`
+  or `find t/publicity e/alice`, is rejected.
+* Use lowercase prefixes: `n/`, `p/`, `e/` and `t/`. Uppercase prefixes such as `N/`, `P/`, `E/` and `T/`
+  are rejected with: "Search prefixes must be lowercase. Use n/, p/, e/ or t/."
+  This rule applies to prefixes; uppercase values such as `find n/ALICE`, `find e/ALICE` and `find t/PUBLICITY`
+  remain valid.
+* Other field prefixes are unsupported. For example, `find G/`, `find g/alice`, `find name/Alice`
+  and `find n/Alice G/value` are rejected. For `G/`, the error is:
+  "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
+  At the start of the search or after whitespace, a token beginning with a nonempty label followed by `/`
+  is treated as a field selection. Slash-containing values attached to a supported prefix, such as `find e/G/`,
+  remain literal search values.
+* Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
+  `find e/alice e/bob` and `find t/publicity t/exco` are rejected.
+* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
+* Rejected searches leave the displayed results, member records and saved data unchanged.
 * A member with no name cannot match a name search, and a member with no phone cannot match a phone search.
-  Use `find e/EMAIL_SUBSTRING` for email-only members. Display placeholders do not match searches.
+  Use `find e/EMAIL_SUBSTRING` or an assigned tag for members with incomplete contact details.
+  Display placeholders do not match searches.
 
 Examples:
 
@@ -379,6 +405,8 @@ Examples:
 * `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
 * `find e/ALEX` returns members whose email addresses contain `alex`, including Alex Yeoh in the sample data.
 * `find e/ALExYeOh@U.NUS.EDU` returns Alex Yeoh in the sample data.
+* `find t/publicity` returns every member tagged `publicity`, including members who also have other tags.
+* `find t/PUBLICITY` returns the same members as `find t/publicity`.
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
 
@@ -522,7 +550,7 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
-**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING` or `find e/EMAIL_SUBSTRING`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`
+**Find**   | `find [n/]KEYWORD [MORE_KEYWORDS]...`, `find p/PHONE_SUBSTRING`, `find e/EMAIL_SUBSTRING` or `find t/TAG`<br> e.g., `find James Jake`, `find n/James Jake`, `find p/9103`, `find e/alex`, `find t/publicity`
 **List**   | `list`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tag INDEX t/TAG`<br> e.g., `tag 1 t/Volunteer`

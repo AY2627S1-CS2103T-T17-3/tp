@@ -268,23 +268,42 @@ The import regression checks supplied-field validation and that imported emails 
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
 
-### Finding members by contact details
+### Finding members by contact details or tag
 
-`FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/` and `e/` search fields.
+`FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/`, `e/` and `t/` search fields.
+It validates prefix-like tokens at argument boundaries against the four supported prefixes before they can be
+interpreted as search values. A nonempty label followed by `/` at the start of the arguments or after whitespace
+is treated as a prefix. Uppercase variants (`N/`, `P/`, `E/` and `T/`) receive lowercase-prefix guidance;
+other prefixes such as `G/`, `g/`, `a/` and `name/` receive an unsupported-prefix error naming the invalid prefix.
+Slashes within values attached to valid prefixes, such as `e/G/`, retain their literal meaning.
+Search values retain their field-specific case rules.
 It normalizes whitespace before tokenizing prefixes, so spaces, tabs and line breaks separate fields consistently.
 Duplicate prefixes, multiple selected fields, text before a selected field and empty search values are rejected.
 Phone and email searches each accept one substring; multiple whitespace-separated fragments are rejected.
+Tag searches accept one alphanumeric tag; multiple whitespace-separated tags are rejected with a single-tag error.
 
 `FindCommand` accepts a `Predicate<Person>` and replaces the model's current filter using
 `Model.updateFilteredPersonList`. Every search checks the complete directory. The existing results view displays
 the matching members and their count, including an empty list and zero for a valid search with no matches.
+After applying the filter, `FindCommand` logs the match count at `INFO` level through `LogsCenter`, for example,
+`Find completed: 3 members matched.`
 
 `NameContainsKeywordsPredicate` matches any whole name keyword, ignoring case.
 `PhoneContainsSubstringPredicate` matches a literal phone substring.
 `EmailContainsSubstringPredicate` lowercases the search substring with `Locale.ROOT` and matches it anywhere in
 the canonical lowercase email. It does not construct an `Email` or validate the substring as a complete address,
 so fragments such as `alice`, `@u.nus.edu` and `+` are accepted. Searching `@u.nus.edu` returns every member
-under the existing email domain restriction. No member data or storage schema changes are required.
+under the existing email domain restriction.
+
+`TagMatchesPredicate` stores a `Tag` validated and normalized through `ParserUtil.parseTag` and checks
+`Person.getTags().contains(tag)`. This reuses the existing exact, case-insensitive tag identity without modifying
+stored tags or their equality behavior. A member with several tags matches if one equals the search tag;
+a member with no tags does not match. Contact details and archive status do not affect tag matching.
+No member data or storage schema changes are required.
+
+Parser, predicate and command tests cover exact matching, mixed case, partial names, multiple or absent member tags,
+invalid input and searches after an earlier filter. Logic integration tests verify that rejected searches preserve
+the previous results, member records and saved data. Multiple-tag and multi-field searches remain unsupported.
 
 ### Importing member directories from CSV
 
@@ -555,8 +574,9 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
 **MSS**
 
-1. Secretary requests to find members using name keywords, a single phone number substring or a single email substring.
-2. NUSocietyDesk displays matching members with their contact details and the number of matches.
+1. Secretary requests to find members using name keywords, a single phone number substring, a single email substring
+   or a single tag.
+2. NUSocietyDesk displays matching members with their available contact details, tags and the number of matches.
 3. Secretary inspects the displayed details to identify the intended member.
 
    Use case ends.
@@ -575,9 +595,15 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-* 1c. Secretary provides multiple phone number or email substrings in one search.
+* 1c. Secretary provides multiple phone number substrings, email substrings or tags in one search.
 
-  * 1c1. NUSocietyDesk shows an error message explaining that the selected search field accepts only one substring.
+  * 1c1. NUSocietyDesk shows an error message explaining that the selected search field accepts only one value.
+
+    Use case ends.
+
+* 1d. Secretary provides an invalid tag name or uses an invalid search format.
+
+  * 1d1. NUSocietyDesk shows an error message explaining how to correct the search.
 
     Use case ends.
 
@@ -754,6 +780,58 @@ The following steps use a file manager and do not require a particular operating
    Remove the test folder and restore the original JSON filename before closing the app.
 
 These GUI checks require manual execution; automated tests inject failures in the write and replacement operations.
+
+### Finding members by tag
+
+Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Run these setup commands one at a time:
+
+```text
+add n/Tag Search Active e/tagactive@u.nus.edu t/Publicity t/Exco
+add e/tagarchived@u.nus.edu t/publicity
+add e/tagyear@u.nus.edu t/publicity2026
+add e/tagshort@u.nus.edu t/pub
+add n/Publicity Example e/taguntagged@u.nus.edu
+find e/tagarchived
+archive 1
+```
+
+The directory now contains five members. The archived member has no name, phone or address.
+
+1. Test cases: `find t/publicity`, `find t/PUBLICITY` and `find t/pUbLiCiTy`.<br>
+   Expected: Only `tagactive@u.nus.edu` and `tagarchived@u.nus.edu` are displayed; the count is two.
+   The archived member retains the `ARCHIVED` badge. The member named Publicity Example does not match because
+   that member has no tags. The `publicity2026` tag does not match.
+1. Test case: `find t/pub`.<br>
+   Expected: Only `tagshort@u.nus.edu` is displayed; the count is one. Neither `publicity` nor `publicity2026` matches.
+1. Test cases: `find t/public` and `find t/volunteer`.<br>
+   Expected: Each produces an empty list and a count of zero.
+1. Run `find e/tagshort`, followed by `find t/publicity`.<br>
+   Expected: The second search finds both publicity members across the complete directory.
+1. After running `find t/publicity`, try each of the following invalid commands:<br>
+   `find t/`, `find t/publicity exco`, `find t/publicity t/exco`, `find t/publicity n/Tag`,
+   `find p/9123 t/publicity`, `find t/publicity e/tagactive`, `find Tag t/publicity` and `find t/publicity!`.<br>
+   Expected: Each shows an informative error, and the two publicity members remain displayed.
+   Multiple values report "Tag searches accept only one tag. Example: find t/publicity."
+1. Test cases: `find N/`, `find P/9123`, `find E/tagactive`, `find T/publicity`, `find T/ E/`
+   and `find n/Tag T/publicity`.<br>
+   Expected: Each reports "Search prefixes must be lowercase. Use n/, p/, e/ or t/."
+   The previous results remain displayed. Lowercase prefixes with uppercase values, such as `find n/TAG`,
+   `find e/TAGACTIVE` and `find t/PUBLICITY`, still work.
+1. Test cases: `find G/`, `find F/value`, `find H/`, `find g/value`, `find name/Tag`
+   and `find n/Tag G/value`.<br>
+   Expected: Each reports an unsupported search prefix and lists `n/`, `p/`, `e/` and `t/` as supported options.
+   For `G/`, the message is "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
+   Previous results, member records and saved data remain unchanged.
+1. Test cases: `find e/G/` and `find e/name/Tag`.<br>
+   Expected: Both are valid literal email-substring searches with zero matches in the test directory.
+   The slashes inside the attached values do not trigger prefix errors.
+1. Run `list`, then close and reopen the app.<br>
+   Expected: All five records retain their contact details, tags and status. Searching has not changed member data.
+   The application log contains an `INFO` completion message with the match count for each successful search.
+
+Automated tests also cover tag values and prefixes separated by tabs or line breaks, and verify that rejected
+searches leave saved data unchanged. The GUI checks above are provided for manual execution.
 
 ### Finding members by email
 

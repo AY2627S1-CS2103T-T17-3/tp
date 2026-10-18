@@ -30,6 +30,9 @@ public class FindCommand extends Command {
 
     public static final String MESSAGE_UPPERCASE_PREFIX = "Search prefixes must be lowercase. Use n/, p/, e/ or t/.";
 
+    public static final String MESSAGE_UNSUPPORTED_PREFIX = "Unsupported search prefix: %1$s. "
+            + "Use n/, p/, e/ or t/.";
+
     public static final String MESSAGE_MULTIPLE_PHONE_SUBSTRINGS = "Phone searches accept only one substring. "
             + "Search each substring in a separate find command.";
 

@@ -25,6 +25,34 @@ public class FindCommandParserTest {
     private FindCommandParser parser = new FindCommandParser();
 
     @Test
+    public void parse_unsupportedPrefix_throwsParseException() {
+        for (String prefix : List.of("G/", "F/", "H/", "g/", "f/", "h/", "a/", "name/", "tag/", "1/", "?/")) {
+            String expectedMessage = "Unsupported search prefix: " + prefix + ". Use n/, p/, e/ or t/.";
+            assertParseFailure(parser, prefix, expectedMessage);
+            assertParseFailure(parser, prefix + "value", expectedMessage);
+            assertParseFailure(parser, " \t\n " + prefix + "value \t\n ", expectedMessage);
+        }
+    }
+
+    @Test
+    public void parse_unsupportedPrefixAfterOtherArguments_throwsParseException() {
+        String expectedMessage = "Unsupported search prefix: G/. Use n/, p/, e/ or t/.";
+        for (String args : List.of("Alice G/", "n/Alice G/value", "p/9123 G/value", "e/alice G/value",
+                "t/publicity G/value", "G/value n/Alice", "G/ F/ H/")) {
+            for (String separator : List.of(" ", "\t", "\n")) {
+                assertParseFailure(parser, args.replace(" ", separator), expectedMessage);
+            }
+        }
+    }
+
+    @Test
+    public void parse_unsupportedPrefixInsideValue_returnsFindCommand() {
+        assertParseSuccess(parser, "e/G/", new FindCommand(new EmailContainsSubstringPredicate("G/")));
+        assertParseSuccess(parser, "e/name/alice", new FindCommand(new EmailContainsSubstringPredicate("name/alice")));
+        assertParseSuccess(parser, "n/AN/NA", new FindCommand(new NameContainsKeywordsPredicate(List.of("AN/NA"))));
+    }
+
+    @Test
     public void parse_uppercasePrefix_throwsParseException() {
         String expectedMessage = "Search prefixes must be lowercase. Use n/, p/, e/ or t/.";
         for (String args : List.of("N/", "P/", "E/", "T/", "N/Alice", "P/9123", "E/alice", "T/publicity")) {
@@ -54,8 +82,6 @@ public class FindCommandParserTest {
 
     @Test
     public void parse_uppercasePrefixInsideValue_returnsFindCommand() {
-        assertParseSuccess(parser, "AN/NA", new FindCommand(new NameContainsKeywordsPredicate(List.of("AN/NA"))));
-        assertParseSuccess(parser, "n/AN/NA", new FindCommand(new NameContainsKeywordsPredicate(List.of("AN/NA"))));
         assertParseSuccess(parser, "e/N/", new FindCommand(new EmailContainsSubstringPredicate("N/")));
     }
 
