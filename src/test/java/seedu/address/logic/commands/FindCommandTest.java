@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.logic.Messages.MESSAGE_PERSONS_LISTED_OVERVIEW;
 import static seedu.address.logic.commands.CommandTestUtil.assertCommandSuccess;
+import static seedu.address.testutil.TypicalPersons.ALICE;
+import static seedu.address.testutil.TypicalPersons.BENSON;
 import static seedu.address.testutil.TypicalPersons.CARL;
 import static seedu.address.testutil.TypicalPersons.DANIEL;
 import static seedu.address.testutil.TypicalPersons.ELLE;
@@ -19,12 +21,16 @@ import org.junit.jupiter.api.Test;
 
 import seedu.address.logic.parser.FindCommandParser;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
+import seedu.address.model.person.Person;
 import seedu.address.model.person.PhoneContainsSubstringPredicate;
+import seedu.address.model.person.Status;
+import seedu.address.testutil.PersonBuilder;
 
 /**
  * Contains integration tests (interaction with the Model) for {@code FindCommand}.
@@ -172,6 +178,62 @@ public class FindCommandTest {
         assertCommandSuccess(command, model, expectedMessage, expectedModel);
         assertEquals(List.of(CARL), model.getFilteredPersonList());
         assertEquals(getTypicalAddressBook(), model.getAddressBook());
+    }
+
+    @Test
+    public void execute_tagSearch_multiplePersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("t/FRIENDS");
+        expectedModel.updateFilteredPersonList(person -> List.of(ALICE, BENSON, DANIEL).contains(person));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 3);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(ALICE, BENSON, DANIEL), model.getFilteredPersonList());
+        assertEquals(getTypicalAddressBook(), model.getAddressBook());
+        assertTrue(command.isReadOnly());
+    }
+
+    @Test
+    public void execute_partialOrUnknownTag_noPersonFound() throws ParseException {
+        for (String tag : List.of("friend", "money", "unknown")) {
+            FindCommand command = new FindCommandParser().parse("t/" + tag);
+            expectedModel.updateFilteredPersonList(person -> false);
+            String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 0);
+            assertCommandSuccess(command, model, expectedMessage, expectedModel);
+            assertEquals(List.of(), model.getFilteredPersonList());
+            assertEquals(getTypicalAddressBook(), model.getAddressBook());
+        }
+    }
+
+    @Test
+    public void execute_tagSearchAfterNameSearch_searchesAllPersons() throws ParseException {
+        new FindCommandParser().parse("n/Elle").execute(model);
+        assertEquals(List.of(ELLE), model.getFilteredPersonList());
+
+        FindCommand command = new FindCommandParser().parse("t/OWESMONEY");
+        expectedModel.updateFilteredPersonList(person -> person.equals(BENSON));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(BENSON), model.getFilteredPersonList());
+        assertEquals(getTypicalAddressBook(), model.getAddressBook());
+    }
+
+    @Test
+    public void execute_tagSearch_incompleteAndArchivedMembersFound() throws ParseException {
+        Person incompleteMember = new PersonBuilder().withoutName().withoutPhone().withoutAddress()
+                .withEmail("incomplete@u.nus.edu").withTags("Publicity").build();
+        Person archivedMember = new PersonBuilder().withEmail("archived@u.nus.edu")
+                .withStatus(Status.ARCHIVED).withTags("publicity", "exco").build();
+        model.addPerson(incompleteMember);
+        model.addPerson(archivedMember);
+        expectedModel.addPerson(incompleteMember);
+        expectedModel.addPerson(archivedMember);
+        AddressBook originalAddressBook = new AddressBook(model.getAddressBook());
+
+        FindCommand command = new FindCommandParser().parse("t/PUBLICITY");
+        expectedModel.updateFilteredPersonList(person -> List.of(incompleteMember, archivedMember).contains(person));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 2);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(incompleteMember, archivedMember), model.getFilteredPersonList());
+        assertEquals(originalAddressBook, model.getAddressBook());
     }
 
     @Test

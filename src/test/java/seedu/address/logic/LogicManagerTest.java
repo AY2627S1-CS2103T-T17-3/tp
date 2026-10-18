@@ -13,6 +13,7 @@ import static seedu.address.testutil.TypicalPersons.AMY;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -108,6 +109,30 @@ public class LogicManagerTest {
         ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(model.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_invalidTagSearch_preservesRecordsFilterAndSavedData() throws Exception {
+        Person matchingPerson = new PersonBuilder().withEmail("alice@u.nus.edu").withTags("Publicity").build();
+        Person otherPerson = new PersonBuilder().withEmail("bob@u.nus.edu").withTags("exco").build();
+        model.addPerson(matchingPerson);
+        model.addPerson(otherPerson);
+        CommandResult result = logic.execute("find t/PUBLICITY");
+        assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+        assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        String savedData = Files.readString(savedFile);
+
+        for (String command : List.of("find t/", "find t/publicity exco", "find t/publicity t/exco",
+                "find t/publicity n/Amy", "find p/9123 t/publicity", "find t/publicity e/alice",
+                "find t/publicity!", "find Amy t/publicity", "find N/", "find P/9123", "find E/alice",
+                "find T/publicity", "find T/ E/", "find n/Amy T/publicity", "find G/", "find F/value",
+                "find H/", "find g/value", "find name/Amy", "find n/Amy G/value", "find t/publicity h/value")) {
+            assertThrows(ParseException.class, () -> logic.execute(command));
+            assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
+            assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());
+            assertEquals(savedData, Files.readString(savedFile));
+        }
     }
 
     @Test
