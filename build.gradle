@@ -77,7 +77,7 @@ dependencies {
 }
 
 shadowJar {
-    archiveFileName = 'addressbook.jar'
+    archiveFileName = 'NUSocietyDesk.jar'
 }
 
 defaultTasks 'clean', 'test'
