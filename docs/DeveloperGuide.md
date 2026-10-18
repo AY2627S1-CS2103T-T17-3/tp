@@ -840,13 +840,16 @@ add n/Carol Lim p/00145678 e/phonecarol@u.nus.edu
 add n/9123 Member e/phonemissing@u.nus.edu
 ```
 
+The `p/` prefix selects the phone field. Its value matches a consecutive sequence of digits anywhere in the
+number, including the middle or end.
+
 1. Test cases: `find p/9123` and `find p/ 9123 `.<br>
    Expected: Alice Tan and Bob Lee are displayed; the count is two. A substring can occur anywhere in the phone
    number, and surrounding whitespace is ignored. The member named 9123 Member has no phone and does not match.
 1. Test cases: `find p/91234567` and `find p/2345`.<br>
    Expected: Only Alice Tan is displayed; the count is one. Both full numbers and consecutive digit fragments match.
-1. Test cases: `find p/9` and `find p/91`.<br>
-   Expected: The first displays Alice Tan and Bob Lee; the second displays only Alice Tan.
+1. Test cases: `find p/9` and `find p/89`.<br>
+   Expected: The first displays Alice Tan and Bob Lee; the second displays only Bob Lee.
    Search values may contain fewer than the three digits required when storing a phone number.
 1. Test case: `find p/001`.<br>
    Expected: Only Carol Lim is displayed; the count is one. Leading zeros are preserved in the search value.
