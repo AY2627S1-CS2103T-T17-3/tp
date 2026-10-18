@@ -195,16 +195,21 @@ address fields as explicit `null` values. Missing properties and explicit nulls 
 strings still use the existing validators without trimming. Empty or whitespace-only strings are invalid.
 Valid complete records still load. `JsonAdaptedPerson` writes a lowercase status; `active` and `archived` load
 unchanged, while a missing or null status defaults to active. No migration or schema-version field is introduced.
-Loading applies the model's email validation
-and rejects the entire file on the first invalid record or duplicate canonical email. Record errors use one-based
-positions in the saved `persons` array; a duplicate reports both positions, for example
-`Record 2: email "alex@u.nus.edu" duplicates record 1.` `JsonAddressBookStorage` also rejects malformed
-JSON roots and missing or non-array `persons` values through `DataLoadingException`.
+`JsonAddressBookStorage.loadAddressBook` returns an `AddressBookLoadResult` with a status (`SUCCESS`, `PARTIAL`,
+`FAILURE`, or `MISSING`), recovered records, and errors. Each record is deserialized and validated independently.
+Invalid records and later duplicate canonical emails are skipped. Error positions refer to the original
+one-based positions in the saved `persons` array, including skipped records; a duplicate reports both positions,
+for example `Record 3: email "alex@u.nus.edu" duplicates record 2.` Malformed JSON, trailing content, invalid
+roots, missing or non-array `persons` values, and read failures produce a failed load with no recovered records.
+The existing `readAddressBook` API remains strict and throws `DataLoadingException` on any loading error.
 
-`MainApp.initModelManager` catches `DataLoadingException` and opens the normal UI with an empty address book.
-Loading alone leaves the invalid file unchanged. The next successful command, including `list`, saves the
-current in-memory directory over that file. Only a missing file starts with sample members. Valid mixed-case
-emails become lowercase in memory on load and in the JSON file after a successful command saves.
+`MainApp.initModelManager` uses recovered records and prepares a warning for `UiManager` to display after the
+main window opens. Any partial or failed load disables saving through that storage instance for the rest of the
+session, including direct calls to either save overload. `LogicManager` rejects commands that change records
+before execution, while `list`, `find`, `help`, and `exit` run without saving. New commands require write access
+by default and must explicitly override `Command.isReadOnly` to run during recovery. Repairing the file requires
+a restart to restore saving. Only a missing file starts with sample members; a valid empty file stays empty.
+Valid mixed-case emails become lowercase in memory on load and in the JSON file after a normal successful save.
 
 ### Common classes
 
@@ -777,14 +782,17 @@ These GUI checks are documented for manual execution; automated tests exercise t
 
    1. In a disposable test directory, run `list` to create `data/addressbook.json`, close the app, and back it up.
    1. Give two saved records the emails `Alex@U.NUS.EDU` and `alex@u.nus.edu`, then relaunch.<br>
-      Expected: the normal window opens with an empty member list. Loading leaves the invalid file unchanged.
-      Storage reports that record 2 duplicates record 1, but the UI does not display those record positions.
+      Expected: the first valid occurrence and other valid members load. A warning shows the file path,
+      recovered-member count, and original positions of the duplicate records. The file remains unchanged.
+   1. Run `list`, `find e/alex`, and `help`, then try `clear` and `delete 1`.<br>
+      Expected: viewing, searching, and help work. Changes are rejected before modifying any records, with
+      instructions to repair the file and restart. The file remains unchanged, including after `exit`.
    1. Correct the second email and relaunch.<br>
-      Expected: the records load with lowercase emails. The file remains unchanged until a successful command,
-      such as `list`, saves it.
+      Expected: all records load with lowercase emails, no warning appears, and normal saving resumes.
    1. Repeat with malformed JSON, a null record, or an email with surrounding whitespace.<br>
-      Expected: each file opens an empty member list. Restore the backup before running commands, which could
-      overwrite the invalid file. A missing file starts with the sample members instead.
+      Expected: malformed JSON produces a protected empty view. A null record or invalid email is skipped while
+      other valid records load. Warnings identify errors, and commands cannot overwrite any of these files.
+      A missing file still starts with sample members; a valid empty file stays empty and allows normal saving.
 
 ### Email domain validation
 

@@ -17,6 +17,7 @@ import seedu.address.logic.parser.AddressBookParser;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.Model;
 import seedu.address.model.person.Person;
+import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.Storage;
 
 /**
@@ -49,6 +50,12 @@ public class LogicManager implements Logic {
 
         CommandResult commandResult;
         Command command = addressBookParser.parseCommand(commandText);
+        if (!storage.isAddressBookSaveAllowed()) {
+            if (!command.isReadOnly()) {
+                throw new CommandException(JsonAddressBookStorage.MESSAGE_SAVE_DISABLED);
+            }
+            return command.execute(model);
+        }
         if (command instanceof ImportCommand importCommand) {
             verifyImportSource(importCommand.getFilePath());
         }
