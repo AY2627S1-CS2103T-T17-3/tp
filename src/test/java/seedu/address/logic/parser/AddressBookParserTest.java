@@ -143,8 +143,26 @@ public class AddressBookParserTest {
 
     @Test
     public void parseCommand_multiplePhoneSubstrings_throwsParseException() {
-        assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS, () ->
-                parser.parseCommand("find p/9123 1234"));
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS, () ->
+                    parser.parseCommand("find p/9123" + separator + "1234"));
+        }
+    }
+
+    @Test
+    public void parseCommand_multipleEmailSubstrings_throwsParseException() {
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS, () ->
+                    parser.parseCommand("find e/alice" + separator + "bob"));
+        }
+    }
+
+    @Test
+    public void parseCommand_multipleTags_throwsParseException() {
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_TAGS, () ->
+                    parser.parseCommand("find t/publicity" + separator + "exco"));
+        }
     }
 
     @Test
