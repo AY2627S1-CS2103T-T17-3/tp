@@ -115,6 +115,33 @@ public class AddressBookParserTest {
     }
 
     @Test
+    public void parseCommand_nameSearchWithWhitespace_returnsFindCommand() throws Exception {
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertEquals(new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice"))),
+                    parser.parseCommand("find" + separator + "n/" + separator + "Alice" + separator));
+            assertEquals(new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice", "Bob"))),
+                    parser.parseCommand("find Alice" + separator + "Bob"));
+        }
+    }
+
+    @Test
+    public void parseCommand_multiplePrefixedNameKeywords_throwsParseException() {
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS, () ->
+                    parser.parseCommand("find n/Alice" + separator + "Bob"));
+        }
+    }
+
+    @Test
+    public void parseCommand_multilineNonFindCommand_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, HelpCommand.MESSAGE_USAGE);
+        for (String command : List.of("add n/Alice\ne/alice@u.nus.edu", "clear\n1", "findOther n/Alice\nBob",
+                "findn/Alice\nBob", "FIND n/Alice\nBob")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(command));
+        }
+    }
+
+    @Test
     public void parseCommand_multiplePhoneSubstrings_throwsParseException() {
         assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS, () ->
                 parser.parseCommand("find p/9123 1234"));

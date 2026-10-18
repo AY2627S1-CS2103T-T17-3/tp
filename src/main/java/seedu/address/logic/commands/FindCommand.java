@@ -19,7 +19,8 @@ public class FindCommand extends Command {
     public static final String COMMAND_WORD = "find";
 
     public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members using one field.\n"
-            + "Name:  " + COMMAND_WORD + " [n/]KEYWORD [MORE_KEYWORDS]...\n"
+            + "Name:  " + COMMAND_WORD + " KEYWORD [MORE_KEYWORDS]... (match any keyword)\n"
+            + "       " + COMMAND_WORD + " n/KEYWORD (one keyword only)\n"
             + "Phone: " + COMMAND_WORD + " p/SUBSTRING\n"
             + "Email: " + COMMAND_WORD + " e/SUBSTRING\n"
             + "Tag:   " + COMMAND_WORD + " t/TAG (one exact tag, ignoring case)\n"
@@ -27,6 +28,9 @@ public class FindCommand extends Command {
             + COMMAND_WORD + " t/publicity";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
+
+    public static final String MESSAGE_MULTIPLE_NAME_KEYWORDS = "Prefixed name searches accept only one keyword. "
+            + "Use find Alice Bob to match names containing Alice OR Bob.";
 
     public static final String MESSAGE_UPPERCASE_PREFIX = "Search prefixes must be lowercase. Use n/, p/, e/ or t/.";
 

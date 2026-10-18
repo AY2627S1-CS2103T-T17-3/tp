@@ -112,6 +112,47 @@ public class LogicManagerTest {
     }
 
     @Test
+    public void execute_nameSearch_displaysMatchesWithoutChangingRecords() throws Exception {
+        Person alice = new PersonBuilder().withName("Alice Tan").withEmail("alice@u.nus.edu").build();
+        Person bob = new PersonBuilder().withName("Bob Lee").withEmail("bob@u.nus.edu").build();
+        model.addPerson(alice);
+        model.addPerson(bob);
+
+        CommandResult result = logic.execute("find n/aLiCe");
+        assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
+        assertEquals(List.of(alice), logic.getFilteredPersonList());
+
+        result = logic.execute("find ALICE Bob");
+        assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 2), result.getFeedbackToUser());
+        assertEquals(List.of(alice, bob), logic.getFilteredPersonList());
+        assertEquals(List.of(alice, bob), model.getAddressBook().getPersonList());
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_multiplePrefixedNameKeywords_preservesRecordsFilterAndSavedData() throws Exception {
+        Person alice = new PersonBuilder().withName("Alice Tan").withEmail("alice@u.nus.edu").build();
+        Person bob = new PersonBuilder().withName("Bob Lee").withEmail("bob@u.nus.edu").build();
+        model.addPerson(alice);
+        model.addPerson(bob);
+        logic.execute("find n/Alice");
+        assertEquals(List.of(alice), logic.getFilteredPersonList());
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        String savedData = Files.readString(savedFile);
+
+        for (String command : List.of("find n/Alice Bob", "find n/Alice  Bob", "find n/Alice\tBob",
+                "find n/Alice\nBob", "find n/Alice\r\nBob", "find n/Alice Alice", "find n/ Alice \tBob \n")) {
+            assertThrows(ParseException.class, FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS, () ->
+                    logic.execute(command));
+            assertEquals(List.of(alice), logic.getFilteredPersonList());
+            assertEquals(List.of(alice, bob), model.getAddressBook().getPersonList());
+            assertEquals(savedData, Files.readString(savedFile));
+        }
+    }
+
+    @Test
     public void execute_invalidTagSearch_preservesRecordsFilterAndSavedData() throws Exception {
         Person matchingPerson = new PersonBuilder().withEmail("alice@u.nus.edu").withTags("Publicity").build();
         Person otherPerson = new PersonBuilder().withEmail("bob@u.nus.edu").withTags("exco").build();
