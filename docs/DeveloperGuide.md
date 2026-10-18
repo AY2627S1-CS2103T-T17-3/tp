@@ -221,6 +221,80 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
+### Recalling submitted commands
+
+`CommandBox` owns one JavaFX-independent `CommandHistory`. A key-pressed filter on its text field consumes
+plain Up/Down events, including boundary no-ops, before JavaFX moves the caret. Modified arrows and other
+keys are not intercepted. The existing `CommandExecutor` remains the only path to execution; navigation
+never invokes it, updates the result display, or accesses `Logic`, `Model` or `Storage`.
+
+The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `beforeCursor` holds older entries
+and `afterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
+their concatenation is the complete retained history. An empty `afterCursor` denotes the draft position.
+Up moves the last older entry to the front of `afterCursor`; Down moves its first entry back to the end
+of `beforeCursor`. Each arrow transition uses constant-time deque end operations.
+
+The first actual Up transition captures an immutable `InputState` containing exact draft text, selection
+anchor and caret. Down past the newest entry returns that snapshot and clears it. Recalled entries place
+the caret at the end. Before moving in either direction, the helper saves the selected entry's edited text
+in `editedCommands`, keyed by its chronological index (`beforeCursor.size()`). These indices remain stable
+until submission. Using indices keeps separate occurrences of the same command independently editable.
+The map contains at most one temporary string per retained entry, including empty edits. Reverting an entry
+to its submitted text removes its temporary edit. Returning to the draft does not clear edits, so browsing
+again restores them. Stored submitted strings and duplicate detection remain unchanged.
+A returned empty optional
+denotes a no-op; a present result always restores text/selection and explicitly removes error styling,
+even when the replacement text is identical. Boundary no-ops preserve edits, selection and styling.
+
+`record` ignores `String.isBlank()` input without changing any state and returns false to prevent execution.
+For every other submission it resets the cursor, clears all temporary edits and the saved draft, suppresses
+an exact consecutive duplicate, and otherwise appends the raw string. `MAX_HISTORY_SIZE` is 100 across both deques. At capacity,
+the oldest entry is removed before appending. Blank inputs and suppressed duplicates do not evict entries;
+the draft is separate. Resetting the cursor moves at most 100 entries. No evicted entry is retained elsewhere.
+Recording precedes the executor call, so parser, execution, import and save failures are recallable.
+Duplicates still execute. Success clears the field; failure retains the input and existing error styling.
+After a parser or command exception, `CommandBox` calls `selectLatestAfterFailure` to select the newest entry
+without replacing the field or its selection. The first Up therefore reaches the preceding entry, while
+Down can return to the failure. If no preceding entry exists, Up is a boundary no-op preserving error styling.
+This positioning leaves `draft` null, so there is no duplicate failed-input draft beyond the newest entry.
+Down is a boundary no-op when only the newest entry remains in `afterCursor` and there is no saved draft.
+Repeated Down presses preserve edits and selection; the next Up still recalls the preceding entry.
+Normal browsing captures and restores a real unsent draft as before. Temporary edits survive navigation.
+
+History is local to the command box's lifetime. Focus changes, Help, minimizing and ordinary commands do not
+reset it; a new application instance starts empty. It is never serialized or reconstructed from logs.
+The existing command syntax, direct parser behavior, data schemas, recovery/save behavior and execution logs
+are unchanged. Recalled indices are interpreted against the current displayed list when submitted.
+
+#### History diagnostics and assertions
+
+`CommandHistory` obtains its logger through `LogsCenter`. It emits `FINE` messages for recording, duplicate
+suppression, ignored blanks, failure selection, navigation, draft restoration and boundary no-ops. Messages contain counts,
+direction and an eviction flag only, never command or draft contents. Examples include
+`Command history recorded: size=100, evictedOldest=true.` and
+`Command history navigated older: before=99, after=1.` Restoration logs only
+`Command history draft restored: size=100.` rather than an additional newer-navigation event.
+These normal operations are not warnings. Lazy message suppliers avoid building diagnostic strings when
+`FINE` is disabled. Existing logging destinations and default levels are unchanged; enabling `FINE` in the
+existing logging configuration exposes the diagnostics.
+
+Java assertions check stable operation boundaries, including no-op returns: non-null deques, combined capacity,
+nonblank entries, no adjacent exact duplicates across the complete history, and any saved draft requiring
+an active browsing position. Browsing after failure has no saved draft. Draft assertions validate text and
+selection bounds; pending-edit assertions check that at most one
+non-null edit exists per retained index. Operation assertions check removal prerequisites,
+unchanged navigation size, the expected recording size, and cursor/draft reset after submission.
+Messages identify invariant failures without including input text. Assertion expressions and invariant helpers
+have no side effects; required mutations and all user-input decisions use ordinary control flow. `AssertionError`
+is not converted to command feedback. A separate test task verifies behavior with assertions disabled.
+
+JUnit tests cover recording, capacity/eviction (including submission while browsing), draft selection,
+retained edits in both directions and across draft visits, independent edits to repeated commands, empty edits,
+and clearing edits after submission without changing original submitted history,
+duplicate and whitespace rules, failure recall, key modifiers and event consumption, identical-text styling,
+and metadata-only logs. GUI tests share one JavaFX toolkit per worker and require a display. See the
+[testing guide](Testing.md) for the assertions-disabled check and the manual history scenarios below.
+
 ### Archiving and activating members
 
 `archive INDEX` and `activate INDEX` use the index in `Model.getFilteredPersonList`, so they work after a search.
@@ -686,6 +760,43 @@ testers are expected to do more *exploratory* testing.
        Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
+
+### Recalling commands and restoring drafts
+
+Use a disposable application folder for these checks, particularly `clear` and save-failure tests.
+
+1. On a fresh launch, type a draft, select part of it, and press Up/Down.<br>
+   Expected: Empty history leaves text, caret and selection unchanged.
+1. Submit `list`, then `lisst`.<br>
+   Expected: `list` succeeds and clears the box; `lisst` shows `Unknown command.` and remains with error styling.
+   Press Up once: `list` is recalled with normal styling, while the error message remains in the result pane.
+   Press Down to return to `lisst`, correct it to `list` and submit; the result is `Listed all persons.`.
+   Repeat the invalid submission consecutively: one Up still reaches the preceding entry.
+   Edit the failed input, press Down several times, then Up once: Down preserves the edit and selection,
+   and Up recalls the preceding entry. Down returns to the retained edit without executing it.
+   On a fresh launch with only one failed submission, Up leaves the text, selection and error styling unchanged.
+1. Type `find n/Alex`, select text from right to left, and browse backward and forward.<br>
+   Expected: Recalled entries put the caret at the end; Down past the newest restores the exact draft and selection.
+   Edit two recalled entries and navigate away and back, including a visit to the draft: each edit returns.
+   Deleting a recalled entry's text also survives navigation. Submitting edited text records it as a new command
+   and clears other temporary edits; earlier submitted entries remain unchanged.
+   Up at the oldest and Down at the draft
+   preserve text, selection and styling. Held arrows repeat but never wrap or execute commands.
+1. Submit the newest command again, then submit spaces only, then repeat that command.<br>
+   Expected: Nonblank submissions still execute but occupy one consecutive entry. Spaces alone do nothing.
+   Repeat after browsing to an older entry: submission resets browsing and discards the old draft.
+1. Submit distinct harmless inputs `list 1` through `list 101` (extra list arguments are ignored).<br>
+   Expected: Only `list 2` through `list 101` remain. Repeating `list 101` does not evict `list 2`.
+1. Check Shift/Ctrl/Alt/Meta arrows and arrow keys in other controls; press F1, minimize/restore, and reopen Help.<br>
+   Expected: Existing shortcuts/control behavior remain; history and drafts survive focus/window changes.
+   Navigation alone never changes result feedback. `clear` clears members but leaves prior history recallable.
+1. Use the failed-save setup described below and submit a command that cannot be saved.<br>
+   Expected: Existing recovery feedback and behavior remain; the submitted command is still recallable and editable.
+1. Launch a separate instance from another disposable folder, then restart the original instance.<br>
+   Expected: Each new instance has empty history; no history file appears and no entries are loaded from logs.
+
+These physical-keyboard and application-lifetime checks require manual execution; automated tests cover
+history transitions and JavaFX event handling without driving a native keyboard.
 
 ### Recording and completing an email-only member
 

@@ -39,3 +39,17 @@ This project has three types of tests:
    For example: `seedu.address.storage.StorageManagerTest`
 1. *Hybrid tests* combine unit and integration testing. These tests check both the individual units and how they work together.<br>
    For example: `seedu.address.logic.LogicManagerTest`
+
+## Command history checks
+
+Use JDK 25 and run `./gradlew checkstyleMain checkstyleTest test commandHistoryWithoutAssertions`.
+The regular `test` task explicitly enables Java assertions. `commandHistoryWithoutAssertions` reruns only
+`CommandHistoryTest` with assertions disabled, verifying recording, eviction, navigation and draft restoration
+without relying on `assert` for required behavior. The `check` task also includes this verification.
+Each run verifies the intended assertion mode and writes a separate HTML report under `build/reports/tests/`.
+
+`CommandHistoryTest` requires no graphical display. Its logging test temporarily captures `FINE` records
+and restores logger configuration afterward. `CommandBoxTest` and `PersonCardTest` share the JavaFX toolkit
+through `JavaFxTestUtil`; they skip on Linux without `DISPLAY`. Linux CI supplies a display through `xvfb-run`.
+On Windows and macOS, run UI tests in a graphical session. Report skipped or unavailable GUI tests explicitly.
+Manual keyboard, focus and restart checks are listed in the Developer Guide's command-history section.
