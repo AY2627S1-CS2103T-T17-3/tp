@@ -51,6 +51,7 @@
         "storage-component": "Storage component",
         "common-classes": "Common classes",
         "implementation": "Implementation",
+        "recalling-submitted-commands": "Recalling submitted commands",
         "archiving-and-activating-members": "Archiving and activating members",
         "recording-a-member-with-incomplete-contact-details": "Recording a member with incomplete contact details",
         "finding-members-by-contact-details-or-tag": "Finding members by contact details or tag",
@@ -67,6 +68,7 @@
         "glossary": "Glossary",
         "appendix-instructions-for-manual-testing": "Appendix: Instructions for manual testing",
         "launch-and-shutdown": "Launch and shutdown",
+        "recalling-commands-and-restoring-drafts": "Recalling commands and restoring drafts",
         "recording-and-completing-an-email-only-member": "Recording and completing an email-only member",
         "importing-member-directories": "Importing member directories",
         "recovering-from-a-failed-save": "Recovering from a failed save",
@@ -112,7 +114,8 @@
       "headings": {
         "testing-guide": "Testing guide",
         "running-tests": "Running tests",
-        "types-of-tests": "Types of tests"
+        "types-of-tests": "Types of tests",
+        "command-history-checks": "Command history checks"
       },
       "headingKeywords": {}
     },
@@ -123,6 +126,7 @@
         "ab-3-user-guide": "AB-3 User Guide",
         "quick-start": "Quick start",
         "features": "Features",
+        "recalling-commands-and": "Recalling commands: ↑ and ↓",
         "viewing-help-help": "Viewing help: help",
         "adding-a-person-add": "Adding a person: add",
         "importing-member-contacts-from-csv-import": "Importing member contacts from CSV: import",
