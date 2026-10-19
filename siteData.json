@@ -72,6 +72,8 @@
         "recording-and-completing-an-email-only-member": "Recording and completing an email-only member",
         "importing-member-directories": "Importing member directories",
         "recovering-from-a-failed-save": "Recovering from a failed save",
+        "finding-members-by-name": "Finding members by name",
+        "finding-members-by-phone-number": "Finding members by phone number",
         "finding-members-by-tag": "Finding members by tag",
         "finding-members-by-email": "Finding members by email",
         "deleting-a-person": "Deleting a person",
