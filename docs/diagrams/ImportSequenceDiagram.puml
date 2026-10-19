@@ -1,0 +1,110 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+skinparam DefaultFontSize 15
+skinparam ParticipantFontColor #FFFFFF
+
+box Logic LOGIC_COLOR_T1
+participant ":LogicManager" as Logic LOGIC_COLOR
+participant ":ImportCommand" as Import LOGIC_COLOR
+end box
+box Storage STORAGE_COLOR_T1
+participant ":CsvMemberReader" as Reader STORAGE_COLOR
+end box
+box Model MODEL_COLOR_T1
+participant "combinedDirectory:\nAddressBook" as Combined MODEL_COLOR
+participant ":Model" as Model MODEL_COLOR
+end box
+
+activate Logic
+Logic -> Import : execute(model)
+activate Import
+create Reader
+Import -> Reader : new CsvMemberReader()
+activate Reader
+Reader --> Import
+deactivate Reader
+Import -> Reader : read(filePath)
+activate Reader
+note over Reader
+  Parse the complete CSV first.
+  Then validate each record
+  using the model's value types.
+end note
+
+alt fatal file error
+    Reader --> Import : throws IOException\nor IllegalValueException
+    deactivate Reader
+    Import --> Logic : throws CommandException
+    deactivate Import
+    note over Logic, Import : No model changes or save.
+else file parsed, valid header, at least one record
+    'Restore the pending calls in this alternative; PlantUML tracks activations linearly.
+    Reader -[hidden]-> Import
+    activate Reader
+    activate Import
+    Reader --> Import : record outcomes
+    deactivate Reader
+    Import -> Model : getAddressBook()
+    activate Model
+    Model --> Import : existing directory
+    deactivate Model
+    create Combined
+    Import -> Combined : new AddressBook(...)
+    activate Combined
+    Combined --> Import
+    deactivate Combined
+
+    loop each record outcome in CSV order
+        alt record failed validation
+            Import -> Import : collect validation rejection
+            activate Import
+            Import --> Import
+            deactivate Import
+        else record contains a valid member
+            Import -> Combined : hasPerson(member)
+            activate Combined
+            Combined --> Import : duplicate?
+            deactivate Combined
+            alt duplicate email
+                Import -> Import : collect duplicate rejection
+                activate Import
+                Import --> Import
+                deactivate Import
+            else unique email
+                Import -> Combined : addPerson(member)
+                activate Combined
+                Combined --> Import
+                deactivate Combined
+            end
+        end
+    end
+
+    alt no accepted members
+        Import --> Logic : throws CommandException\n(counts, rejections)
+        deactivate Import
+        note over Logic, Import : Original records and filter retained;\nno save.
+    else at least one accepted member
+        'Continue the same execute(model) call in this alternative.
+        Logic -[hidden]-> Import
+        activate Import
+        Import -> Model : setAddressBook(combinedDirectory)
+        activate Model
+        Model --> Import
+        deactivate Model
+        Import -> Model : updateFilteredPersonList(\nPREDICATE_SHOW_ALL_PERSONS)
+        activate Model
+        Model --> Import
+        deactivate Model
+        Import --> Logic : CommandResult\n(counts, rejections)
+        deactivate Import
+        ref over Logic, Model
+            Persist changed directory
+            See SaveRecoverySequenceDiagram
+        end ref
+    end
+end
+'Anchor the end of the caller's shown execution after the referenced interaction.
+Logic -[hidden]-> Logic
+deactivate Logic
+@enduml

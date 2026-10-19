@@ -1,0 +1,102 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+skinparam DefaultFontSize 15
+skinparam ParticipantFontColor #FFFFFF
+
+box Logic LOGIC_COLOR_T1
+participant ":LogicManager" as Logic LOGIC_COLOR
+participant ":Command" as Command LOGIC_COLOR
+end box
+box Model MODEL_COLOR_T1
+participant ":Model" as Model MODEL_COLOR
+end box
+box Storage STORAGE_COLOR_T1
+participant ":JsonAddressBookStorage" as Json STORAGE_COLOR
+participant ":AtomicFileWriter" as Writer STORAGE_COLOR
+end box
+
+[-> Logic : execute(...)
+activate Logic
+note over Logic, Model : Parsing and pre-execution guards have passed.
+Logic -> Model : getAddressBook()
+activate Model
+Model --> Logic : existing directory
+deactivate Model
+Logic -> Model : getFilteredPersonListPredicate()
+activate Model
+Model --> Logic : previousFilter
+deactivate Model
+note over Logic
+  previousAddressBook is a copy
+  of the existing directory.
+end note
+Logic -> Command : execute(model)
+activate Command
+note over Command, Model : Command-specific interactions omitted;\nsee the import diagram for ImportCommand.
+Command --> Logic : commandResult
+deactivate Command
+
+group Persist changed directory
+    Logic -> Model : getAddressBook()
+    activate Model
+    Model --> Logic : updated directory
+    deactivate Model
+    Logic -> Json : saveAddressBook(directory)\n(via StorageManager)
+    activate Json
+    Json -> Json : serialize directory to JSON
+    activate Json
+    Json --> Json
+    deactivate Json
+    Json -> Writer : write(filePath, json)
+    activate Writer
+    Writer -> Writer : prepare destination and\ncreate adjacent temporary file
+    activate Writer
+    Writer --> Writer
+    deactivate Writer
+    Writer -> Writer : writeTemporaryFile(\ntemp, json)
+    activate Writer
+    Writer --> Writer
+    deactivate Writer
+    opt temporary write completed
+        Writer -> Writer : replaceFile(...)\nATOMIC_MOVE,\nREPLACE_EXISTING
+        activate Writer
+        Writer --> Writer
+        deactivate Writer
+    end
+
+    alt write and atomic replacement succeed
+        Writer --> Json : return
+        deactivate Writer
+        Json --> Logic : return
+        deactivate Json
+        [<-- Logic : commandResult
+        deactivate Logic
+    else temporary write or replacement fails
+        'Restore the pending calls in this alternative; PlantUML tracks activations linearly.
+        Logic -[hidden]-> Writer
+        activate Logic
+        activate Json
+        activate Writer
+        Writer -> Writer : attempt to delete\ntemporary file
+        activate Writer
+        note over Writer : Cleanup errors are suppressed\non the original failure.
+        Writer --> Writer
+        deactivate Writer
+        Writer --> Json : throws IOException\nor SecurityException
+        deactivate Writer
+        Json --> Logic : propagates save failure
+        deactivate Json
+        Logic -> Model : setAddressBook(previousAddressBook)
+        activate Model
+        Model --> Logic
+        deactivate Model
+        Logic -> Model : updateFilteredPersonList(\npreviousFilter)
+        activate Model
+        Model --> Logic
+        deactivate Model
+        [<-- Logic : throws\nCommandException
+        deactivate Logic
+    end
+end
+@enduml

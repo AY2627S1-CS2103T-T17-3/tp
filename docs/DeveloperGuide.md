@@ -119,7 +119,7 @@ How the parsing works:
 ### Model component
 **API** : [`Model.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/model/Model.java)
 
-<puml src="diagrams/ModelClassDiagram.puml" width="450" />
+<puml src="diagrams/ModelClassDiagram.puml" alt="Model classes and per-member tag identity" />
 
 
 The `Model` component,
@@ -129,9 +129,9 @@ The `Model` component,
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
 * does not depend on any of the other three components (as the `Model` represents data entities of the domain, they should make sense on their own without depending on other components)
 
-`Tag` validates its input and stores the name in lowercase using `Locale.ROOT`. Equality and hash codes use this
-canonical name, so each person's `Set<Tag>` treats case variants as one tag. Command parsing and JSON loading both
-construct `Tag` objects and therefore share this identity rule. Saving writes the canonical lowercase names.
+`Tag` normalizes valid alphanumeric names to lowercase with `Locale.ROOT`. Its `equals` and `hashCode` use that
+normalized name, so `Person`'s `Set<Tag>` collapses `Publicity` and `publicity` into one tag. Command parsing,
+CSV import, and JSON loading all construct `Tag` objects and share this rule. Saving writes the lowercase names.
 
 `Person` represents name, phone and address as non-null `Optional` containers. Email, status and tags remain
 required. The complete-record constructors retain their non-null argument requirements and delegate to the
@@ -155,7 +155,7 @@ including members outside the displayed filter, and identify the existing member
 name without a displayed index. Re-entering one's own email or changing only its case remains valid; changing an email releases
 the previous one for reuse.
 
-`EditCommand` preserves the existing tag set and its descriptor contains only name, phone, email, and address.
+`EditCommand` preserves tags; `EditPersonDescriptor` accepts only name, phone, email, and address.
 `EditCommandParser` still tokenizes `t/` so it can reject tag arguments explicitly instead of including them in another
 field's value.
 
@@ -183,7 +183,7 @@ no storage schema or UI changes are required.
 
 **API** : [`Storage.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/storage/Storage.java)
 
-<puml src="diagrams/StorageClassDiagram.puml" width="550" />
+<puml src="diagrams/StorageClassDiagram.puml" alt="Storage classes and the atomic file writer" />
 
 The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
@@ -334,8 +334,8 @@ Reading does not rewrite the file; the next successful command saves explicit nu
 complete contact details reject the entire file if it contains an incomplete member. With their existing loading
 behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
 
-Automatic saving uses the recovery behavior described under "Saving member data safely" below.
-CSV import also accepts absent name, phone and address details, but requires explicit status.
+Automatic saving uses [save-failure recovery](#saving-member-data-safely).
+[CSV import](#importing-member-directories-from-csv) also accepts absent name, phone, and address, but requires status.
 
 Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
 incremental completion across reloads, filtered edits, unnamed duplicates, email reuse, searches, tags and deletion.
@@ -374,68 +374,103 @@ Rejected searches preserve the previous results, member records and saved data.
 
 ### Importing member directories from CSV
 
-`ImportCommandParser` parses a relative or absolute local path, optionally enclosed in double quotes. It preserves
-backslashes and performs no file I/O. `AddressBookParser` dispatches `import` through this parser.
+Import adds valid, nonduplicate members while reporting rejected records in CSV order. It separates file parsing
+from changes to the live model so a fatal file error cannot leave a partially imported directory. See the
+[User Guide](UserGuide.md#importing-member-contacts-from-csv-import) for the CSV format and user-facing examples.
 
-`CsvMemberReader` uses Apache Commons CSV 1.14.1 to parse UTF-8 input with standard CSV quoting. It accepts an optional
-byte order mark and ignores empty lines. The header must be `name,phone,email,address,tags,status` in that order.
-The reader parses the entire file before returning any outcomes, then checks column counts, trims field values,
-and constructs existing model objects to reuse their validation and canonicalization. Blank names, phones and
-addresses become empty optionals; supplied values are validated normally. Email remains required.
-Semicolon-separated tags use a `Set<Tag>`. Status is validated through
-`Status.isValidStatus` and supplied explicitly to `Person`; it never defaults to active. Record errors include the
-logical CSV record number, counting the header as 1. Each `CsvMemberRecord` retains its original number and either
-a validated `Person` or its first validation failure. The immutable result list retains valid and rejected records
-in source order, so later duplicate errors use original numbers even after invalid or multiline records.
-Empty and header-only files are rejected. Invalid headers, malformed CSV, decoding errors and read failures remain
-fatal; no outcomes are applied to the live directory if the file cannot be parsed completely.
+The main responsibilities are:
 
-`ImportCommand` reads the members and copies the complete existing directory into a temporary `AddressBook`.
-It collects validation rejections and checks each valid member against that copy using the existing canonical-email
-identity rule. Conflicting records are skipped without updating existing members. Duplicate checks include archived
-members, members outside the current filter, and earlier accepted CSV records. Invalid earlier records do not reserve
-an email; the first valid occurrence wins. Rejection feedback remains in CSV order.
-If at least one record is accepted, it calls `Model.setAddressBook`, resets the filter to show the complete directory,
-and returns the imported/rejected counts with every rejected record's number and reason. If all records are rejected,
-it throws `CommandException` with zero imports and the rejection details before changing the model; this also prevents
-`LogicManager` from rewriting JSON. Fatal file errors likewise throw before model changes.
-No model or storage-schema changes are needed. Logs record preparation counts and fatal file failures without
-including member fields or rejection details; the preparation log does not claim the later JSON save succeeded.
+* `AddressBookParser` dispatches to `ImportCommandParser`, which parses one local path without file I/O.
+* `CsvMemberReader` parses the complete UTF-8 file with Apache Commons CSV before validating member records.
+  It returns an immutable list of `CsvMemberRecord` outcomes: each contains the original record number and either
+  a valid `Person` or its first validation error.
+* `ImportCommand` checks those outcomes against a temporary `AddressBook` and applies the accepted members together.
 
-Before executing an import, `LogicManager` checks that its source differs from the JSON save file. Normalized paths
-and `Files.isSameFile` detect path aliases and links; this prevents subsequent automatic saving from overwriting the
-import source. The reader only opens the CSV for reading. Successful imports use existing automatic JSON persistence.
-As with other commands, a subsequent save failure restores the previous member records and search filter.
+The execution flow is:
 
-Tests cover quoted fields, BOM/CRLF input, fixed headers, optional-field combinations, existing validators, required
-statuses, duplicate emails, original record numbers, and late fatal CSV errors. Integration tests verify partial
-imports, incomplete-member JSON round trips, source preservation, zero saves when all records are rejected,
-source/save file aliases, and save failures.
+1. **Protect the source.** Before execution, `LogicManager` compares the CSV path with the JSON save path using
+   normalized paths and `Files.isSameFile`. This rejects aliases and links to the save file. The reader opens the
+   source for reading only.
+1. **Read and validate.** The reader checks the fixed six-column header, trims member fields, and reuses the model
+   validators. Blank name, phone, and address values become empty optionals. Email and status are required;
+   `Status.isValidStatus` accepts only `active` and `archived`. `Tag` and `Set<Tag>` normalize and deduplicate tags.
+1. **Stage accepted records.** The command copies the complete directory, including archived and filtered-out members.
+   It collects validation errors and checks valid records against the copy's email identity rule, adding each accepted
+   member to that copy. This also detects duplicates of earlier accepted CSV records; invalid records reserve no email.
+1. **Apply and save.** If at least one record is accepted, the command calls `Model.setAddressBook` and resets the filter
+   to show all members. It returns counts and rejection details to `LogicManager`, which performs the shared
+   [save/recovery flow](#saving-member-data-safely). The UI receives success only after that save completes.
+
+The sequence diagram below expands `ImportCommand.execute`. Source-path checks and the directory/filter snapshot
+have already completed in `LogicManager`. Incidental logging calls are omitted.
+Where activation bars restart at alternative-branch boundaries, they continue the same pending calls;
+this is a workaround for PlantUML's linear activation tracking.
+
+<puml src="diagrams/ImportSequenceDiagram.puml" alt="CSV import validation, duplicate checks, and success or failure outcomes" />
+
+The `Persist changed directory` reference expands to the matching frame in the
+[save/recovery diagram](#saving-member-data-safely). Its snapshot is taken before import execution, not after it.
+
+For example, with none of the sample emails already present, [members-partial.csv](samples/members-partial.csv)
+stages records 2 and 5, rejects record 3's invalid phone, and rejects record 4 as a duplicate of record 2.
+Both accepted members are applied together. Record numbers include the header as 1 and exclude empty lines;
+quoted multiline cells do not create extra record numbers.
+
+| Outcome | Effect |
+| --- | --- |
+| Invalid member fields, wrong column count, or duplicate email | Reject that record and continue with the other outcomes. |
+| All records rejected | Throw `CommandException` with every rejection; preserve the model and filter and skip saving. |
+| Unreadable file, decoding error, invalid header, malformed CSV, or no member records | Fail before applying any records, even if earlier CSV records were valid. |
+| Save failure after applying accepted members | Restore the original directory and filter using the shared save/recovery flow. |
+
+Import logs contain preparation counts or fatal-file failure messages, without member fields or rejection details.
+A preparation log does not mean the later save succeeded. `CsvMemberReaderTest` and `ImportCommandTest` cover parsing
+and record outcomes; `ImportIntegrationTest` checks persistence, source protection, and failure behavior.
 
 ### Saving member data safely
 
-`LogicManager` copies the directory and captures `Model.getFilteredPersonListPredicate()` before executing a command.
-If the subsequent save throws `IOException` (including `AccessDeniedException`) or `SecurityException`, it restores
-the directory and the actual predicate, reports that the command was not saved, and logs the failure type and recovery.
-Restoring the predicate preserves search behavior for future changes, including searches with no matches.
-The command's success result is returned only after saving succeeds. Command logs identify the command class rather
-than including raw input or member details.
+Saving protects both the in-memory directory and the existing JSON file. A command's success is returned to the UI
+only after persistence succeeds. In a normal writable session, parsing and pre-execution guards run first.
+`LogicManager` then follows this sequence:
 
-`JsonAddressBookStorage` serializes the complete directory before calling the package-private `AtomicFileWriter`.
-The writer creates a temporary file in the destination's directory, writes and closes its UTF-8 contents, and uses
-`Files.move` with `ATOMIC_MOVE` and `REPLACE_EXISTING`. Existing symbolic links are followed so the configured link
-is retained. There is no non-atomic fallback: unsupported atomic replacement is a save failure. No fallible cleanup
-is performed after successful replacement. Failed writes or moves remove the temporary file where possible; a cleanup
-failure is attached to the original exception and logged. A failed first save leaves the destination absent.
-This protects against ordinary write/replacement errors; it does not promise recovery from power loss or concurrent
-edits by another application. User-preference saving is unchanged.
+1. **Snapshot.** Copy the directory and capture `Model.getFilteredPersonListPredicate()` before executing the command.
+1. **Execute.** Run `command.execute(model)`. A parser or command exception exits before saving; the save-failure
+   rollback below does not handle command-execution failures.
+1. **Write.** Delegate saving through `StorageManager` to `JsonAddressBookStorage`, which serializes the complete
+   directory before invoking its package-private `AtomicFileWriter` helper.
+1. **Replace.** The writer creates a temporary file beside the destination, writes and closes its UTF-8 contents,
+   then replaces the destination with `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. Existing symbolic links are resolved
+   to their target so the configured link remains intact. There is no non-atomic fallback.
+1. **Return or restore.** After replacement succeeds, return the command result. On `IOException` (including
+   `AccessDeniedException`) or `SecurityException` from saving, restore the directory and original filter predicate,
+   then throw a `CommandException` explaining the failure. The success result is not returned.
 
-The startup recovery guard remains in effect: partial or failed loads disable member changes and saves before
-execution. This behavior is separate from restoring a command after a normal-session save failure.
+The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
+replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
+one arrow. Command-specific model interactions and logging calls are omitted.
+As in the import diagram, activation bars redrawn at alternative-branch boundaries continue the pending calls.
 
-Tests inject partial writes and replacement failures, check that the original JSON remains byte-for-byte unchanged,
-and verify restoration across add, edit, delete, clear, status, tag and import commands. They also cover permissions,
-unsupported atomic moves, a failed first save, continued predicate behavior, retry/reload, and startup protection.
+<puml src="diagrams/SaveRecoverySequenceDiagram.puml" alt="Directory and filter snapshot, atomic saving, and rollback after a save failure" />
+
+Failures earlier in saving, such as JSON serialization or destination checks, use the same restoration path.
+If the command itself throws, execution exits before the `Persist changed directory` frame.
+
+Restoring the predicate, rather than just the visible list, preserves subsequent search behavior, including filters
+that matched no members. For example, if an import updates the model but atomic replacement fails, its accepted
+members disappear and the previous search is restored; the existing JSON and CSV source remain unchanged.
+
+After a failed write or replacement, the writer attempts to remove the temporary file. A cleanup failure is attached
+to the original exception and logged. No fallible cleanup follows a successful replacement, and a failed first save
+leaves the destination absent. Logs identify the command class and recovery metadata without raw input or member details.
+
+This covers ordinary write and replacement failures, not power loss or concurrent edits by another application.
+User-preference saving is unchanged. The separate [startup recovery guard](#storage-component) rejects member changes
+and disables saving after a partial or failed load; it is not the rollback mechanism described here.
+
+`AtomicFileWriterTest` injects partial-write and replacement failures and checks file preservation and cleanup.
+`PersistenceIntegrationTest` verifies record/filter restoration, retry, and reload across commands;
+`ImportIntegrationTest` checks the same behavior for imports. See the
+[manual save-failure scenario](#recovering-from-a-failed-save) for the GUI check.
 
 ### \[Proposed\] Undo/redo feature
 
@@ -696,14 +731,14 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
 * **Contact details**: A member's name, phone number, email address, and address
 * **Duplicate member record**: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ
-* **Former member**: A member who is no longer active in the society but whose record is retained
-* **Incomplete member record**: A member record containing only some normally expected details, but enough information to identify the member according to the application's rules
+* **Former member**: A member who is no longer active in the society; their retained record can be marked `archived`
+* **Incomplete member record**: A valid member record with an email and at least one of name, phone number, or address absent
 * **Member**: A person whose contact and society-related information is stored in NUSocietyDesk
-* **Member directory**: The complete collection of member records stored in NUSocietyDesk
-* **Member record**: The information stored for one member, including their contact details and any society-related tags
-* **Membership status**: A classification indicating a member's current relationship with the society, such as active or former
-* **Rejected record**: A record that is not imported because it contains an invalid supplied value,
-  is missing a required field, or has a duplicate email. Missing optional contact details alone do not cause rejection
+* **Member directory**: All member records stored in NUSocietyDesk, including archived members and members outside the current search results
+* **Member record**: One member's contact details, membership status, and tags; their email determines identity
+* **Membership status**: A record's `active` or `archived` classification, stored separately from its tags; `former` is not a valid status value
+* **Rejected record**: A CSV member record skipped because of invalid fields, missing required values,
+  an incorrect column count, or a duplicate email. Missing optional contact details alone do not cause rejection
 * **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
 * **Tag**: A label attached to a member record to represent information such as a committee or role
 
@@ -800,8 +835,10 @@ Use a disposable application folder. Before launching, create `data/addressbook.
 ### Importing member directories
 
 Use a disposable application folder. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
-Keep a separate copy of this source file for comparison. Start with neither sample email in the directory.
-For independent cases below, use a fresh disposable directory or remove members added by earlier imports.
+Keep a separate copy of the CSV for comparison. Start with neither `alex@u.nus.edu` nor `jamie@u.nus.edu` in the
+directory, and confirm startup has not disabled saving. Run `list` to ensure the JSON file exists, then back it up.
+For independent cases below, restore that starting state. Keep the app's launch folder fixed so relative paths resolve
+to the prepared CSV files. Inspect the full feedback message for rejection details.
 CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.
 
 1. Test case: `import "member contacts.csv"`<br>
@@ -810,7 +847,7 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
    Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
    status, displays `ARCHIVED`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
 
-1. Test case: `find Existing`, followed by importing the same CSV again.<br>
+1. After the successful import above, run `find e/alex`, then import the same CSV again.<br>
    Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
    Member records, search results, and saved JSON are unchanged.
 
@@ -820,9 +857,10 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
    validation error for CSV record 3. Existing members and the source CSV are unchanged; all members are displayed.
    Restart and confirm only Alex was added.
 
-1. In fresh copies, repeat with a non-NUS email, missing status, a duplicate case-variant email, or missing/extra
-   columns in one member record.<br>
-   Expected: Valid records are imported; each rejected record has its original number and a useful reason.
+1. In separate fresh copies of the original CSV, change Jamie's email to `jamie@gmail.com`, remove Jamie's status,
+   change Jamie's email to `ALEX@U.NUS.EDU`, or remove/add a column in Jamie's record. Restore the starting directory
+   before each import.<br>
+   Expected: Alex is imported; Jamie is rejected as record 3 with the relevant validation or duplicate-email reason.
 1. Repeat with a reordered header, a header-only file, and an unterminated quoted cell after a valid record.<br>
    Expected: The whole import fails; no valid prefix is imported and records, search results and JSON are unchanged.
 
@@ -839,7 +877,12 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
    Expected: Format errors explain the command syntax; a missing file gives a file-reading error.
    Member records, current search results, and saved JSON remain unchanged.
 
-These GUI checks are documented for manual execution; automated tests exercise the command and persistence paths.
+1. Test case: `import data/addressbook.json`, using the app's configured JSON save file.<br>
+   Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
+   and the original JSON remain unchanged.
+
+These GUI checks require manual execution. `ImportIntegrationTest` covers persistence and source protection;
+`ImportCommandTest` checks the partial-import sample's documented counts.
 
 ### Recovering from a failed save
 
@@ -847,26 +890,30 @@ Use the current application build in a disposable folder on a filesystem that su
 Use the default data-file location, `data/addressbook.json`, and keep a separate backup of that file.
 The following steps use a file manager and do not require a particular operating system or shell.
 
-1. Launch with at least two members, including one matching `find e/alex`. Ensure `retry@u.nus.edu` is not already
-   present. Run `find e/alex` and note the displayed records.
+1. Launch with at least two members, including one matching `find e/alex` and one that does not. Confirm startup
+   has not disabled saving and `retry@u.nus.edu` is absent. Run `find e/alex` and note the displayed records.
 1. Keep the app running. In a file manager, rename `data/addressbook.json` to `data/addressbook.saved.json`.
    Create a folder named `addressbook.json` inside `data`, and place a text file named `keep.txt` in that folder.
    The nonempty folder prevents the app from replacing the destination with a JSON file.
 1. In the app, run `add e/retry@u.nus.edu`.<br>
    Expected: Saving fails; feedback says records and the previous search filter were restored. The original search
-   results remain visible and no new member remains in the directory. No success confirmation is displayed.
+   results remain visible. Do not run another command until the file path is restored; verify the missing member
+   with `list` after restoration. No success confirmation is displayed.
 1. Compare `data/addressbook.saved.json` with the backup.<br>
    Expected: The original JSON is unchanged, the test folder and `keep.txt` still exist, and there is no leftover
    `.nusocietydesk-*.tmp` file in `data` (enable hidden-file display if necessary).
 1. Remove only the test folder `data/addressbook.json` and its `keep.txt`, then rename `data/addressbook.saved.json`
    back to `data/addressbook.json`. Restore this path before restarting the app.
+   Run `list` to confirm that `retry@u.nus.edu` was not added, then run `find e/alex` to restore the test's search.
 1. Retry `add e/retry@u.nus.edu`, then close and restart the app.<br>
    Expected: The add succeeds, all members are displayed, and exactly one new member survives restarting.
-1. Make a fresh backup and repeat the path-conflict steps with a valid CSV containing a new member email.<br>
+1. Run `find e/alex` again, make a fresh backup, and repeat the path-conflict steps with a valid CSV containing a new
+   member email.<br>
    Expected: The previous records and filter are restored; the original JSON and source CSV remain unchanged.
    Remove the test folder and restore the original JSON filename before closing the app.
 
-These GUI checks require manual execution; automated tests inject failures in the write and replacement operations.
+These GUI checks require manual execution. `AtomicFileWriterTest`, `PersistenceIntegrationTest`, and
+`ImportIntegrationTest` inject failures without changing real user files.
 
 ### Combining search conditions
 
@@ -1068,7 +1115,8 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 ### Tag identity and editing
 
-1. Add a person with case variants of a tag.
+1. In a disposable application folder, confirm saving is enabled and `tagtest@u.nus.edu` is absent.
+   Add a person with case variants of a tag.
 
    1. Test case: `add n/Tag Test p/91234567 e/tagtest@u.nus.edu a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
       Expected: The card displays exactly two tags, `exco` and `publicity`, in lowercase.
@@ -1116,7 +1164,8 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 1. Load tags from an existing saved record.
 
-   1. Close the app in a disposable test directory. Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`.
+   1. Close the app in the disposable test directory and back up `data/addressbook.json`.
+      Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`, leaving all other JSON unchanged.
 
    1. Relaunch the app.<br>
       Expected: The card displays only `exco` and `publicity`.
