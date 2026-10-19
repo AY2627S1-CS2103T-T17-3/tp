@@ -1,10 +1,12 @@
 package seedu.address.logic.parser;
 
+import static seedu.address.logic.Messages.MESSAGE_INVALID_COMMAND_FORMAT;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Predicate;
@@ -50,6 +52,39 @@ final class SearchParserUtil {
         }
         return ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "),
                 SEARCH_PREFIXES.toArray(Prefix[]::new));
+    }
+
+    /**
+     * Parses every explicitly prefixed condition before returning predicates for a combined search.
+     *
+     * @param args The command arguments.
+     * @param usage The command's usage guidance.
+     * @param multipleValuesMessage The error format for multiple values, with a placeholder for the prefix.
+     * @param invalidPhoneMessage The error for a phone value containing non-digits.
+     * @throws ParseException if there are no conditions, unprefixed text or an invalid condition.
+     */
+    static List<Predicate<Person>> parseConditions(String args, String usage, String multipleValuesMessage,
+            String invalidPhoneMessage) throws ParseException {
+        ArgumentMultimap argMultimap = tokenize(args);
+        String invalidFormatMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, usage);
+        if (!argMultimap.getPreamble().isEmpty()) {
+            throw new ParseException(invalidFormatMessage);
+        }
+
+        List<Predicate<Person>> predicates = new ArrayList<>();
+        for (Prefix prefix : SEARCH_PREFIXES) {
+            for (String value : argMultimap.getAllValues(prefix)) {
+                if (value.isEmpty()) {
+                    throw new ParseException(invalidFormatMessage);
+                }
+                predicates.add(parseCondition(prefix, value, String.format(multipleValuesMessage, prefix),
+                        invalidPhoneMessage));
+            }
+        }
+        if (predicates.isEmpty()) {
+            throw new ParseException(invalidFormatMessage);
+        }
+        return predicates;
     }
 
     /**

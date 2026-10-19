@@ -36,7 +36,7 @@ public class AddressBookParser {
     // Let search commands validate line-separated conditions without changing other commands' input handling.
     private static final Pattern MULTILINE_FIND_COMMAND_FORMAT = Pattern.compile(
             "(?<commandWord>" + FindCommand.COMMAND_WORD + "|" + FindCommand.COMMAND_WORD_ALL
-                    + ")(?<arguments>\\s.*)", Pattern.DOTALL);
+                    + "|" + FindCommand.COMMAND_WORD_ANY + ")(?<arguments>\\s.*)", Pattern.DOTALL);
     private static final Logger logger = LogsCenter.getLogger(AddressBookParser.class);
 
     /**
@@ -75,6 +75,7 @@ public class AddressBookParser {
             case ClearCommand.COMMAND_WORD -> new ClearCommand();
             case FindCommand.COMMAND_WORD -> new FindCommandParser().parse(arguments);
             case FindCommand.COMMAND_WORD_ALL -> new FindAllCommandParser().parse(arguments);
+            case FindCommand.COMMAND_WORD_ANY -> new FindAnyCommandParser().parse(arguments);
             case ListCommand.COMMAND_WORD -> new ListCommand();
             case ExitCommand.COMMAND_WORD -> new ExitCommand();
             case HelpCommand.COMMAND_WORD -> new HelpCommand();
