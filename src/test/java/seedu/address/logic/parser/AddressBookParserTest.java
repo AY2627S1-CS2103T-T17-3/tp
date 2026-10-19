@@ -28,8 +28,11 @@ import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.TagAddCommand;
 import seedu.address.logic.commands.TagRemoveCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.person.AllConditionsPredicate;
+import seedu.address.model.person.AnyConditionsPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.TagMatchesPredicate;
 import seedu.address.model.tag.Tag;
 import seedu.address.testutil.EditPersonDescriptorBuilder;
 import seedu.address.testutil.PersonBuilder;
@@ -115,6 +118,50 @@ public class AddressBookParserTest {
     }
 
     @Test
+    public void parseCommand_findAllWithWhitespace_returnsFindCommand() throws Exception {
+        FindCommand expectedCommand = new FindCommand(new AllConditionsPredicate(List.of(
+                new NameContainsKeywordsPredicate(List.of("John")), new TagMatchesPredicate(new Tag("exco")))));
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertEquals(expectedCommand, parser.parseCommand("findall" + separator + "n/John"
+                    + separator + "t/EXCO"));
+        }
+    }
+
+    @Test
+    public void parseCommand_invalidFindAll_throwsParseException() {
+        String invalidFormatMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE_ALL);
+        for (String input : List.of("findall", "findall John", "findall n/John\nt/")) {
+            assertThrows(ParseException.class, invalidFormatMessage, () -> parser.parseCommand(input));
+        }
+        assertThrows(ParseException.class, FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING_ALL, () ->
+                parser.parseCommand("findall n/John\np/abc"));
+        assertThrows(ParseException.class, String.format(FindCommand.MESSAGE_MULTIPLE_CONDITION_VALUES, "n/"), () ->
+                parser.parseCommand("findall n/John\nTan"));
+    }
+
+    @Test
+    public void parseCommand_findAnyWithWhitespace_returnsFindCommand() throws Exception {
+        FindCommand expectedCommand = new FindCommand(new AnyConditionsPredicate(List.of(
+                new NameContainsKeywordsPredicate(List.of("John")), new TagMatchesPredicate(new Tag("exco")))));
+        for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
+            assertEquals(expectedCommand, parser.parseCommand("findany" + separator + "n/John"
+                    + separator + "t/EXCO"));
+        }
+    }
+
+    @Test
+    public void parseCommand_invalidFindAny_throwsParseException() {
+        String invalidFormatMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE_ANY);
+        for (String input : List.of("findany", "findany John", "findany n/John\nt/")) {
+            assertThrows(ParseException.class, invalidFormatMessage, () -> parser.parseCommand(input));
+        }
+        assertThrows(ParseException.class, FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING_ANY, () ->
+                parser.parseCommand("findany n/John\np/abc"));
+        String multipleValuesMessage = String.format(FindCommand.MESSAGE_MULTIPLE_CONDITION_VALUES_ANY, "n/");
+        assertThrows(ParseException.class, multipleValuesMessage, () -> parser.parseCommand("findany n/John\nTan"));
+    }
+
+    @Test
     public void parseCommand_nameSearchWithWhitespace_returnsFindCommand() throws Exception {
         for (String separator : List.of(" ", "\t", "\n", "\r\n")) {
             assertEquals(new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice"))),
@@ -136,7 +183,9 @@ public class AddressBookParserTest {
     public void parseCommand_multilineNonFindCommand_throwsParseException() {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, HelpCommand.MESSAGE_USAGE);
         for (String command : List.of("add n/Alice\ne/alice@u.nus.edu", "clear\n1", "findOther n/Alice\nBob",
-                "findn/Alice\nBob", "FIND n/Alice\nBob")) {
+                "findn/Alice\nBob", "FIND n/Alice\nBob", "findallOther n/Alice\nt/exco",
+                "findalln/Alice\nt/exco", "FINDALL n/Alice\nt/exco", "findanyOther n/Alice\nt/exco",
+                "findanyn/Alice\nt/exco", "FINDANY n/Alice\nt/exco")) {
             assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(command));
         }
     }

@@ -361,6 +361,7 @@ Tag removed: [publicity]; Email: 2@u.nus.edu
 
 Finds members by name keywords, a phone number substring, an email address substring or one exact tag.
 Matching members are displayed in a list with index numbers, together with the number of matches.
+Use `findall` or `findany` (below) to combine fields or repeat a field.
 
 Formats:
 
@@ -393,7 +394,7 @@ Formats:
   For example, `find p/9103` matches the phone number `91031282`.
 * Phone searches support only one substring. Commands such as `find p/9123 1234` are rejected with an error.
   The same applies to substrings separated by tabs or line breaks.
-  Search separately with `find p/9123` and `find p/1234`.
+  Use `findany p/9123 p/1234` to match either substring.
 * Both partial and full phone numbers are accepted. Even one or two digits can be used, such as `find p/9` or `find p/91`.
 * Use only ASCII digits (`0-9`). Letters, punctuation and non-ASCII digits are rejected, for example,
   `find p/abc`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.
@@ -412,7 +413,7 @@ Formats:
   `alice@u.nus.edu` and `malice@u.nus.edu`.
 * Email searches support only one substring. Commands such as `find e/alex david` are rejected with an error.
   The same applies to substrings separated by tabs or line breaks.
-  Search separately with `find e/alex` and `find e/david`.
+  Use `findany e/alex e/david` to match either substring.
 * Include `e/` to search email addresses: `find alex@u.nus.edu` searches names,
   while `find e/alex@u.nus.edu` searches emails.
 * `find e/@u.nus.edu` returns every member because all stored email addresses use that domain.
@@ -429,7 +430,7 @@ Formats:
 * Tag searches include active and archived members, as well as members with incomplete contact details.
   Include `t/`: `find publicity` searches names, while `find t/publicity` searches tags.
 
-**Search rules**
+**Rules for `find`**
 
 * Search one field per command. Combining fields, such as `find n/Alice p/9123`, `find e/alice n/Alice`
   or `find t/publicity e/alice`, is rejected.
@@ -467,6 +468,37 @@ Examples:
 * `find t/PUBLICITY` returns the same members as `find t/publicity`.
 * `find alex david` returns `Alex Yeoh`, `David Li`<br>
   ![result for 'find alex david'](images/findAlexDavidResult.png)
+
+### Combining search conditions: `findall` and `findany`
+
+`findall` returns members matching **every** condition (AND). `findany` returns members matching
+**at least one** condition (OR).
+
+Formats:
+
+```text
+findall PREFIX/VALUE [PREFIX/VALUE]...
+findany PREFIX/VALUE [PREFIX/VALUE]...
+```
+
+* Supply at least one condition. Every condition needs a lowercase `n/`, `p/`, `e/` or `t/` prefix
+  and one nonempty value. Field validation and matching follow `find` above.
+* Repeat a prefix to add another condition: use `n/John n/Tan`, not `n/John Tan`.
+* Every condition must be valid. For example, `findany n/Alice p/abc` is rejected even if Alice exists.
+  Rejected searches preserve the previous results, member records and saved data.
+
+| Example | Matches |
+| --- | --- |
+| `findall n/John n/Tan` | Names containing both whole words, in either order |
+| `findall n/John t/exco` | Members whose name contains the whole word John and who have the exco tag |
+| `findall t/exco t/publicity` | Members with both tags |
+| `findany t/exco t/publicity` | Members with either tag |
+| `findany n/Alice e/alice` | Members whose name contains Alice or whose email contains alice |
+
+Each search checks the complete directory and replaces the previous results. Members appear once, in directory
+order, with the final match count. If no members match, the list is empty and the count is zero.
+Active, archived and incomplete members remain searchable. A missing name or phone fails that condition;
+with `findany`, another condition can still match.
 
 ### Archiving a member: `archive`
 
@@ -564,8 +596,8 @@ If some records are invalid, AddressBook loads the valid records and shows a war
 recovered-member count, and each rejected record's original position and reason. For duplicate emails
 (including case variants), the first valid record is retained. If the JSON syntax or overall structure is
 invalid, or the file cannot be read, the app shows an empty member list and a warning.<br>
-The original file is preserved. You can use `list`, `find`, `help`, and `exit`, but member changes and saving
-are disabled for that session. Close the app, back up and repair the file, then restart. Normal saving resumes
+The original file is preserved. You can use `list`, `find`, `findall`, `findany`, `help`, and `exit`, but member changes
+and saving are disabled for that session. Close the app, back up and repair the file, then restart. Normal saving resumes
 only when the entire file loads successfully. A missing file still starts with sample members.<br>
 Furthermore, certain edits can cause the AddressBook to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
 </box>
@@ -609,6 +641,8 @@ Action     | Format, Examples
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
 **Find**   | `find KEYWORD [MORE_KEYWORDS]...`, `find n/KEYWORD`, `find p/PHONE_SUBSTRING`, `find e/EMAIL_SUBSTRING` or `find t/TAG`<br> e.g., `find James Jake`, `find n/James`, `find p/9103`, `find e/alex`, `find t/publicity`
+**Find all** | `findall PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findall n/John t/exco`
+**Find any** | `findany PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findany n/Alice e/alice`
 **List**   | `list`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tag INDEX t/TAG`<br> e.g., `tag 1 t/Volunteer`

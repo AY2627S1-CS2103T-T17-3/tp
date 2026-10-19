@@ -206,9 +206,10 @@ The existing `readAddressBook` API remains strict and throws `DataLoadingExcepti
 `MainApp.initModelManager` uses recovered records and prepares a warning for `UiManager` to display after the
 main window opens. Any partial or failed load disables saving through that storage instance for the rest of the
 session, including direct calls to either save overload. `LogicManager` rejects commands that change records
-before execution, while `list`, `find`, `help`, and `exit` run without saving. New commands require write access
-by default and must explicitly override `Command.isReadOnly` to run during recovery. Repairing the file requires
-a restart to restore saving. Only a missing file starts with sample members; a valid empty file stays empty.
+before execution, while `list`, `find`, `findall`, `findany`, `help`, and `exit` run without saving.
+New commands require write access by default and must explicitly override `Command.isReadOnly` to run during
+recovery. Repairing the file requires a restart to restore saving. Only a missing file starts with sample members;
+a valid empty file stays empty.
 Valid mixed-case emails become lowercase in memory on load and in the JSON file after a normal successful save.
 
 ### Common classes
@@ -344,48 +345,32 @@ incomplete members. `PersonBuilder` supports absent fields and preserves status 
 
 ### Finding members by contact details or tag
 
-`FindCommandParser` accepts unprefixed name keywords or one of the `n/`, `p/`, `e/` and `t/` search fields.
-Unprefixed name searches accept multiple keywords with OR semantics; `n/` accepts exactly one nonempty keyword.
-After the existing prefix and empty-value checks, the parser rejects multiple whitespace-separated `n/` keywords
-with guidance to use the unprefixed form for OR searching. This includes repeated identical keywords.
-Surrounding whitespace, including whitespace between the prefix and its value, is ignored.
-It validates prefix-like tokens at argument boundaries against the four supported prefixes before they can be
-interpreted as search values. A nonempty label followed by `/` at the start of the arguments or after whitespace
-is treated as a prefix. Uppercase variants (`N/`, `P/`, `E/` and `T/`) receive lowercase-prefix guidance;
-other prefixes such as `G/`, `g/`, `a/` and `name/` receive an unsupported-prefix error naming the invalid prefix.
-Slashes within values attached to valid prefixes, such as `e/G/`, retain their literal meaning.
-Search values retain their field-specific case rules.
-It normalizes whitespace before tokenizing prefixes, so spaces, tabs and line breaks separate fields consistently.
-`AddressBookParser` also passes multiline `find` arguments to this parser, allowing field-specific validation and
-error messages for line-separated values. Other commands retain their existing input handling.
-Duplicate prefixes, multiple selected fields, text before a selected field and empty search values are rejected.
-Phone and email searches each accept one substring; multiple whitespace-separated fragments are rejected.
-Tag searches accept one alphanumeric tag; multiple whitespace-separated tags are rejected with a single-tag error.
+`AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
+arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
+before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
 
-`FindCommand` accepts a `Predicate<Person>` and replaces the model's current filter using
-`Model.updateFilteredPersonList`. Every search checks the complete directory. The existing results view displays
-the matching members and their count, including an empty list and zero for a valid search with no matches.
-After applying the filter, `FindCommand` logs the match count at `INFO` level through `LogsCenter`, for example,
-`Find completed: 3 members matched.`
+`FindCommandParser` accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
+its restrictions against repeated prefixes, multiple fields and multiple values within a prefixed condition.
 
-`NameContainsKeywordsPredicate` matches any whole name keyword, ignoring case. It retains support for multiple
-keywords because unprefixed searches still require OR matching; the single-keyword restriction belongs in the parser.
-`PhoneContainsSubstringPredicate` matches a literal phone substring.
-`EmailContainsSubstringPredicate` lowercases the search substring with `Locale.ROOT` and matches it anywhere in
-the canonical lowercase email. It does not construct an `Email` or validate the substring as a complete address,
-so fragments such as `alice`, `@u.nus.edu` and `+` are accepted. Searching `@u.nus.edu` returns every member
-under the existing email domain restriction.
+`FindAllCommandParser` and `FindAnyCommandParser` use `SearchParserUtil.parseConditions` to require at least
+one explicitly prefixed condition. It reads every occurrence with `ArgumentMultimap.getAllValues`, rejects
+unprefixed text and empty values, and validates the entire input before returning predicates.
+`AllConditionsPredicate` combines these with AND; `AnyConditionsPredicate` combines them with OR.
+Invalid conditions therefore reject even an OR search that could otherwise match a member.
 
-`TagMatchesPredicate` stores a `Tag` validated and normalized through `ParserUtil.parseTag` and checks
-`Person.getTags().contains(tag)`. This reuses the existing exact, case-insensitive tag identity without modifying
-stored tags or their equality behavior. A member with several tags matches if one equals the search tag;
-a member with no tags does not match. Contact details and archive status do not affect tag matching.
-No member data or storage schema changes are required.
+All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
+ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
+Email substrings need not be complete addresses; tags are validated through `ParserUtil.parseTag`.
+Absent names or phones make the corresponding condition false. Archive status does not restrict matching.
 
-Parser, predicate and command tests cover single-keyword prefixed name searches, unprefixed OR searches, spaces,
-tabs and line breaks, exact matching, mixed case, partial names, multiple or absent member tags, invalid input and
-searches after an earlier filter. Logic integration tests verify that rejected searches preserve
-the previous results, member records and saved data. Multiple-tag and multi-field searches remain unsupported.
+Each parser creates one `FindCommand`, which applies its predicate once through `Model.updateFilteredPersonList`.
+The filter covers the complete directory, preserves directory order and displays each matching member once.
+The command reports and logs the final count, including zero for an empty result. It remains read-only for
+recovery mode and requires no changes to member data or the storage schema.
+
+Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
+invalid conditions, incomplete and archived members, and searches after an earlier filter.
+Rejected searches preserve the previous results, member records and saved data.
 
 ### Importing member directories from CSV
 
@@ -583,7 +568,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* * *`  | secretary with an existing directory                                   | import existing contacts into NUSocietyDesk and review any rejected records  | adopt the product without manual re-entry or risking silent data loss                         |
 | `* * *`  | secretary                                                              | attach consistent society-related information to a member                    | organise contacts according to their place in the society                                     |
 | `* * *`  | secretary who remembers only part of a member’s information            | search across relevant contact fields                                        | locate the member without knowing their exact name                                            |
-| `* * *`  | secretary                                                              | combine multiple search conditions                                           | find members matching specific criteria such as committee, role, and membership status       |
+| `* * *`  | secretary                                                              | combine name, phone, email and tag search conditions                          | find members by contact details, committee or role                                            |
 | `* * *`  | secretary                                                              | change selected member information without replacing unrelated details       | make corrections safely                                                                       |
 | `* * *`  | secretary                                                              | mark former members as archived without deleting their records              | retain their contact history                                                                   |
 | `* * *`  | secretary                                                              | activate a member who was archived                                           | correct an incorrect archive or record a returning member                                     |
@@ -652,47 +637,23 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 
     Use case ends.
 
-**Use case: UC03 - Find and inspect a member**
+**Use case: UC03 - Find and inspect members**
 
 **MSS**
 
-1. Secretary requests to find members using name keywords, a single phone number substring, a single email substring
-   or a single tag.
+1. Secretary requests to find members using name, phone, email or tag criteria, choosing whether all or any
+   criteria must match when combining conditions.
 2. NUSocietyDesk displays matching members with their available contact details, tags and the number of matches.
-3. Secretary inspects the displayed details to identify the intended member.
+3. Secretary inspects the displayed details to identify the intended members.
 
    Use case ends.
 
 **Extensions**
 
-* 1a. Secretary provides no search value.
+* 1a. Secretary supplies missing or invalid search criteria.
 
-  * 1a1. NUSocietyDesk shows an error message with the required format.
-
-    Use case ends.
-
-* 1b. Secretary selects more than one search field or repeats a field selection.
-
-  * 1b1. NUSocietyDesk shows an error message explaining the invalid field selection.
-
-    Use case ends.
-
-* 1c. Secretary provides multiple phone number substrings, email substrings or tags in one search.
-
-  * 1c1. NUSocietyDesk shows an error message explaining that the selected search field accepts only one value.
-
-    Use case ends.
-
-* 1d. Secretary provides an invalid tag name or uses an invalid search format.
-
-  * 1d1. NUSocietyDesk shows an error message explaining how to correct the search.
-
-    Use case ends.
-
-* 1e. Secretary provides multiple name keywords in a prefixed name search.
-
-  * 1e1. NUSocietyDesk explains the single-keyword restriction and suggests an unprefixed search to match any keyword.
-  * 1e2. NUSocietyDesk keeps the previous results and member records unchanged.
+  * 1a1. NUSocietyDesk shows an error message explaining how to correct the search.
+  * 1a2. NUSocietyDesk keeps the previous results and member records unchanged.
 
     Use case ends.
 
@@ -906,6 +867,29 @@ The following steps use a file manager and do not require a particular operating
    Remove the test folder and restore the original JSON filename before closing the app.
 
 These GUI checks require manual execution; automated tests inject failures in the write and replacement operations.
+
+### Combining search conditions
+
+In a disposable application copy, start with an empty directory and add:
+
+```text
+add n/John Tan e/john.tan@u.nus.edu t/exco t/publicity
+add n/John Lee e/john.lee@u.nus.edu t/exco
+add n/Alice Tan e/alice.tan@u.nus.edu t/publicity
+```
+
+Run these searches in order; later searches must check the complete directory despite the earlier filter.
+
+| Command | Expected result |
+| --- | --- |
+| `findall n/John n/Tan t/exco` | John Tan; count 1 |
+| `findall t/exco t/publicity` | John Tan; count 1 |
+| `findany t/exco t/publicity` | All three members, each once in insertion order; count 3 |
+| `findany n/Alice e/john.lee` | John Lee, then Alice Tan; count 2 |
+| `findall n/Nobody t/exco` | Empty list; count 0 |
+
+Run `find n/Alice`, then try `findall John t/exco`, `findall n/John Tan` and `findany n/John p/abc`.
+Each must report an error and leave Alice Tan displayed, with member records and saved JSON unchanged.
 
 ### Finding members by name
 

@@ -5,28 +5,25 @@ import static seedu.address.logic.parser.CliSyntax.PREFIX_EMAIL;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_NAME;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_PHONE;
 import static seedu.address.logic.parser.CliSyntax.PREFIX_TAG;
+import static seedu.address.logic.parser.SearchParserUtil.SEARCH_PREFIXES;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
 
 import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
-import seedu.address.model.person.EmailContainsSubstringPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
-import seedu.address.model.person.PhoneContainsSubstringPredicate;
-import seedu.address.model.person.TagMatchesPredicate;
 
 /**
  * Parses input arguments and creates a new FindCommand object.
  */
 public class FindCommandParser implements Parser<FindCommand> {
 
-    private static final Pattern SEARCH_PREFIX = Pattern.compile("(?:^|\\s)([^\\s/]+/)");
-    private static final Set<String> SUPPORTED_SEARCH_PREFIXES = Set.of(
-            PREFIX_NAME.getPrefix(), PREFIX_PHONE.getPrefix(), PREFIX_EMAIL.getPrefix(), PREFIX_TAG.getPrefix());
+    private static final Map<Prefix, String> MULTIPLE_VALUE_MESSAGES = Map.of(
+            PREFIX_NAME, FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS,
+            PREFIX_PHONE, FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS,
+            PREFIX_EMAIL, FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS,
+            PREFIX_TAG, FindCommand.MESSAGE_MULTIPLE_TAGS);
 
     /**
      * Parses name keywords, a {@code p/} phone substring, an {@code e/} email substring or a {@code t/} tag
@@ -36,14 +33,10 @@ public class FindCommandParser implements Parser<FindCommand> {
      */
     public FindCommand parse(String args) throws ParseException {
         String trimmedArgs = args.trim();
-        validateSearchPrefixes(trimmedArgs);
-        // Normalize whitespace so prefixes after tabs and newlines are recognized by the tokenizer.
-        ArgumentMultimap argMultimap =
-                ArgumentTokenizer.tokenize(" " + trimmedArgs.replaceAll("\\s+", " "),
-                        PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG);
-        argMultimap.verifyNoDuplicatePrefixesFor(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG);
+        ArgumentMultimap argMultimap = SearchParserUtil.tokenize(args);
+        argMultimap.verifyNoDuplicatePrefixesFor(SEARCH_PREFIXES.toArray(Prefix[]::new));
 
-        List<Prefix> searchPrefixes = List.of(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG).stream()
+        List<Prefix> searchPrefixes = SEARCH_PREFIXES.stream()
                 .filter(prefix -> argMultimap.getValue(prefix).isPresent())
                 .toList();
         if (searchPrefixes.size() > 1) {
@@ -64,55 +57,13 @@ public class FindCommandParser implements Parser<FindCommand> {
                     String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
         }
 
-        if (searchPrefixes.contains(PREFIX_PHONE)) {
-            if (trimmedArgs.split("\\s+").length > 1) {
-                throw new ParseException(FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS);
-            }
-            if (!trimmedArgs.matches("[0-9]+")) {
-                throw new ParseException(FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING);
-            }
-            return new FindCommand(new PhoneContainsSubstringPredicate(trimmedArgs));
+        if (!searchPrefixes.isEmpty()) {
+            Prefix prefix = searchPrefixes.getFirst();
+            return new FindCommand(SearchParserUtil.parseCondition(prefix, trimmedArgs,
+                    MULTIPLE_VALUE_MESSAGES.get(prefix), FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING));
         }
 
-        if (searchPrefixes.contains(PREFIX_EMAIL)) {
-            if (trimmedArgs.split("\\s+").length > 1) {
-                throw new ParseException(FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS);
-            }
-            return new FindCommand(new EmailContainsSubstringPredicate(trimmedArgs));
-        }
-
-        if (searchPrefixes.contains(PREFIX_TAG)) {
-            if (trimmedArgs.split("\\s+").length > 1) {
-                throw new ParseException(FindCommand.MESSAGE_MULTIPLE_TAGS);
-            }
-            return new FindCommand(new TagMatchesPredicate(ParserUtil.parseTag(trimmedArgs)));
-        }
-
-        String[] nameKeywords = trimmedArgs.split("\\s+");
-        if (searchPrefixes.contains(PREFIX_NAME) && nameKeywords.length > 1) {
-            throw new ParseException(FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS);
-        }
-
-        return new FindCommand(new NameContainsKeywordsPredicate(List.of(nameKeywords)));
-    }
-
-    /**
-     * Rejects unsupported prefixes at argument boundaries before they can become search values.
-     *
-     * @throws ParseException if a prefix is uppercase or unsupported.
-     */
-    private void validateSearchPrefixes(String args) throws ParseException {
-        Matcher matcher = SEARCH_PREFIX.matcher(args);
-        while (matcher.find()) {
-            String prefix = matcher.group(1);
-            if (SUPPORTED_SEARCH_PREFIXES.contains(prefix)) {
-                continue;
-            }
-            if (SUPPORTED_SEARCH_PREFIXES.contains(prefix.toLowerCase(Locale.ROOT))) {
-                throw new ParseException(FindCommand.MESSAGE_UPPERCASE_PREFIX);
-            }
-            throw new ParseException(String.format(FindCommand.MESSAGE_UNSUPPORTED_PREFIX, prefix));
-        }
+        return new FindCommand(new NameContainsKeywordsPredicate(List.of(trimmedArgs.split("\\s+"))));
     }
 
 }
