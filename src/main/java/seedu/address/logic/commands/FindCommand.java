@@ -17,6 +17,7 @@ import seedu.address.model.person.Person;
 public class FindCommand extends Command {
 
     public static final String COMMAND_WORD = "find";
+    public static final String COMMAND_WORD_ALL = "findall";
 
     public static final String MESSAGE_USAGE = COMMAND_WORD + ": Search members using one field.\n"
             + "Name:  " + COMMAND_WORD + " KEYWORD [MORE_KEYWORDS]... (match any keyword)\n"
@@ -26,6 +27,21 @@ public class FindCommand extends Command {
             + "Tag:   " + COMMAND_WORD + " t/TAG (one exact tag, ignoring case)\n"
             + "Examples: " + COMMAND_WORD + " alice bob; " + COMMAND_WORD + " p/9123; " + COMMAND_WORD + " e/alice; "
             + COMMAND_WORD + " t/publicity";
+
+    public static final String MESSAGE_USAGE_ALL = COMMAND_WORD_ALL
+            + ": Search members matching every condition (AND).\n"
+            + "Format: " + COMMAND_WORD_ALL + " PREFIX/VALUE [PREFIX/VALUE]...\n"
+            + "Use n/KEYWORD, p/DIGITS, e/SUBSTRING or t/TAG for every condition.\n"
+            + "Provide at least one condition. Repeat prefixes to add conditions; use one value per occurrence.\n"
+            + "Names match whole words; tags match exactly; both ignore case.\n"
+            + "Phones match consecutive digits; emails match literal substrings, ignoring case.\n"
+            + "Example: " + COMMAND_WORD_ALL + " n/John n/Tan t/exco";
+
+    public static final String MESSAGE_MULTIPLE_CONDITION_VALUES = "Each %1$s condition accepts only one value. "
+            + "Repeat the prefix for each additional condition, for example: findall n/John n/Tan.";
+
+    public static final String MESSAGE_INVALID_PHONE_SUBSTRING_ALL = "Phone searches accept digits (0-9) only. "
+            + "Example: findall p/9123.";
 
     public static final String MESSAGE_MULTIPLE_FIELDS = "Specify only one search field per find command.";
 

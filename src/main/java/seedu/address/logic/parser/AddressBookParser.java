@@ -33,9 +33,10 @@ public class AddressBookParser {
      * Used for initial separation of command word and args.
      */
     private static final Pattern BASIC_COMMAND_FORMAT = Pattern.compile("(?<commandWord>\\S+)(?<arguments>.*)");
-    // Let find validate line-separated keywords without changing other commands' input handling.
+    // Let search commands validate line-separated conditions without changing other commands' input handling.
     private static final Pattern MULTILINE_FIND_COMMAND_FORMAT = Pattern.compile(
-            "(?<commandWord>" + FindCommand.COMMAND_WORD + ")(?<arguments>\\s.*)", Pattern.DOTALL);
+            "(?<commandWord>" + FindCommand.COMMAND_WORD + "|" + FindCommand.COMMAND_WORD_ALL
+                    + ")(?<arguments>\\s.*)", Pattern.DOTALL);
     private static final Logger logger = LogsCenter.getLogger(AddressBookParser.class);
 
     /**
@@ -73,6 +74,7 @@ public class AddressBookParser {
             case DeleteCommand.COMMAND_WORD -> new DeleteCommandParser().parse(arguments);
             case ClearCommand.COMMAND_WORD -> new ClearCommand();
             case FindCommand.COMMAND_WORD -> new FindCommandParser().parse(arguments);
+            case FindCommand.COMMAND_WORD_ALL -> new FindAllCommandParser().parse(arguments);
             case ListCommand.COMMAND_WORD -> new ListCommand();
             case ExitCommand.COMMAND_WORD -> new ExitCommand();
             case HelpCommand.COMMAND_WORD -> new HelpCommand();
