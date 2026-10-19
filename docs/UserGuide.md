@@ -197,8 +197,8 @@ Adding the same email again never fills or overwrites the existing record. Use `
 </box>
 
 Tag names are alphanumeric and case-insensitive. They are stored and displayed in lowercase.
-For example, `t/Publicity t/publicity` adds one tag named `publicity`.
-Tags in existing saved records follow the same rule when loaded; case variants are merged.
+For example, adding a member with `t/Publicity t/publicity` gives that member one tag, `publicity`.
+Loading saved records applies the same rule within each member's tag set.
 
 Examples:
 * `add e/newmember@u.nus.edu n/New Member t/Publicity`
@@ -207,8 +207,8 @@ Examples:
 
 ### Importing member contacts from CSV: `import`
 
-Appends valid member records from a CSV file, skipping invalid records and duplicate emails.
-Feedback reports the imported and rejected counts, followed by each rejected record's number and reason.
+Adds valid members from a local CSV file and reports records rejected for invalid details or duplicate emails.
+Existing members are never updated or merged. The source CSV is never changed.
 
 Format: `import FILE_PATH`
 
@@ -218,10 +218,12 @@ Examples:
 * `import "member contacts.csv"`
 * `import "C:\Members\member contacts.csv"`
 
-Relative paths are resolved from the folder where the application was launched. Use double quotes around paths
-containing spaces. The command reads a local file; it does not download a Google Sheet or open an Excel workbook.
+Relative paths start from the folder where you launched the app. Enclose paths containing spaces in double quotes.
+Export Google Sheets or Excel data as a **comma-separated UTF-8 CSV** before importing.
 
-Save your spreadsheet as a comma-separated UTF-8 CSV using these lowercase headers in this exact order:
+#### Prepare the CSV
+
+The [sample CSV](samples/members.csv) contains the required header row followed by two example members:
 
 ```csv
 name,phone,email,address,tags,status
@@ -229,40 +231,42 @@ Alex Tan,91234567,alex@u.nus.edu,"NUS, Kent Ridge",Publicity;Exco,active
 Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
 ```
 
-A [sample CSV](samples/members.csv) is available to copy or download. Replace its example members with your own data.
-The [partial-import sample](samples/members-partial.csv) intentionally includes an invalid phone number and a duplicate
-email to demonstrate rejection feedback. In a directory without its example members, it imports two records and
-rejects two.
+Copy or download this file and replace the example members with your own data. Keep the lowercase header row
+unchanged and include all six columns in every member record, even when optional cells are blank.
+Surrounding whitespace is removed from member fields before validation.
 
-* Every member must have all six columns. Email and status must be nonempty. Name, phone, and address may be blank;
-  blank or whitespace-only cells for these optional fields mean the detail is absent, as with an omitted field in `add`.
-* Supplied contact fields follow the same validation rules as `add`. Surrounding field whitespace is removed.
-  Phone numbers contain digits only and have at least three digits. Emails must end with exactly `@u.nus.edu`.
-* Separate tags with semicolons, for example `Publicity;Exco`. Leave the tags cell empty for a member with no tags.
-  Each tag must be alphanumeric. Tags and emails are normalized to lowercase; case variants of tags are merged.
-  Empty tags inside a list, such as `publicity;`, are rejected.
-* Status is required and must be exactly `active` or `archived`. It is preserved during import;
+| Column | Accepted values |
+| --- | --- |
+| `name` | Optional. Leave blank if unknown; supplied names follow the `add` rules. |
+| `phone` | Optional. Leave blank if unknown; supplied numbers contain at least three digits and no other characters. |
+| `email` | Required. A valid email ending with exactly `@u.nus.edu`; stored in lowercase. |
+| `address` | Optional. Leave blank if unknown; supplied addresses follow the `add` rules. |
+| `tags` | Optional. Separate alphanumeric tags with semicolons, e.g., `Publicity;Exco`. Case variants become one lowercase tag per member. |
+| `status` | Required. Exactly `active` or `archived`. |
+
+Whitespace-only name, phone, and address cells count as absent. An empty tags cell means no tags; empty tags
+inside a list, such as `publicity;`, are invalid.
+
+The imported status is preserved;
   `archived` members display the `ARCHIVED` badge. Status is separate from tags.
-* Quote cells containing commas or double quotes. Inside a quoted cell, write a double quote as `""`.
-  Embedded line breaks are parsed as part of a cell. After surrounding whitespace is removed, line breaks inside
-  a name, phone, email or address fail the existing field validation rules.
-* A UTF-8 byte order mark and empty lines are accepted. An empty file or a header without members is rejected.
 
-On success, members are appended in CSV order, existing records remain unchanged, and the full directory is displayed.
-The feedback states how many members were imported and how many records were rejected.
-The combined directory is automatically saved as JSON when at least one member is imported.
-The source CSV is never changed. An import source that points to the application's JSON save file is rejected.
+Quote cells containing commas or double quotes. Inside a quoted cell, write a double quote as `""`.
+Quoted line breaks are parsed as part of a cell, but line breaks remaining inside a contact value fail validation.
+A UTF-8 byte order mark and empty lines are accepted. Empty files and header-only files are rejected.
 
-Duplicate checks include every existing member, including archived members and members outside the current search
-results, as well as earlier accepted records in the CSV. Matching is by case-insensitive email; shared names or phone
-numbers are allowed when emails differ. Existing members are never updated or merged. Within the CSV, the first valid
-occurrence of an email is accepted and subsequent valid occurrences are rejected. An invalid earlier record does not
-reserve its email. Re-importing an unchanged CSV adds no more members.
+#### Check the import result
 
-Every invalid or duplicate record produces a message with a CSV record number and the first reason it was rejected.
-Rejections are listed in CSV order. The header counts as record 1; the first member is record 2.
-Empty lines do not count, and record numbers can differ from physical line numbers when quoted cells span lines.
-For example, the partial-import sample reports Jamie as CSV record 3 and Duplicate Alex as CSV record 4:
+If at least one member is accepted, the app appends accepted members in CSV order, displays the full directory,
+and saves it as JSON. Feedback shows the imported and rejected counts, followed by each rejection's record number
+and first reason. The header is record 1; the first member is record 2. Empty lines do not count.
+A quoted cell spanning several lines still belongs to one record.
+
+An email conflicts with any existing member, including archived members and members outside the current search
+results. Within the CSV, the first valid occurrence wins; later valid occurrences are rejected. An invalid record
+does not reserve its email. Matching ignores email case; names and phone numbers do not determine duplicates.
+
+For example, import the [partial-import sample](samples/members-partial.csv) into a directory without its emails.
+Alex and the email-only member are accepted; Jamie's phone is invalid, and Duplicate Alex repeats Alex's email:
 
 ```text
 Imported 2 member(s); rejected 2 record(s) from members-partial.csv.
@@ -271,16 +275,21 @@ CSV record 3: Phone numbers should only contain digits, and should be at least 3
 CSV record 4: email "alex@u.nus.edu" duplicates an existing member or an earlier accepted CSV record.
 ```
 
-Correct the rejected records and import them again; previously imported members are skipped as duplicates if you
-retry the complete file. A syntactically valid record with missing or extra columns is rejected individually.
-Unreadable or non-UTF-8 files, invalid headers, malformed CSV, empty files, and header-only files reject the whole
-operation before any members are added, even when the file starts with valid records.
-If every record is rejected, feedback reports zero imports and all rejection reasons; member records, the current
-search results, and saved JSON remain unchanged.
+Correct the rejected records and import again. If you retry the complete file, previously imported members are
+reported as duplicates. Re-importing an unchanged file adds no members while those emails remain in the directory.
 
-If automatic saving fails, an error is shown and the imported members are removed from the current session.
-The previous directory, search filter, saved JSON, and source CSV are preserved. Resolve the saving problem
-and retry the import.
+#### Rejections and failures
+
+* **Some records are rejected:** Other valid records are imported. A record with missing or extra columns is
+  rejected individually if the CSV itself can still be parsed.
+* **Every record is rejected:** Feedback lists all rejection reasons. Member records, search results, and saved
+  JSON remain unchanged.
+* **The file cannot be read or parsed:** Unreadable or non-UTF-8 files, invalid headers, malformed CSV, empty files,
+  and header-only files stop the entire import. No records are added, even if the file starts with valid records.
+  Fix the file or path and retry. The app also rejects a source that points to its JSON save file, including a link
+  to that file.
+* **Automatic saving fails:** The import is reverted. Follow [Saving the data](#saving-the-data) to resolve the
+  problem, then retry. The source CSV is unchanged.
 
 ### Listing all persons: `list`
 
@@ -292,7 +301,7 @@ Format: `list`
 
 Edits an existing person in the address book.
 
-Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
+Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`
 
 * Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, ...
 * At least one of the optional fields must be provided.
@@ -303,14 +312,15 @@ Format: `edit INDEX [n/NAME] [p/PHONE] [e/EMAIL] [a/ADDRESS]`
 * The confirmation shows the member's current supplied details, including retained values, and omits missing
   fields and empty tags. For an email-only member, it reads `Edited person: Email: 2@u.nus.edu`.
 * A provided email must follow the same `@u.nus.edu` rules as `add`. Omitting `e/` preserves the current email.
-* Existing tags are preserved. The `edit` command rejects `t/` arguments, including an empty `t/`.
+* Existing tags are preserved. Any `t/` argument, including an empty `t/`, rejects the entire edit.
+  Use `tag` or `untag` to change tags.
 * Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
   address for reuse. The new email cannot belong to another member, including one outside the displayed list.
 
 Examples:
 *  `edit 1 p/91234567 e/johndoe@u.nus.edu` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@u.nus.edu` respectively.
-*  `edit 2 n/Betsy Crower` Edits the name of the 2nd person to be `Betsy Crower`.
-*  `edit 2 t/` Is rejected because tags cannot be edited with `edit`. No tags are removed and the person's details remain unchanged.
+*  `edit 2 n/Betsy Crower` changes the 2nd displayed person's name to `Betsy Crower` and preserves their tags.
+*  `edit 2 t/` is rejected. The member's contact details and tags remain unchanged.
 
 To complete an email-only member, run `find e/newmember@u.nus.edu`, identify the member's displayed index,
 and use `edit INDEX n/New Member`. Search again or recheck the index before using `edit INDEX p/91234567`
@@ -524,10 +534,14 @@ Format: `exit`
 ### Saving the data
 
 AddressBook automatically saves data after every successful command. You do not need to save manually.
-If saving fails, the app reports the error and restores the member records and search filter from before the command.
-The previous data file is preserved. Resolve the reported problem (for example, insufficient permissions or disk space)
-and retry the command. The app requires the data folder's filesystem to support atomic file replacement; it reports
-a saving error if this is unavailable.
+
+If saving fails, the command's changes are reverted: the previous member records, search filter, and data file
+are preserved. The result shows a saving error instead of a success confirmation. For example, an `add` whose save
+fails leaves no new member in the directory.
+
+Resolve the reported cause, such as insufficient permissions or disk space, then retry the command. The data folder's
+filesystem must support atomic file replacement; otherwise saving fails. Use a supported location for the data file.
+
 If the data file cannot be fully loaded, saving and changes to members are disabled to protect the original file.
 
 ### Editing the data file
