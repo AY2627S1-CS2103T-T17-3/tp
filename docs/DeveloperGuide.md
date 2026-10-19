@@ -119,7 +119,7 @@ How the parsing works:
 ### Model component
 **API** : [`Model.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/model/Model.java)
 
-<puml src="diagrams/ModelClassDiagram.puml" width="450" />
+<puml src="diagrams/ModelClassDiagram.puml" alt="Model classes and per-member tag identity" />
 
 
 The `Model` component,
@@ -183,7 +183,7 @@ no storage schema or UI changes are required.
 
 **API** : [`Storage.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/storage/Storage.java)
 
-<puml src="diagrams/StorageClassDiagram.puml" width="550" />
+<puml src="diagrams/StorageClassDiagram.puml" alt="Storage classes and the atomic file writer" />
 
 The `Storage` component,
 * can save both address book data and user preference data in JSON format, and read them back into corresponding objects.
@@ -416,6 +416,16 @@ The execution flow is:
    to show all members. It returns counts and rejection details to `LogicManager`, which performs the shared
    [save/recovery flow](#saving-member-data-safely). The UI receives success only after that save completes.
 
+The sequence diagram below expands `ImportCommand.execute`. Source-path checks and the directory/filter snapshot
+have already completed in `LogicManager`. Incidental logging calls are omitted.
+Where activation bars restart at alternative-branch boundaries, they continue the same pending calls;
+this is a workaround for PlantUML's linear activation tracking.
+
+<puml src="diagrams/ImportSequenceDiagram.puml" alt="CSV import validation, duplicate checks, and success or failure outcomes" />
+
+The `Persist changed directory` reference expands to the matching frame in the
+[save/recovery diagram](#saving-member-data-safely). Its snapshot is taken before import execution, not after it.
+
 For example, with none of the sample emails already present, [members-partial.csv](samples/members-partial.csv)
 stages records 2 and 5, rejects record 3's invalid phone, and rejects record 4 as a duplicate of record 2.
 Both accepted members are applied together. Record numbers include the header as 1 and exclude empty lines;
@@ -449,6 +459,16 @@ only after persistence succeeds. In a normal writable session, parsing and pre-e
 1. **Return or restore.** After replacement succeeds, return the command result. On `IOException` (including
    `AccessDeniedException`) or `SecurityException` from saving, restore the directory and original filter predicate,
    then throw a `CommandException` explaining the failure. The success result is not returned.
+
+The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
+replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
+one arrow. Command-specific model interactions and logging calls are omitted.
+As in the import diagram, activation bars redrawn at alternative-branch boundaries continue the pending calls.
+
+<puml src="diagrams/SaveRecoverySequenceDiagram.puml" alt="Directory and filter snapshot, atomic saving, and rollback after a save failure" />
+
+Failures earlier in saving, such as JSON serialization or destination checks, use the same restoration path.
+If the command itself throws, execution exits before the `Persist changed directory` frame.
 
 Restoring the predicate, rather than just the visible list, preserves subsequent search behavior, including filters
 that matched no members. For example, if an import updates the model but atomic replacement fails, its accepted
