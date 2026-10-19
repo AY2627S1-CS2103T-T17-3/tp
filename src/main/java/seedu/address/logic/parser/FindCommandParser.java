@@ -89,6 +89,9 @@ public class FindCommandParser implements Parser<FindCommand> {
         }
 
         String[] nameKeywords = trimmedArgs.split("\\s+");
+        if (searchPrefixes.contains(PREFIX_NAME) && nameKeywords.length > 1) {
+            throw new ParseException(FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS);
+        }
 
         return new FindCommand(new NameContainsKeywordsPredicate(List.of(nameKeywords)));
     }

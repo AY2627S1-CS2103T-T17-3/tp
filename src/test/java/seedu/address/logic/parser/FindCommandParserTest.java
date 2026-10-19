@@ -169,9 +169,22 @@ public class FindCommandParserTest {
     @Test
     public void parse_namePrefix_returnsFindCommand() {
         FindCommand expectedFindCommand =
-                new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice", "Bob")));
-        assertParseSuccess(parser, "n/Alice Bob", expectedFindCommand);
-        assertParseSuccess(parser, " \n \t n/ \n Alice \t Bob \t", expectedFindCommand);
+                new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice")));
+        assertParseSuccess(parser, "n/Alice", expectedFindCommand);
+        assertParseSuccess(parser, " \r\n \t n/ \n Alice \t", expectedFindCommand);
+    }
+
+    @Test
+    public void parse_multiplePrefixedNameKeywords_throwsParseException() {
+        String expectedMessage = "Prefixed name searches accept only one keyword. "
+                + "Use find Alice Bob to match names containing Alice OR Bob.";
+        for (String separator : List.of(" ", "  ", "\t", "\n", "\r\n", " \t\n ")) {
+            assertParseFailure(parser, "n/Alice" + separator + "Bob", expectedMessage);
+            assertParseFailure(parser, "n/Alice" + separator + "Alice", expectedMessage);
+            assertParseFailure(parser, " \t n/ Alice" + separator + "Bob \n", expectedMessage);
+            assertParseSuccess(parser, "Alice" + separator + "Bob",
+                    new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice", "Bob"))));
+        }
     }
 
     @Test
@@ -190,6 +203,7 @@ public class FindCommandParserTest {
         assertParseFailure(parser, "n/Alice\nn/Bob", expectedMessage);
         assertParseFailure(parser, "n/ n/Bob", expectedMessage);
         assertParseFailure(parser, "n/Alice n/", expectedMessage);
+        assertParseFailure(parser, "n/Alice Bob n/Carol", expectedMessage);
     }
 
     @Test
@@ -197,6 +211,7 @@ public class FindCommandParserTest {
         String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
         assertParseFailure(parser, "Alice n/Bob", expectedMessage);
         assertParseFailure(parser, "Alice\tn/Bob", expectedMessage);
+        assertParseFailure(parser, "Alice\nn/Bob Carol", expectedMessage);
     }
 
     @Test
@@ -269,6 +284,7 @@ public class FindCommandParserTest {
         assertParseFailure(parser, "n/ p/9123", expectedMessage);
         assertParseFailure(parser, "n/Alice p/", expectedMessage);
         assertParseFailure(parser, "n/Alice p/abc", expectedMessage);
+        assertParseFailure(parser, "n/Alice Bob\np/9123", expectedMessage);
         assertParseFailure(parser, "p/abc e/alice", expectedMessage);
     }
 

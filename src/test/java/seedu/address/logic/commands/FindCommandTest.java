@@ -87,12 +87,21 @@ public class FindCommandTest {
     }
 
     @Test
-    public void execute_prefixedNameKeywords_multiplePersonsFound() throws ParseException {
-        FindCommand command = new FindCommandParser().parse("n/kUrZ eLLe NoMatch");
+    public void execute_unprefixedNameKeywords_multiplePersonsFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse("kUrZ eLLe NoMatch");
         expectedModel.updateFilteredPersonList(preparePredicate("kUrZ eLLe NoMatch"));
         String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 2);
         assertCommandSuccess(command, model, expectedMessage, expectedModel);
         assertEquals(List.of(CARL, ELLE), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_prefixedNameKeyword_onePersonFound() throws ParseException {
+        FindCommand command = new FindCommandParser().parse(" \t n/ kUrZ \n ");
+        expectedModel.updateFilteredPersonList(preparePredicate("kUrZ"));
+        String expectedMessage = String.format(MESSAGE_PERSONS_LISTED_OVERVIEW, 1);
+        assertCommandSuccess(command, model, expectedMessage, expectedModel);
+        assertEquals(List.of(CARL), model.getFilteredPersonList());
     }
 
     @Test
