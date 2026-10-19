@@ -41,7 +41,16 @@ Person *--> Name
 Person *--> Phone
 Person *--> Email
 Person *--> Address
-Person *--> "*" Tag
+Person --> "0..*" Tag : tags {unique}
+
+note bottom of Tag
+  Names normalized to lowercase
+  using Locale.ROOT.
+  Equality and hash codes use
+  the normalized name.
+  Within each member's Set<Tag>,
+  case variants collapse to one tag.
+end note
 
 Person -[hidden]up--> I
 UniquePersonList -[hidden]right-> I
