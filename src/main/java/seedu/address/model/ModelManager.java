@@ -11,6 +11,7 @@ import javafx.collections.transformation.FilteredList;
 import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Status;
 
 /**
  * Represents the in-memory model of the address book data.
@@ -21,6 +22,8 @@ public class ModelManager implements Model {
     private final AddressBook addressBook;
     private final UserPrefs userPrefs;
     private final FilteredList<Person> filteredPersons;
+    private Predicate<? super Person> searchPredicate = PREDICATE_SHOW_ALL_PERSONS;
+    private StatusFilter statusFilter = StatusFilter.ALL;
 
     /**
      * Initializes a ModelManager with the given addressBook and userPrefs.
@@ -105,15 +108,32 @@ public class ModelManager implements Model {
     }
 
     @Override
+    public void setStatusFilter(StatusFilter statusFilter) {
+        this.statusFilter = requireNonNull(statusFilter);
+        refreshFilteredPersonList();
+    }
+
+    @Override
     public Predicate<? super Person> getFilteredPersonListPredicate() {
-        Predicate<? super Person> predicate = filteredPersons.getPredicate();
-        return predicate == null ? PREDICATE_SHOW_ALL_PERSONS : predicate;
+        return searchPredicate;
     }
 
     @Override
     public void updateFilteredPersonList(Predicate<? super Person> predicate) {
-        requireNonNull(predicate);
-        filteredPersons.setPredicate(predicate);
+        searchPredicate = requireNonNull(predicate);
+        refreshFilteredPersonList();
+    }
+
+    private void refreshFilteredPersonList() {
+        filteredPersons.setPredicate(person -> searchPredicate.test(person) && matchesStatus(person));
+    }
+
+    private boolean matchesStatus(Person person) {
+        return switch (statusFilter) {
+            case ALL -> true;
+            case ACTIVE -> person.getStatus() == Status.ACTIVE;
+            case ARCHIVED -> person.getStatus() == Status.ARCHIVED;
+        };
     }
 
     @Override
@@ -129,6 +149,7 @@ public class ModelManager implements Model {
 
         return addressBook.equals(otherModelManager.addressBook)
                 && userPrefs.equals(otherModelManager.userPrefs)
+                && statusFilter == otherModelManager.statusFilter
                 && filteredPersons.equals(otherModelManager.filteredPersons);
     }
 

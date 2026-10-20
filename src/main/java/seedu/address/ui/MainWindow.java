@@ -1,10 +1,12 @@
 package seedu.address.ui;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCombination;
@@ -17,6 +19,7 @@ import seedu.address.logic.Logic;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.StatusFilter;
 
 /**
  * The Main Window. Provides the basic application layout containing
@@ -25,15 +28,14 @@ import seedu.address.logic.parser.exceptions.ParseException;
 public class MainWindow extends UiPart<Stage> {
 
     private static final String FXML = "MainWindow.fxml";
-
     private final Logger logger = LogsCenter.getLogger(getClass());
 
     private Stage primaryStage;
     private Logic logic;
     private Path dataFilePath;
+    private StatusFilter statusFilter = StatusFilter.ALL;
 
     // Independent Ui parts residing in this Ui container
-    private PersonListPanel personListPanel;
     private ResultDisplay resultDisplay;
     private HelpWindow helpWindow;
 
@@ -51,6 +53,9 @@ public class MainWindow extends UiPart<Stage> {
 
     @FXML
     private StackPane statusbarPlaceholder;
+
+    @FXML
+    private Button statusFilterButton;
 
     /**
      * Creates a {@code MainWindow} with the given {@code Stage}, {@code Logic},
@@ -114,7 +119,8 @@ public class MainWindow extends UiPart<Stage> {
      * Fills up all the placeholders of this window.
      */
     void fillInnerParts() {
-        personListPanel = new PersonListPanel(logic.getFilteredPersonList());
+        logic.setStatusFilter(statusFilter);
+        PersonListPanel personListPanel = new PersonListPanel(logic.getFilteredPersonList());
         personListPanelPlaceholder.getChildren().add(personListPanel.getRoot());
 
         resultDisplay = new ResultDisplay();
@@ -167,8 +173,19 @@ public class MainWindow extends UiPart<Stage> {
         primaryStage.hide();
     }
 
-    public PersonListPanel getPersonListPanel() {
-        return personListPanel;
+    @FXML
+    private void handleStatusFilterButton() {
+        statusFilter = switch (statusFilter) {
+            case ALL -> StatusFilter.ACTIVE;
+            case ACTIVE -> StatusFilter.ARCHIVED;
+            case ARCHIVED -> StatusFilter.ALL;
+        };
+        logic.setStatusFilter(statusFilter);
+        statusFilterButton.setText(statusFilter.name());
+        statusFilterButton.getStyleClass().removeAll("active", "archived");
+        if (statusFilter != StatusFilter.ALL) {
+            statusFilterButton.getStyleClass().add(statusFilter.name().toLowerCase(Locale.ROOT));
+        }
     }
 
     /**

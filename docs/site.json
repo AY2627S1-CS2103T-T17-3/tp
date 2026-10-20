@@ -1,7 +1,7 @@
 {
   "baseUrl": "",
   "titlePrefix": "NUSocietyDesk",
-  "titleSuffix": "AddressBook Level-3",
+  "titleSuffix": "Member Directory",
   "faviconPath": "images/SeEduLogo.png",
   "style": {
     "codeTheme": "light"
