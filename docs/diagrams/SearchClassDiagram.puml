@@ -1,0 +1,63 @@
+@startuml
+!include style.puml
+skinparam style strictuml
+skinparam arrowThickness 1.1
+skinparam arrowColor LOGIC_COLOR_T4
+skinparam classBackgroundColor LOGIC_COLOR
+skinparam genericDisplay old
+skinparam nodesep 60
+skinparam ranksep 90
+
+title Partial search class diagram
+
+package Logic as LogicPackage {
+    package Parsers as ParserPackage {
+        class FindCommandParser
+        class FindAllCommandParser
+        class FindAnyCommandParser
+        class SearchParserUtil
+    }
+
+    class "{abstract}\nCommand" as Command
+    class FindCommand
+}
+
+class "<<interface>>\nModel" as Model MODEL_COLOR
+
+together {
+    class AllConditionsPredicate MODEL_COLOR
+    class AnyConditionsPredicate MODEL_COLOR
+    class NameContainsKeywordsPredicate MODEL_COLOR
+}
+
+class "<<interface>>\njava.util.function.\nPredicate<Person>" as PersonPredicate #555555
+
+FindCommandParser ..> SearchParserUtil
+FindAllCommandParser ..> SearchParserUtil
+FindAnyCommandParser ..> SearchParserUtil
+
+FindCommandParser ..> FindCommand : <<create>>
+FindAllCommandParser ..> FindCommand : <<create>>
+FindAnyCommandParser ..> FindCommand : <<create>>
+SearchParserUtil -[hidden]down-> FindCommand
+FindCommand -left-|> Command
+
+FindCommand -down-> "predicate\n1" PersonPredicate
+FindCommand .right.> Model : updateFilteredPersonList()
+
+AllConditionsPredicate -up-> "predicates\n1..*" PersonPredicate
+AllConditionsPredicate .up.|> PersonPredicate
+AnyConditionsPredicate .up.|> PersonPredicate
+NameContainsKeywordsPredicate .up.|> PersonPredicate
+AnyConditionsPredicate -up-> "predicates\n1..*" PersonPredicate
+
+AllConditionsPredicate -[hidden]right-> NameContainsKeywordsPredicate
+NameContainsKeywordsPredicate -[hidden]right-> AnyConditionsPredicate
+
+note as FieldPredicateNote
+    Example field predicate.
+    Other field predicates are omitted.
+end note
+NameContainsKeywordsPredicate .. FieldPredicateNote
+
+@enduml
