@@ -224,16 +224,27 @@ This section describes some noteworthy details on how certain features are imple
 
 ### Recalling submitted commands
 
+#### UI ownership and history state
+
 `CommandBox` owns one JavaFX-independent `CommandHistory`. A key-pressed filter on its text field consumes
 plain Up/Down events, including boundary no-ops, before JavaFX moves the caret. Modified arrows and other
 keys are not intercepted. The existing `CommandExecutor` remains the only path to execution; navigation
 never invokes it, updates the result display, or accesses `Logic`, `Model` or `Storage`.
+
+The partial class diagram shows the owned history helper, the saved input snapshot, and the separate execution
+callback. `CommandExecutor` is supplied by `MainWindow` as `this::executeCommand`; it is only called on submission.
+`InputState` is a nested immutable record used for navigation inputs and results as well as the saved draft.
+The diagram omits JavaFX controls, inherited UI members, and private helper methods.
+
+<puml src="diagrams/CommandHistoryClassDiagram.puml" width="700" alt="CommandBox owns one CommandHistory and separately references a CommandExecutor; history can retain one draft InputState" />
 
 The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `beforeCursor` holds older entries
 and `afterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
 their concatenation is the complete retained history. An empty `afterCursor` denotes the draft position.
 Up moves the last older entry to the front of `afterCursor`; Down moves its first entry back to the end
 of `beforeCursor`. Each arrow transition uses constant-time deque end operations.
+
+#### Recalling an entry and restoring a draft
 
 The first actual Up transition captures an immutable `InputState` containing exact draft text, selection
 anchor and caret. Down past the newest entry returns that snapshot and clears it. Recalled entries place
@@ -246,6 +257,14 @@ again restores them. Stored submitted strings and duplicate detection remain unc
 A returned empty optional
 denotes a no-op; a present result always restores text/selection and explicitly removes error styling,
 even when the replacement text is identical. Boundary no-ops preserve edits, selection and styling.
+
+For example, after submitting `list` and `help`, the user types an unsent draft and presses Up to recall
+`help`. Now `beforeCursor` contains `["list"]` and `afterCursor` contains `["help"]`, so the selected entry's
+index is 1. If the user edits the recalled text and presses Down, the helper stores the temporary edit under
+that index and restores the draft's exact text and selection. The next Up restores the edit with the caret
+at the end, while the submitted string remains `help`. None of these navigation steps executes a command.
+
+#### Recording submissions and handling failures
 
 `record` ignores `String.isBlank()` input without changing any state and returns false to prevent execution.
 For every other submission it resets the cursor, clears all temporary edits and the saved draft, suppresses
@@ -261,6 +280,10 @@ This positioning leaves `draft` null, so there is no duplicate failed-input draf
 Down is a boundary no-op when only the newest entry remains in `afterCursor` and there is no saved draft.
 Repeated Down presses preserve edits and selection; the next Up still recalls the preceding entry.
 Normal browsing captures and restores a real unsent draft as before. Temporary edits survive navigation.
+
+For example, after `list` succeeds and `lisst` fails, the cursor selects `lisst` with no saved draft.
+Up recalls `list`; Down returns to `lisst`; another Down is a no-op. This avoids showing the failed input
+twice. An exact consecutive duplicate still reaches the executor, but neither adds an entry nor evicts one.
 
 History is local to the command box's lifetime. Focus changes, Help, minimizing and ordinary commands do not
 reset it; a new application instance starts empty. It is never serialized or reconstructed from logs.
