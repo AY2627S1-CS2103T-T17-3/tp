@@ -345,6 +345,14 @@ incomplete members. `PersonBuilder` supports absent fields and preserves status 
 
 ### Finding members by contact details or tag
 
+The partial class diagram below shows the shared search design. Parsers validate input and construct predicates;
+`FindCommand` applies the supplied predicate through the `Model` interface. `Predicate<Person>` is the common
+contract for field matching and AND/OR combinations. `NameContainsKeywordsPredicate` represents the field
+predicates; other field predicates and parsing helpers are omitted.
+
+<puml src="diagrams/SearchClassDiagram.puml"
+      alt="Partial search class diagram showing shared command execution and predicate composition" />
+
 `AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
 arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
 before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
