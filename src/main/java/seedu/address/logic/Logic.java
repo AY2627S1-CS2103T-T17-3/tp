@@ -27,6 +27,9 @@ public interface Logic {
     /** Selects which member statuses are shown and used for displayed indices. */
     void setStatusFilter(StatusFilter statusFilter);
 
+    /** Returns the selected status view. */
+    StatusFilter getStatusFilter();
+
     /**
      * Returns the user prefs' GUI settings.
      */

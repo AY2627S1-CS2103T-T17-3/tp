@@ -1,6 +1,7 @@
 package seedu.address.logic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static seedu.address.logic.Messages.MESSAGE_INVALID_PERSON_DISPLAYED_INDEX;
 import static seedu.address.logic.Messages.MESSAGE_UNKNOWN_COMMAND;
 import static seedu.address.logic.commands.CommandTestUtil.ADDRESS_DESC_AMY;
@@ -33,6 +34,7 @@ import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
+import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
 import seedu.address.model.person.Status;
@@ -77,6 +79,41 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_view_changesSessionOnlyWithoutSaving() throws Exception {
+        Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
+        model.addPerson(person);
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+
+        assertEquals(new CommandResult("Switched to archived view."), logic.execute("view archived"));
+        assertEquals(StatusFilter.ARCHIVED, logic.getStatusFilter());
+        assertEquals(List.of(), logic.getFilteredPersonList());
+        assertEquals(List.of(person), model.getAddressBook().getPersonList());
+        assertFalse(Files.exists(savedFile));
+
+        assertEquals(new CommandResult("Switched to all view."), logic.execute("view all"));
+        assertEquals(StatusFilter.ALL, logic.getStatusFilter());
+        assertEquals(List.of(person), logic.getFilteredPersonList());
+        assertFalse(Files.exists(savedFile));
+    }
+
+    @Test
+    public void execute_view_remainsAvailableWhenSavingIsDisabled() throws Exception {
+        Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
+        model.addPerson(person);
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Files.writeString(savedFile, "invalid JSON");
+        JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(savedFile);
+        addressBookStorage.loadAddressBook();
+        Logic readOnlyLogic = new LogicManager(model, new StorageManager(addressBookStorage,
+                new JsonUserPrefsStorage(temporaryFolder.resolve("recoveryUserPrefs.json"))));
+
+        assertEquals(new CommandResult("Switched to archived view."), readOnlyLogic.execute("view archived"));
+        assertEquals(StatusFilter.ARCHIVED, readOnlyLogic.getStatusFilter());
+        assertEquals(List.of(), readOnlyLogic.getFilteredPersonList());
+        assertEquals("invalid JSON", Files.readString(savedFile));
     }
 
     @Test

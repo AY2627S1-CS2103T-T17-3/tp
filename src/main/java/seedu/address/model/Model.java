@@ -66,6 +66,9 @@ public interface Model {
     /** Selects which status is shown by the list used for displayed indices. */
     void setStatusFilter(StatusFilter statusFilter);
 
+    /** Returns the selected status view. */
+    StatusFilter getStatusFilter();
+
     /** Returns the current filter, including a filter that matches everyone when no search is active. */
     Predicate<? super Person> getFilteredPersonListPredicate();
 

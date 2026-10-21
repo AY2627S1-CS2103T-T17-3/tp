@@ -114,6 +114,11 @@ public class ModelManager implements Model {
     }
 
     @Override
+    public StatusFilter getStatusFilter() {
+        return statusFilter;
+    }
+
+    @Override
     public Predicate<? super Person> getFilteredPersonListPredicate() {
         return searchPredicate;
     }

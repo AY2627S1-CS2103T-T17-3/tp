@@ -63,6 +63,9 @@ public class LogicManager implements Logic {
             }
             return command.execute(model);
         }
+        if (!command.requiresSave()) {
+            return command.execute(model);
+        }
         if (command instanceof ImportCommand importCommand) {
             verifyImportSource(importCommand.getFilePath());
         }
@@ -113,6 +116,11 @@ public class LogicManager implements Logic {
     @Override
     public void setStatusFilter(StatusFilter statusFilter) {
         model.setStatusFilter(statusFilter);
+    }
+
+    @Override
+    public StatusFilter getStatusFilter() {
+        return model.getStatusFilter();
     }
 
     @Override

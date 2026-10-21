@@ -12,7 +12,7 @@
 
 The image is an early UI concept. The current app includes a status button and uses `ARCHIVED` in place of `FORMER`.
 
-**NUSocietyDesk is an offline member directory for NUS society secretaries.** Use typed commands to import, find, and update members while viewing their contact details, society tags, and active or archived status in the graphical list. The status button cycles through All, Active, and Archived views; searches apply to the selected view.
+**NUSocietyDesk is an offline member directory for NUS society secretaries.** Use typed commands to import, find, and update members while viewing their contact details, society tags, and active or archived status in the graphical list. The status button cycles through All, Active, and Archived views; `view all|active|archived` selects them by command. Searches apply to the selected view.
 
 * To use NUSocietyDesk, start with the [_Quick Start_ section of the **User Guide**](UserGuide.html#quick-start).
 * To develop NUSocietyDesk, start with the [**Developer Guide**](DeveloperGuide.html).

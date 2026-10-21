@@ -33,7 +33,6 @@ public class MainWindow extends UiPart<Stage> {
     private Stage primaryStage;
     private Logic logic;
     private Path dataFilePath;
-    private StatusFilter statusFilter = StatusFilter.ALL;
 
     // Independent Ui parts residing in this Ui container
     private ResultDisplay resultDisplay;
@@ -119,7 +118,7 @@ public class MainWindow extends UiPart<Stage> {
      * Fills up all the placeholders of this window.
      */
     void fillInnerParts() {
-        logic.setStatusFilter(statusFilter);
+        updateStatusFilterButton();
         PersonListPanel personListPanel = new PersonListPanel(logic.getFilteredPersonList());
         personListPanelPlaceholder.getChildren().add(personListPanel.getRoot());
 
@@ -175,12 +174,17 @@ public class MainWindow extends UiPart<Stage> {
 
     @FXML
     private void handleStatusFilterButton() {
-        statusFilter = switch (statusFilter) {
+        StatusFilter nextStatusFilter = switch (logic.getStatusFilter()) {
             case ALL -> StatusFilter.ACTIVE;
             case ACTIVE -> StatusFilter.ARCHIVED;
             case ARCHIVED -> StatusFilter.ALL;
         };
-        logic.setStatusFilter(statusFilter);
+        logic.setStatusFilter(nextStatusFilter);
+        updateStatusFilterButton();
+    }
+
+    private void updateStatusFilterButton() {
+        StatusFilter statusFilter = logic.getStatusFilter();
         statusFilterButton.setText(statusFilter.name());
         statusFilterButton.getStyleClass().removeAll("active", "archived");
         if (statusFilter != StatusFilter.ALL) {
@@ -196,6 +200,7 @@ public class MainWindow extends UiPart<Stage> {
     private CommandResult executeCommand(String commandText) throws CommandException, ParseException {
         try {
             CommandResult commandResult = logic.execute(commandText);
+            updateStatusFilterButton();
             logger.info("Result: " + commandResult.getFeedbackToUser());
             resultDisplay.setFeedbackToUser(commandResult.getFeedbackToUser());
 
