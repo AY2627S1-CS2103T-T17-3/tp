@@ -40,7 +40,7 @@
       "src": "DeveloperGuide.md",
       "title": "Developer Guide",
       "headings": {
-        "ab-3-developer-guide": "AB-3 Developer Guide",
+        "nusocietydesk-developer-guide": "NUSocietyDesk Developer Guide",
         "acknowledgements": "Acknowledgements",
         "setting-up-getting-started": "Setting up, getting started",
         "design": "Design",
@@ -53,6 +53,7 @@
         "implementation": "Implementation",
         "recalling-submitted-commands": "Recalling submitted commands",
         "archiving-and-activating-members": "Archiving and activating members",
+        "filtering-the-member-list-by-status": "Filtering the member list by status",
         "recording-a-member-with-incomplete-contact-details": "Recording a member with incomplete contact details",
         "finding-members-by-contact-details-or-tag": "Finding members by contact details or tag"
       },
@@ -99,14 +100,14 @@
       "src": "UserGuide.md",
       "title": "User Guide",
       "headings": {
-        "ab-3-user-guide": "AB-3 User Guide",
+        "nusocietydesk-user-guide": "NUSocietyDesk User Guide",
         "quick-start": "Quick start",
         "features": "Features",
         "recalling-commands-and": "Recalling commands: ↑ and ↓",
         "viewing-help-help": "Viewing help: help",
         "adding-a-person-add": "Adding a person: add",
         "importing-member-contacts-from-csv-import": "Importing member contacts from CSV: import",
-        "listing-all-persons-list": "Listing all persons: list",
+        "listing-members-list": "Listing members: list",
         "editing-a-person-edit": "Editing a person: edit",
         "adding-a-tag-to-a-member-tag": "Adding a tag to a member: tag",
         "removing-a-tag-from-a-member-untag": "Removing a tag from a member: untag",
@@ -130,7 +131,7 @@
       "src": "index.md",
       "title": "",
       "headings": {
-        "addressbook-level-3": "AddressBook Level-3"
+        "nusocietydesk": "NUSocietyDesk"
       },
       "headingKeywords": {}
     },
