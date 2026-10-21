@@ -27,7 +27,9 @@ import seedu.address.logic.commands.ImportCommand;
 import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.TagAddCommand;
 import seedu.address.logic.commands.TagRemoveCommand;
+import seedu.address.logic.commands.ViewCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.StatusFilter;
 import seedu.address.model.person.AllConditionsPredicate;
 import seedu.address.model.person.AnyConditionsPredicate;
 import seedu.address.model.person.NameContainsKeywordsPredicate;
@@ -59,6 +61,21 @@ public class AddressBookParserTest {
     public void parseCommand_archiveAndActivate() throws Exception {
         assertEquals(new ArchiveCommand(INDEX_FIRST_PERSON), parser.parseCommand("archive 1"));
         assertEquals(new ActivateCommand(INDEX_FIRST_PERSON), parser.parseCommand("activate 1"));
+    }
+
+    @Test
+    public void parseCommand_view() throws Exception {
+        assertEquals(new ViewCommand(StatusFilter.ALL), parser.parseCommand("view all"));
+        assertEquals(new ViewCommand(StatusFilter.ACTIVE), parser.parseCommand("view ACTIVE"));
+        assertEquals(new ViewCommand(StatusFilter.ARCHIVED), parser.parseCommand("view archived"));
+    }
+
+    @Test
+    public void parseCommand_invalidView_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, ViewCommand.MESSAGE_USAGE);
+        for (String input : List.of("view", "view former", "view active archived", "view s/active")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(input));
+        }
     }
 
     @Test

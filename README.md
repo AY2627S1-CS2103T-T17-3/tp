@@ -18,11 +18,12 @@ The screenshot is an early UI concept that shows a `FORMER` badge. The current a
 | Complete or correct details | `edit 2 p/91234567` | Changes supplied contact fields while retaining the others. |
 | Maintain roles and committees | `tag 2 t/President`, `untag 2 t/President` | Adds or removes one tag at a time. |
 | Find members | `find e/alex`, `findall n/Alex t/publicity`, `findany n/Alex e/alex` | Searches one field, or combines conditions with AND or OR. |
+| Choose a status view | `view active`, `view archived`, `view all` | Changes the button and displayed list without clearing the current search. |
 | View the selected status | `list` | Clears a search while keeping the All, Active, or Archived view selected in the GUI. |
 | Retain former members | `archive 2`, `activate 2` | Changes status without deleting contact details; choose All or Archived to view former members. |
 | Remove a record | `delete 2` | Permanently deletes the member at the displayed index. |
 
-The GUI opens in All view. Each click of the status button cycles **All → Active → Archived → All**. Searches apply to the selected view, and changing the view keeps the current search. `edit`, `tag`, `untag`, `archive`, `activate`, and `delete` use the index in the currently displayed list, including filtered results. A successful data change is saved to `data/addressbook.json`; the directory is loaded on startup. The app also provides command history with the ↑ and ↓ keys and reports invalid commands and save failures.
+The GUI opens in All view. Each click of the status button cycles **All → Active → Archived → All**; `view STATUS` selects the same view from the command box. Searches apply to the selected view, and changing the view keeps the current search. `list` clears the search without changing the view. `edit`, `tag`, `untag`, `archive`, `activate`, and `delete` use the index in the currently displayed list, including filtered results. A successful data change is saved to `data/addressbook.json`; the directory is loaded on startup. The app also provides command history with the ↑ and ↓ keys and reports invalid commands and save failures.
 
 The current identity rule is a unique `@u.nus.edu` email. Names and phone numbers may be shared, and a phone-only or personal-email contact cannot currently be added or imported. Name searches match whole words and tag searches match complete tags; phone and email searches accept substrings.
 

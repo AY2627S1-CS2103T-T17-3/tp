@@ -34,6 +34,8 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 
    * `list` : Clears the search and lists members in the selected status view.
 
+   * `view archived` : Shows archived members without clearing the current search; also updates the status button.
+
    * `add e/johnd@u.nus.edu` : Adds a member whose other contact details can be filled in later.
 
    * `find e/johnd` : Finds members using part of an email address.
@@ -300,14 +302,28 @@ reported as duplicates. Re-importing an unchanged file adds no members while tho
 * **Automatic saving fails:** The import is reverted. Follow [Saving the data](#saving-the-data) to resolve the
   problem, then retry. The source CSV is unchanged.
 
+### Choosing a status view: `view`
+
+Selects the members shown by status, using the same view as the GUI button.
+
+Format: `view all|active|archived`
+
+Supply exactly one status. The value is case-insensitive (`view ACTIVE` also works); `former` is not accepted.
+The command updates the button and list together. It keeps the current search, so `view all` can still show only
+search matches. It does not change member statuses or save data. On the next launch, the view starts at All.
+
+For example, after `find t/publicity`, use `view archived` to see archived matches, then `view active` to see
+active matches. Use `list` to clear the search while keeping the selected view.
+
 ### Listing members: `list`
 
 Clears the current search and shows members in the selected status view.
 
 Format: `list`
 
-The GUI starts in **All** view. Each click of the status button cycles **All → Active → Archived → All**.
-All shows both statuses. Switching views keeps the current search, while `list` clears it. Indices always refer
+The GUI starts in **All** view. Each click of the status button cycles **All → Active → Archived → All**;
+`view` selects one of these states directly. All shows both statuses. Switching views keeps the current search,
+while `list` clears it. Indices always refer
 to the members currently shown on screen.
 
 `edit`, `tag`, `untag`, `archive`, `activate`, and `delete` use the index in that visible list when the command
@@ -591,7 +607,8 @@ Format: `exit`
 
 ### Saving the data
 
-AddressBook automatically saves data after every successful command. You do not need to save manually.
+AddressBook automatically saves data after successful commands other than `view`. You do not need to save manually.
+`view` changes only the current window's status filter and does not write the data file.
 
 If saving fails, the command's changes are reverted: the previous member records, search filter, and data file
 are preserved. The result shows a saving error instead of a success confirmation. For example, an `add` whose save
@@ -626,7 +643,7 @@ Missing names, phones, and addresses are saved as JSON `null`, for example:
 For these three optional fields, an omitted property also loads as missing. Empty strings, whitespace-only
 strings, and invalid supplied values are rejected. Email must always be present and valid. Older complete
 records continue to load. An omitted or `null` status defaults to `active`; a supplied status must be exactly
-`active` or `archived`. Loading alone does not rewrite a file; the next successful command saves the resolved status
+`active` or `archived`. Loading alone does not rewrite a file; the next successfully saved command writes the resolved status
 and absent optional fields as explicit `null` values.
 
 <box type="warning" seamless>
@@ -636,7 +653,7 @@ If some records are invalid, AddressBook loads the valid records and shows a war
 recovered-member count, and each rejected record's original position and reason. For duplicate emails
 (including case variants), the first valid record is retained. If the JSON syntax or overall structure is
 invalid, or the file cannot be read, the app shows an empty member list and a warning.<br>
-The original file is preserved. You can use `list`, `find`, `findall`, `findany`, `help`, and `exit`, but member changes
+The original file is preserved. You can use `list`, `view`, `find`, `findall`, `findany`, `help`, and `exit`, but member changes
 and saving are disabled for that session. Close the app, back up and repair the file, then restart. Normal saving resumes
 only when the entire file loads successfully. A missing file still starts with sample members.<br>
 Furthermore, certain edits can cause the AddressBook to behave in unexpected ways (e.g., if a value entered is outside of the acceptable range). Therefore, edit the data file only if you are confident that you can update it correctly.
@@ -684,6 +701,7 @@ Action     | Format, Examples
 **Find all** | `findall PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findall n/John t/exco`
 **Find any** | `findany PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findany n/Alice e/alice`
 **List**   | `list`
+**View**   | `view all\|active\|archived`<br> e.g., `view archived`
 **Import** | `import FILE_PATH`<br> e.g., `import "member contacts.csv"`
 **Add tag** | `tag INDEX t/TAG`<br> e.g., `tag 1 t/Volunteer`
 **Remove tag** | `untag INDEX t/TAG`<br> e.g., `untag 1 t/publicity`

@@ -16,6 +16,11 @@ public abstract class Command {
         return false;
     }
 
+    /** Returns whether executing this command requires saving the address book. */
+    public boolean requiresSave() {
+        return true;
+    }
+
     /**
      * Executes the command and returns the result message.
      *

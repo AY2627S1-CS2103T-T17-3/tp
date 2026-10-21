@@ -206,7 +206,7 @@ The existing `readAddressBook` API remains strict and throws `DataLoadingExcepti
 `MainApp.initModelManager` uses recovered records and prepares a warning for `UiManager` to display after the
 main window opens. Any partial or failed load disables saving through that storage instance for the rest of the
 session, including direct calls to either save overload. `LogicManager` rejects commands that change records
-before execution, while `list`, `find`, `findall`, `findany`, `help`, and `exit` run without saving.
+before execution, while `list`, `view`, `find`, `findall`, `findany`, `help`, and `exit` run without saving.
 New commands require write access by default and must explicitly override `Command.isReadOnly` to run during
 recovery. Repairing the file requires a restart to restore saving. Only a missing file starts with sample members;
 a valid empty file stays empty.
@@ -309,8 +309,13 @@ retaining the selected status view. Archived members appear in All or Archived v
 ### Filtering the member list by status
 
 The button in `MainWindow.fxml` starts at `ALL`. `MainWindow.handleStatusFilterButton` cycles the state
-`ALL → ACTIVE → ARCHIVED → ALL`, updates the button text, and calls `Logic.setStatusFilter`. `LogicManager`
-passes that state to `ModelManager`. This is an in-memory view setting and is reset to All when the app starts.
+`ALL → ACTIVE → ARCHIVED → ALL` through `Logic.setStatusFilter`. The `view all|active|archived` command sets
+the same state directly. `LogicManager` passes both paths to `ModelManager`, the source of truth for the selected
+view. `MainWindow` reads the state to update the button text and colour after either path changes it.
+This is an in-memory setting and starts at All on each launch.
+
+`ViewCommandParser` accepts exactly one status, ignoring case. `ViewCommand` is read-only so it works during
+data recovery; it also skips the normal save because selecting a view does not change member records.
 
 `ModelManager` keeps one `FilteredList<Person>` and two independent filter settings: the current search
 predicate and the selected `StatusFilter`. Each change recomputes the list predicate as search **and** status.
@@ -347,7 +352,7 @@ false for absent fields. Email search remains available, and display placeholder
 
 `JsonAdaptedPerson` maps between optional model values and nullable saved strings. An email-only record can be
 represented as `{"name":null,"phone":null,"email":"alex@u.nus.edu","address":null,"status":"active","tags":[]}`.
-Reading does not rewrite the file; the next successful command saves explicit nulls. Older versions requiring
+Reading does not rewrite the file; the next successfully saved command writes explicit nulls. Older versions requiring
 complete contact details reject the entire file if it contains an incomplete member. With their existing loading
 behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
 
@@ -806,7 +811,10 @@ Use a disposable application folder with `data/addressbook.json` containing `{"p
    `former@u.nus.edu`, and `ALL` shows both members.
 1. Run `find e/active`, then click through Active and Archived.<br>
    Expected: Active shows the matching member, Archived shows an empty list, and the search remains in effect.
-1. With Archived selected, run `list`.<br>
+1. Run `view active`, then `view archived`, then `view all`.<br>
+   Expected: The button and list follow each command. The existing search remains in effect, so `view archived`
+   shows no matches and `view all` restores the active match. No member statuses change.
+1. Run `view archived`, then `list`.<br>
    Expected: The search clears, the button still reads `ARCHIVED`, and `former@u.nus.edu` appears at index 1.
 1. Run `edit 1 n/Former Member`, then `tag 1 t/Alumni`, followed by `untag 1 t/Alumni`.<br>
    Expected: Each command updates `former@u.nus.edu`, the member at index 1 in the current Archived view.

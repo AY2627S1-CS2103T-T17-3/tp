@@ -157,6 +157,11 @@ public class AddCommandTest {
         }
 
         @Override
+        public StatusFilter getStatusFilter() {
+            throw new AssertionError("This method should not be called.");
+        }
+
+        @Override
         public Predicate<? super Person> getFilteredPersonListPredicate() {
             throw new AssertionError("This method should not be called.");
         }
