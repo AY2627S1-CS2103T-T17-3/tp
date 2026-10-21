@@ -1,0 +1,42 @@
+@startuml
+!include style.puml
+skinparam ArrowColor UI_COLOR_T4
+skinparam ArrowFontStyle plain
+skinparam ClassBackgroundColor UI_COLOR
+skinparam ClassAttributeFontColor white
+skinparam ClassAttributeFontSize 14
+skinparam DefaultFontName Arial
+skinparam DefaultFontSize 14
+show members
+hide empty members
+
+class CommandBox
+interface "CommandBox.CommandExecutor" as CommandExecutor <<interface>> {
+    execute(commandText)
+}
+class CommandHistory {
+    beforeCursor: Deque<String>
+    afterCursor: Deque<String>
+    editedCommands: Map<Integer, String>
+    --
+    record(command): boolean
+    older(currentInput): Optional<InputState>
+    newer(currentInput): Optional<InputState>
+    selectLatestAfterFailure()
+}
+class "CommandHistory.InputState" as InputState <<record>> {
+    text: String
+    anchor: int
+    caret: int
+}
+
+CommandBox *-down-> "1" CommandHistory : history
+CommandBox -right-> "1" CommandExecutor : commandExecutor
+CommandHistory -right-> "0..1" InputState : draft
+
+note bottom of CommandHistory
+    JavaFX-independent helper in the UI package.
+    The two deques retain at most 100 submitted strings.
+    Temporary edits are keyed by entry index.
+end note
+@enduml
