@@ -4,9 +4,9 @@
   pageNav: 3
 ---
 
-# AB-3 User Guide
+# NUSocietyDesk User Guide
 
-AddressBook Level 3 (AB3) is a **desktop application for managing contacts, optimized for use through a Command Line Interface (CLI)** while retaining the benefits of a Graphical User Interface (GUI). If you type quickly, AB3 can help you manage contacts faster than traditional GUI applications.
+NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses typed commands and a graphical member list to manage contacts, roles, committees, and membership status.
 
 <!-- * Table of Contents -->
 <page-nav-print />
@@ -18,28 +18,37 @@ AddressBook Level 3 (AB3) is a **desktop application for managing contacts, opti
 1. Ensure that Java `25` or later is installed on your computer.<br>
    **Mac users:** Ensure you have the precise JDK version prescribed [here](https://se-education.org/guides/tutorials/javaInstallationMac.html).
 
-1. Download the latest `.jar` file from [here](https://github.com/se-edu/addressbook-level3/releases).
+1. Get `NUSocietyDesk.jar` from the [project releases](https://github.com/AY2627S1-CS2103T-T17-3/tp/releases), if available, or build it from source with `./gradlew shadowJar` (output: `build/libs/NUSocietyDesk.jar`).
 
-1. Copy the file to the folder you want to use as the _home folder_ for your AddressBook.
+1. Copy the file to the folder you want to use as the home folder for your member directory.
 
 1. Open a terminal, `cd` to the folder containing the JAR file, and run `java -jar NUSocietyDesk.jar`.<br>
-   A GUI similar to the one below should appear in a few seconds. Note how the app contains some sample data.<br>
+   A GUI should appear in a few seconds with sample data. The image below is an early UI concept; the current
+   app has an **ALL** status button and uses **ARCHIVED** instead of **FORMER** on member cards.<br>
    ![Ui](images/Ui.png)
 
 1. Type a command in the command box and press Enter to execute it. For example, type **`help`** and press Enter to open the help window.<br>
+   The status button starts at **ALL**. Click it to cycle through **ACTIVE**, **ARCHIVED**, and back to **ALL**;
+   the member list changes to match the label.
    Some example commands you can try:
 
-   * `list` : Lists all contacts.
+   * `list` : Clears the search and lists members in the selected status view.
 
    * `add e/johnd@u.nus.edu` : Adds a member whose other contact details can be filled in later.
+
+   * `find e/johnd` : Finds members using part of an email address.
+
+   * `edit 1 p/91234567` : Updates the phone number of the 1st displayed member.
+
+   * `tag 1 t/Publicity` : Adds a society tag to the 1st displayed member.
+
+   * `import "members.csv"` : Imports a prepared CSV file and reports rejected records.
 
    * `delete 3` : Deletes the 3rd contact shown in the current list.
 
    * `archive 2` : Marks the 2nd displayed member as archived without deleting their record.
 
    * `activate 2` : Marks the 2nd displayed member as active again.
-
-   * `clear` : Deletes all contacts.
 
    * `exit` : Exits the app.
 
@@ -92,7 +101,7 @@ For example:
 
 1. Submit `list`, then `lisst`. The result shows `Unknown command.` and the failed text remains in the command box.
 1. Press ↑ once to recall `list`, then ↓ to return to `lisst` with normal input styling.
-1. Correct it to `list` and press Enter. The result shows `Listed all persons.` and the command box clears.
+1. Correct it to `list` and press Enter. The result shows `Listed members in the selected status view.` and the command box clears.
 1. Press ↑ twice to recall `list`, then `lisst`.
 
 **Drafts:** When you first press ↑, the app remembers your unsent text and its caret/selection.
@@ -155,7 +164,7 @@ New person added: Email: alex@u.nus.edu
 These placeholders are display text only. They are not stored as contact values or searched as names or phones.
 When a name is present, add, edit, tag and delete confirmations label it as `Name: <person name>`.
 For example, adding Alex with only a name and email shows `New person added: Name: Alex; Email: alex@u.nus.edu`.
-After a successful add, all members are displayed in their existing order, with the new member appended.
+After a successful add, the search is cleared. The new member appears in All or Active view.
 
 Email is required and uniquely identifies a member. Email addresses are compared, displayed, and saved in
 lowercase. Only complete email addresses ending with exactly `@u.nus.edu` are accepted. For example,
@@ -256,7 +265,7 @@ A UTF-8 byte order mark and empty lines are accepted. Empty files and header-onl
 
 #### Check the import result
 
-If at least one member is accepted, the app appends accepted members in CSV order, displays the full directory,
+If at least one member is accepted, the app appends accepted members in CSV order, clears the search,
 and saves it as JSON. Feedback shows the imported and rejected counts, followed by each rejection's record number
 and first reason. The header is record 1; the first member is record 2. Empty lines do not count.
 A quoted cell spanning several lines still belongs to one record.
@@ -291,11 +300,25 @@ reported as duplicates. Re-importing an unchanged file adds no members while tho
 * **Automatic saving fails:** The import is reverted. Follow [Saving the data](#saving-the-data) to resolve the
   problem, then retry. The source CSV is unchanged.
 
-### Listing all persons: `list`
+### Listing members: `list`
 
-Shows a list of all persons in the address book.
+Clears the current search and shows members in the selected status view.
 
 Format: `list`
+
+The GUI starts in **All** view. Each click of the status button cycles **All → Active → Archived → All**.
+All shows both statuses. Switching views keeps the current search, while `list` clears it. Indices always refer
+to the members currently shown on screen.
+
+`edit`, `tag`, `untag`, `archive`, `activate`, and `delete` use the index in that visible list when the command
+is submitted. The index can change when you switch status views, search, or run a command. For example, if an
+archived member is third in All view but first in Archived view, `edit 1 p/91234567` updates that archived
+member while Archived is selected. An index outside the visible list is rejected, even if it exists in the
+complete directory. Recheck the displayed index before another command; successful edits, tag changes, archives,
+and activations clear the search but keep the selected status view, while deletion keeps the current search.
+
+For example, run `find t/Publicity`, then switch to Archived to see archived members with that tag. Run `list`
+to show all archived members; the button stays on Archived. Switch back to All to see both statuses.
 
 ### Editing a person: `edit`
 
@@ -308,7 +331,8 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`
 * Existing values will be updated to the input values.
 * Missing contact details can be filled in one at a time. Omitting a field preserves its current value or absence.
   Supplied blank values are rejected; this command cannot clear a name, phone, address, or email.
-* Successful edits display the full directory. Recheck the displayed index before the next edit.
+* Successful edits clear the search and display members in the selected status view. Recheck the displayed index
+  before the next edit.
 * The confirmation shows the member's current supplied details, including retained values, and omits missing
   fields and empty tags. For an email-only member, it reads `Edited person: Email: 2@u.nus.edu`.
 * A provided email must follow the same `@u.nus.edu` rules as `add`. Omitting `e/` preserves the current email.
@@ -336,7 +360,7 @@ Format: `tag INDEX t/TAG`
 * Exactly one index and one `t/` argument are required. Empty tags, multiple tags, and extra arguments are rejected.
 * Tag names must be alphanumeric. Matching is case-insensitive; tags are stored and displayed in lowercase.
 * Adding a tag the member already has succeeds with the normal completion message and leaves their tags unchanged.
-* After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
+* After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
 Example: `tag 1 t/Volunteer` adds `volunteer` to the first displayed member. If they already have `publicity`
 and `exco`, they will have all three tags afterward.
@@ -351,7 +375,7 @@ Format: `untag INDEX t/TAG`
 * Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
 * Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
 * Removing the last tag is allowed and leaves the member with no tags.
-* After success, all members are displayed, as with `edit`. Check the displayed indices before your next command.
+* After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
 Example: `untag 1 t/publicity` removes only `publicity` from the first displayed member. If their tags were
 `publicity`, `exco`, and `volunteer`, they will retain `exco` and `volunteer`.
@@ -505,10 +529,10 @@ findany PREFIX/VALUE [PREFIX/VALUE]...
 | `findany t/exco t/publicity` | Members with either tag |
 | `findany n/Alice e/alice` | Members whose name contains Alice or whose email contains alice |
 
-Each search checks the complete directory and replaces the previous results. Members appear once, in directory
-order, with the final match count. If no members match, the list is empty and the count is zero.
-Active, archived and incomplete members remain searchable. A missing name or phone fails that condition;
-with `findany`, another condition can still match.
+Each search checks the complete directory and replaces the previous results. The selected status view determines
+which matches appear and are counted. Members appear once, in directory order. If no members match in the selected
+view, the list is empty and the count is zero. All view includes both active and archived matches.
+A missing name or phone fails that condition; with `findany`, another condition can still match.
 
 ### Archiving a member: `archive`
 
@@ -518,8 +542,9 @@ Format: `archive INDEX`
 
 * `INDEX` is a positive integer from the currently displayed list, including search results.
 * An already archived member cannot be archived again.
-* Archived members remain visible in `list` and can still be found, edited, and activated.
-* A successful command restores the full displayed list and saves the new status automatically.
+* Archived members appear in All or Archived view and can still be found, edited, and activated.
+* A successful command clears the search and saves the new status automatically. In Active view, the archived member
+  disappears from the displayed list; in All view, the member remains visible with an `ARCHIVED` badge.
 
 Example: `find n/Jamie` followed by `archive 1` archives the first displayed result.
 
@@ -532,7 +557,8 @@ Format: `activate INDEX`
 The displayed-index rules are the same as for `archive`. An already active member cannot be activated again.
 The member's other details remain unchanged, and the new status is saved automatically.
 
-Example: `list` followed by `activate 2` activates the second displayed member.
+Example: switch to Archived view, run `list`, then `activate 2` to activate the second displayed member. It then
+appears in All or Active view.
 
 ### Deleting a person: `delete`
 
@@ -545,7 +571,7 @@ Format: `delete INDEX`
 * The index **must be a positive integer** 1, 2, 3, ...
 
 Examples:
-* `list` followed by `delete 2` deletes the 2nd person in the address book.
+* `list` followed by `delete 2` deletes the 2nd member in the selected status view.
 * `find Betsy` followed by `delete 1` deletes the 1st person in the results of the `find` command.
 
 The deletion confirmation shows only the member's supplied details. For an email-only member with no tags,

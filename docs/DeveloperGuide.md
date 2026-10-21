@@ -4,7 +4,7 @@
   pageNav: 3
 ---
 
-# AB-3 Developer Guide
+# NUSocietyDesk Developer Guide
 
 <!-- * Table of Contents -->
 <page-nav-print />
@@ -125,7 +125,7 @@ How the parsing works:
 The `Model` component,
 
 * stores the address book data i.e., all `Person` objects (which are contained in a `UniquePersonList` object).
-* stores the `Person` objects selected by the current filter, such as search results, in a separate _filtered_ list. It exposes this list as an unmodifiable `ObservableList<Person>` that the UI can observe and bind to, so the UI updates when the list changes.
+* exposes one filtered `ObservableList<Person>` for the current search and status view. The UI observes this list, so it updates when either filter changes.
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
 * does not depend on any of the other three components (as the `Model` represents data entities of the domain, they should make sense on their own without depending on other components)
 
@@ -166,9 +166,9 @@ and adds or removes the requested `Tag` using the existing case-insensitive iden
 a replacement `Person` with unchanged contact details and calls `Model.setPerson`.
 
 Adding an existing tag or removing an absent tag succeeds with the normal completion message and leaves the
-record unchanged. Removing the final tag is allowed. After success, both commands reset the filter to show all
-persons, matching `EditCommand`. `LogicManager` saves the updated address book through the existing storage flow;
-no storage schema or UI changes are required.
+record unchanged. Removing the final tag is allowed. After success, both commands clear the search and show members
+in the selected status view, matching `EditCommand`. `LogicManager` saves the updated address book through the
+existing storage flow; no storage schema or UI changes are required.
 
 
 <box type="info" seamless>
@@ -324,9 +324,26 @@ and metadata-only logs. GUI tests share one JavaFX toolkit per worker and requir
 `archive INDEX` and `activate INDEX` use the index in `Model.getFilteredPersonList`, so they work after a search.
 Each command rejects an invalid index or a member already in the requested status. `Person.withStatus` creates a
 replacement that retains the member's optional contact details, email and tags. `Model.setPerson` replaces the
-record in the directory; its email identity remains unchanged. A successful command resets the displayed list to
-the complete directory. Archived members remain visible and searchable, so they can be selected for `activate`.
+record in the directory; its email identity remains unchanged. A successful command clears the search while
+retaining the selected status view. Archived members appear in All or Archived view and can be selected for
+`activate` there. Changing a member's status can remove them from the current view.
 `LogicManager` saves the new status through the existing JSON storage after each successful command.
+
+### Filtering the member list by status
+
+The button in `MainWindow.fxml` starts at `ALL`. `MainWindow.handleStatusFilterButton` cycles the state
+`ALL → ACTIVE → ARCHIVED → ALL`, updates the button text, and calls `Logic.setStatusFilter`. `LogicManager`
+passes that state to `ModelManager`. This is an in-memory view setting and is reset to All when the app starts.
+
+`ModelManager` keeps one `FilteredList<Person>` and two independent filter settings: the current search
+predicate and the selected `StatusFilter`. Each change recomputes the list predicate as search **and** status.
+Changing views therefore keeps a search; a new `find`, `findall`, or `findany` searches the complete directory
+and replaces the previous search while the status view stays selected. `list` clears the search predicate but
+keeps the status view. Commands that clear a search after a successful data change do the same. Find feedback
+counts only members visible in the selected view. `edit`, `tag`, `untag`, `archive`, `activate`, and `delete`
+resolve their index against this same `FilteredList<Person>` at execution time. They reject an index beyond the
+visible list, even when that index exists in the full directory. Edits, tag changes, archives, and activations
+then clear the search but retain the status view; deletion leaves the current search in place.
 
 ### Recording a member with incomplete contact details
 
@@ -341,7 +358,7 @@ text may become part of a field value. New members have active status and may ha
 An omitted edit preserves either the value or its absence. Blank edits cannot clear a detail. Tags and status are
 preserved. Tag commands also pass the optional contact details and status through unchanged. Add and edit still
 check email conflicts throughout the directory; a repeated add never merges records. Successful add, edit and tag
-commands retain the existing behavior of showing the full directory.
+commands clear the search and show members in the selected status view.
 
 Add, edit, tag and delete commands use `Messages.formatProvidedDetails` to omit absent contact fields and empty tags from their success messages.
 The formatter label a supplied name as `Name: <person name>` consistently across command confirmations.
@@ -392,11 +409,13 @@ Invalid conditions therefore reject even an OR search that could otherwise match
 All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
 Email substrings need not be complete addresses; tags are validated through `ParserUtil.parseTag`.
-Absent names or phones make the corresponding condition false. Archive status does not restrict matching.
+Absent names or phones make the corresponding condition false. The selected status view is applied after
+the contact or tag predicate.
 
 Each parser creates one `FindCommand`, which applies its predicate once through `Model.updateFilteredPersonList`.
-The filter covers the complete directory, preserves directory order and displays each matching member once.
-The command reports and logs the final count, including zero for an empty result. It remains read-only for
+The search checks the complete directory rather than the previous results. The combined filter preserves
+directory order and displays each member matching both search and status once. The command reports and logs
+the visible count, including zero for an empty result. It remains read-only for
 recovery mode and requires no changes to member data or the storage schema.
 
 Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
@@ -428,9 +447,10 @@ The execution flow is:
 1. **Stage accepted records.** The command copies the complete directory, including archived and filtered-out members.
    It collects validation errors and checks valid records against the copy's email identity rule, adding each accepted
    member to that copy. This also detects duplicates of earlier accepted CSV records; invalid records reserve no email.
-1. **Apply and save.** If at least one record is accepted, the command calls `Model.setAddressBook` and resets the filter
-   to show all members. It returns counts and rejection details to `LogicManager`, which performs the shared
-   [save/recovery flow](#saving-member-data-safely). The UI receives success only after that save completes.
+1. **Apply and save.** If at least one record is accepted, the command calls `Model.setAddressBook` and clears the
+   search while retaining the selected status view. It returns counts and rejection details to `LogicManager`,
+   which performs the shared [save/recovery flow](#saving-member-data-safely). The UI receives success only after
+   that save completes.
 
 The sequence diagram below expands `ImportCommand.execute`. Source-path checks and the directory/filter snapshot
 have already completed in `LogicManager`. Incidental logging calls are omitted.
@@ -473,8 +493,9 @@ only after persistence succeeds. In a normal writable session, parsing and pre-e
    then replaces the destination with `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. Existing symbolic links are resolved
    to their target so the configured link remains intact. There is no non-atomic fallback.
 1. **Return or restore.** After replacement succeeds, return the command result. On `IOException` (including
-   `AccessDeniedException`) or `SecurityException` from saving, restore the directory and original filter predicate,
-   then throw a `CommandException` explaining the failure. The success result is not returned.
+   `AccessDeniedException`) or `SecurityException` from saving, restore the directory and previous search predicate,
+   then throw a `CommandException` explaining the failure. The selected status view stays unchanged. The success
+   result is not returned.
 
 The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
 replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
@@ -486,7 +507,7 @@ As in the import diagram, activation bars redrawn at alternative-branch boundari
 Failures earlier in saving, such as JSON serialization or destination checks, use the same restoration path.
 If the command itself throws, execution exits before the `Persist changed directory` frame.
 
-Restoring the predicate, rather than just the visible list, preserves subsequent search behavior, including filters
+Restoring the search predicate, rather than just the visible list, preserves subsequent search behavior, including searches
 that matched no members. For example, if an import updates the model but atomic replacement fails, its accepted
 members disappear and the previous search is restored; the existing JSON and CSV source remain unchanged.
 
@@ -638,6 +659,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* * *`  | secretary                                                              | change selected member information without replacing unrelated details       | make corrections safely                                                                       |
 | `* * *`  | secretary                                                              | mark former members as archived without deleting their records              | retain their contact history                                                                   |
 | `* * *`  | secretary                                                              | activate a member who was archived                                           | correct an incorrect archive or record a returning member                                     |
+| `* * *`  | secretary                                                              | switch between all, active and archived members while searching             | focus on current members and still retrieve former members                                    |
 | `* * *`  | secretary dealing with members who have similar or duplicate names     | distinguish their records using additional information                       | avoid contacting or modifying the wrong member                                                |
 | `* * *`  | secretary                                                              | receive precise confirmation and error messages                              | know exactly what changed and how to correct a failed operation                               |
 | `* *`    | secretary who has to manage local and international members            | store phone numbers with country codes                                       | contact members who have international phone numbers                                          |
@@ -758,7 +780,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 ### Glossary
 
 * **Active member**: A member whose record has active membership status
-* **Archived member record**: A retained record with archived status; it remains visible in list and search results
+* **Archived member record**: A retained record with archived status; it appears in All or Archived view when it matches the current search
 * **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
 * **Contact details**: A member's name, phone number, email address, and address
 * **Duplicate member record**: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ
@@ -768,6 +790,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 * **Member directory**: All member records stored in NUSocietyDesk, including archived members and members outside the current search results
 * **Member record**: One member's contact details, membership status, and tags; their email determines identity
 * **Membership status**: A record's `active` or `archived` classification, stored separately from its tags; `former` is not a valid status value
+* **Status view**: The GUI's All, Active or Archived selection; it limits the displayed list and search results without changing saved member statuses
 * **Rejected record**: A CSV member record skipped because of invalid fields, missing required values,
   an incorrect column count, or a duplicate email. Missing optional contact details alone do not cause rejection
 * **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
@@ -803,6 +826,26 @@ testers are expected to do more *exploratory* testing.
 
 1. _{ more test cases … }_
 
+### Switching between All, Active and Archived views
+
+Use a disposable application folder with `data/addressbook.json` containing `{"persons":[]}` before launch.
+
+1. Add `add e/active@u.nus.edu` and `add e/former@u.nus.edu`, then run `archive 2`.<br>
+   Expected: The button reads `ALL`. Both members appear; the second has an `ARCHIVED` badge.
+1. Click the status button once, then again, then a third time.<br>
+   Expected: Its text and list change together: `ACTIVE` shows only `active@u.nus.edu`, `ARCHIVED` shows only
+   `former@u.nus.edu`, and `ALL` shows both members.
+1. Run `find e/active`, then click through Active and Archived.<br>
+   Expected: Active shows the matching member, Archived shows an empty list, and the search remains in effect.
+1. With Archived selected, run `list`.<br>
+   Expected: The search clears, the button still reads `ARCHIVED`, and `former@u.nus.edu` appears at index 1.
+1. Run `edit 1 n/Former Member`, then `tag 1 t/Alumni`, followed by `untag 1 t/Alumni`.<br>
+   Expected: Each command updates `former@u.nus.edu`, the member at index 1 in the current Archived view.
+   `active@u.nus.edu` stays unchanged. The selected view remains Archived.
+1. Run `activate 1`.<br>
+   Expected: The member leaves the Archived list. Switching to All or Active shows both active members.
+   Restarting the app returns the button to `ALL`; the activated status remains saved.
+
 ### Recalling commands and restoring drafts
 
 Use a disposable application folder for these checks, particularly `clear` and save-failure tests.
@@ -812,7 +855,7 @@ Use a disposable application folder for these checks, particularly `clear` and s
 1. Submit `list`, then `lisst`.<br>
    Expected: `list` succeeds and clears the box; `lisst` shows `Unknown command.` and remains with error styling.
    Press Up once: `list` is recalled with normal styling, while the error message remains in the result pane.
-   Press Down to return to `lisst`, correct it to `list` and submit; the result is `Listed all persons.`.
+   Press Down to return to `lisst`, correct it to `list` and submit; the result is `Listed members in the selected status view.`.
    Repeat the invalid submission consecutively: one Up still reaches the preceding entry.
    Edit the failed input, press Down several times, then Up once: Down preserves the edit and selection,
    and Up recalls the preceding entry. Down returns to the retained edit without executing it.
@@ -855,7 +898,8 @@ Use a disposable application folder. Before launching, create `data/addressbook.
 1. Run `edit 1 p/91234567`, then `edit 1 a/Kent Ridge`, and restart.<br>
    Expected: Exactly one complete member remains with all supplied values.
 1. Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
-   Expected: Only the intended member changes. Each successful edit resets the view to the full directory.
+   Expected: Only the intended member changes. Each successful edit clears the search and shows members in the
+   selected status view.
 1. Try `add e/new@u.nus.edu p/`, `edit 1 n/`, and a duplicate `add e/ALEX@U.NUS.EDU`.<br>
    Expected: Each is rejected without changing records, filters or saved data.
 1. Add `add e/unnamed@u.nus.edu t/Publicity`. Search by its email, add/remove a tag, and delete it.<br>
@@ -865,7 +909,7 @@ Use a disposable application folder. Before launching, create `data/addressbook.
 
 ### Importing member directories
 
-Use a disposable application folder. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
+Use a disposable application folder in All view. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
 Keep a separate copy of the CSV for comparison. Start with neither `alex@u.nus.edu` nor `jamie@u.nus.edu` in the
 directory, and confirm startup has not disabled saving. Run `list` to ensure the JSON file exists, then back it up.
 For independent cases below, restore that starting state. Keep the app's launch folder fixed so relative paths resolve
@@ -921,7 +965,7 @@ Use the current application build in a disposable folder on a filesystem that su
 Use the default data-file location, `data/addressbook.json`, and keep a separate backup of that file.
 The following steps use a file manager and do not require a particular operating system or shell.
 
-1. Launch with at least two members, including one matching `find e/alex` and one that does not. Confirm startup
+1. Launch in All view with at least two members, including one matching `find e/alex` and one that does not. Confirm startup
    has not disabled saving and `retry@u.nus.edu` is absent. Run `find e/alex` and note the displayed records.
 1. Keep the app running. In a file manager, rename `data/addressbook.json` to `data/addressbook.saved.json`.
    Create a folder named `addressbook.json` inside `data`, and place a text file named `keep.txt` in that folder.
@@ -971,7 +1015,7 @@ Each must report an error and leave Alice Tan displayed, with member records and
 
 ### Finding members by name
 
-Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
 Run these setup commands one at a time:
 
 ```text
@@ -1003,7 +1047,7 @@ for manual execution.
 
 ### Finding members by phone number
 
-Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
 Run these setup commands one at a time:
 
 ```text
@@ -1050,7 +1094,7 @@ provided for manual execution.
 
 ### Finding members by tag
 
-Use a disposable application folder and an empty directory (`clear` removes all members in that copy).
+Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
 Run these setup commands one at a time:
 
 ```text
@@ -1131,7 +1175,7 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 1. Deleting a person while all persons are being shown
 
-   1. Prerequisites: List all persons using the `list` command, with multiple persons in the list.
+   1. Prerequisites: Select All view, then list all persons using `list`, with multiple persons in the list.
 
    1. Test case: `delete 1`<br>
       Expected: The first contact is deleted from the list. The status message shows the deleted contact's details.
@@ -1184,10 +1228,10 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 1. Check displayed indices and invalid input.
 
    1. Run `find Tag`, note Tag Test's displayed index, and run `tag INDEX t/Volunteer` using that index.<br>
-      Expected: Only Tag Test gains the tag, and all members are displayed afterward.
+      Expected: Only Tag Test gains the tag; the search clears and the selected status view remains.
 
    1. Run `find Tag` again and run `untag INDEX t/Volunteer` using the new displayed index.<br>
-      Expected: Only Tag Test loses the tag, and all members are displayed afterward.
+      Expected: Only Tag Test loses the tag; the search clears and the selected status view remains.
 
    1. For each of `tag` and `untag`, try arguments `0 t/Volunteer`, `1 2 t/Volunteer`, `1`, `1 t/`,
       `1 t/Publicity Team`, `1 t/Volunteer t/Exco`, and an index larger than the displayed list.<br>

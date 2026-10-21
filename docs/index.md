@@ -3,17 +3,19 @@
   title: ""
 ---
 
-# AddressBook Level-3
+# NUSocietyDesk
 
-[![CI Status](https://github.com/se-edu/addressbook-level3/workflows/Java%20CI/badge.svg)](https://github.com/se-edu/addressbook-level3/actions)
-[![codecov](https://codecov.io/gh/se-edu/addressbook-level3/branch/master/graph/badge.svg)](https://codecov.io/gh/se-edu/addressbook-level3)
+[![CI Status](https://github.com/AY2627S1-CS2103T-T17-3/tp/workflows/Java%20CI/badge.svg)](https://github.com/AY2627S1-CS2103T-T17-3/tp/actions)
+[![codecov](https://codecov.io/gh/AY2627S1-CS2103T-T17-3/tp/graph/badge.svg?token=X6TRWEESQX)](https://codecov.io/gh/AY2627S1-CS2103T-T17-3/tp)
 
 ![Ui](images/Ui.png)
 
-**AddressBook is a desktop application for managing your contact details.** While it has a GUI, most of the user interactions happen using a CLI (Command Line Interface).
+The image is an early UI concept. The current app includes a status button and uses `ARCHIVED` in place of `FORMER`.
 
-* If you are interested in using AddressBook, head over to the [_Quick Start_ section of the **User Guide**](UserGuide.html#quick-start).
-* If you are interested in developing AddressBook, the [**Developer Guide**](DeveloperGuide.html) is a good place to start.
+**NUSocietyDesk is an offline member directory for NUS society secretaries.** Use typed commands to import, find, and update members while viewing their contact details, society tags, and active or archived status in the graphical list. The status button cycles through All, Active, and Archived views; searches apply to the selected view.
+
+* To use NUSocietyDesk, start with the [_Quick Start_ section of the **User Guide**](UserGuide.html#quick-start).
+* To develop NUSocietyDesk, start with the [**Developer Guide**](DeveloperGuide.html).
 
 
 **Acknowledgements**

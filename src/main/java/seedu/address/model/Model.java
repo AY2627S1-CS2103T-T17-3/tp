@@ -63,6 +63,9 @@ public interface Model {
     /** Returns an unmodifiable view of the filtered person list */
     ObservableList<Person> getFilteredPersonList();
 
+    /** Selects which status is shown by the list used for displayed indices. */
+    void setStatusFilter(StatusFilter statusFilter);
+
     /** Returns the current filter, including a filter that matches everyone when no search is active. */
     Predicate<? super Person> getFilteredPersonListPredicate();
 
