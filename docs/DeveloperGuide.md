@@ -91,6 +91,7 @@ Here's a (partial) class diagram of the `Logic` component:
 <puml src="diagrams/LogicClassDiagram.puml" width="550"/>
 
 The sequence diagram below illustrates the interactions within the `Logic` component, taking `execute("delete 1")` API call as an example.
+It shows the successful save path; [save-failure recovery](#saving-member-data-safely) is detailed separately.
 
 <puml src="diagrams/DeleteSequenceDiagram.puml" alt="Interactions Inside the Logic Component for the `delete 1` Command" />
 
@@ -115,6 +116,7 @@ Here are the other classes in `Logic` (omitted from the class diagram above) tha
 How the parsing works:
 * When called upon to parse a user command, the `AddressBookParser` class creates an `XYZCommandParser` (`XYZ` is a placeholder for the specific command name, e.g., `AddCommandParser`). The parser uses the other classes shown above to parse the user command and create an `XYZCommand` object (e.g., `AddCommand`). The `AddressBookParser` returns that object as a `Command` object.
 * All `XYZCommandParser` classes, such as `AddCommandParser` and `DeleteCommandParser`, implement the `Parser` interface so they can be treated similarly where appropriate, for example during testing.
+* `ViewCommandParser` is shown separately because it validates a single status value directly, without prefix tokenization.
 
 ### Model component
 **API** : [`Model.java`](https://github.com/se-edu/addressbook-level3/tree/master/src/main/java/seedu/address/model/Model.java)
@@ -339,6 +341,14 @@ This is an in-memory setting and starts at All on each launch.
 
 `ViewCommandParser` accepts exactly one status, ignoring case. `ViewCommand` is read-only so it works during
 data recovery; it also skips the normal save because selecting a view does not change member records.
+
+The sequence diagram shows a typed `view archived` followed by one button click. Both paths change the same
+model filter and update the list; the typed command also synchronizes the button after execution. The command
+path shown is a normal writable session. In recovery mode, `LogicManager` permits this read-only command and
+executes it without saving as well.
+
+<puml src="diagrams/StatusViewSequenceDiagram.puml"
+      alt="Typed view command and status button update the same model filter and visible list" />
 
 `ModelManager` keeps one `FilteredList<Person>` and two independent filter settings: the current search
 predicate and the selected `StatusFilter`. Each change recomputes the list predicate as search **and** status.

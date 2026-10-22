@@ -6,11 +6,13 @@ skinparam classBackgroundColor LOGIC_COLOR
 
 Class "{abstract}\nCommand" as Command
 Class XYZCommand
+Class ViewCommand
 
 package "Parser classes"{
 Class "<<interface>>\nParser" as Parser
 Class AddressBookParser
 Class XYZCommandParser
+Class ViewCommandParser
 Class CliSyntax
 Class ParserUtil
 Class ArgumentMultimap
@@ -22,10 +24,13 @@ Class HiddenOutside #FFFFFF
 HiddenOutside ..> AddressBookParser
 
 AddressBookParser .down.> XYZCommandParser: <<create>>
+AddressBookParser ..> ViewCommandParser : <<create>>
 
 XYZCommandParser ..> XYZCommand : <<create>>
+ViewCommandParser ..> ViewCommand : <<create>>
 AddressBookParser ..> Command : <<use>>
 XYZCommandParser .up.|> Parser
+ViewCommandParser .up.|> Parser
 XYZCommandParser ..> ArgumentMultimap
 XYZCommandParser ..> ArgumentTokenizer
 ArgumentTokenizer .left.> ArgumentMultimap
@@ -35,4 +40,10 @@ XYZCommandParser ..> ParserUtil
 ParserUtil .down.> Prefix
 ArgumentTokenizer .down.> Prefix
 XYZCommand -up-|> Command
+ViewCommand -up-|> Command
+
+note right of ViewCommandParser
+  Parses all, active, or archived
+  without prefix tokenization.
+end note
 @enduml
