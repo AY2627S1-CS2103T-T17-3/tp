@@ -233,8 +233,30 @@ public class AddressBookParserTest {
 
     @Test
     public void parseCommand_help() throws Exception {
-        assertTrue(parser.parseCommand(HelpCommand.COMMAND_WORD) instanceof HelpCommand);
-        assertTrue(parser.parseCommand(HelpCommand.COMMAND_WORD + " 3") instanceof HelpCommand);
+        for (String input : List.of("help", "  help  ", "help\t", "help\n", "help\r\n")) {
+            HelpCommand command = (HelpCommand) parser.parseCommand(input);
+            assertEquals(HelpCommand.SHOWING_HELP_MESSAGE, command.execute(null).getFeedbackToUser());
+        }
+    }
+
+    @Test
+    public void parseCommand_helpWithArguments_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, HelpCommand.MESSAGE_USAGE);
+        for (String input : List.of("help 1", "help 123", "help add", "help add edit", "help delete 0",
+                "help --guide", "help\t1", "  help 1  ", "help \"\"")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(input));
+        }
+    }
+
+    @Test
+    public void parseCommand_invalidHelpInput_preservesExistingErrors() {
+        for (String input : List.of("HELP", "helpadd")) {
+            assertThrows(ParseException.class, MESSAGE_UNKNOWN_COMMAND, () -> parser.parseCommand(input));
+        }
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, HelpCommand.MESSAGE_USAGE);
+        for (String input : List.of("help\nadd", "help\r\nadd")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(input));
+        }
     }
 
     @Test
