@@ -165,986 +165,338 @@ This is an in-memory setting and starts at All on each launch.</p> <p><code clas
 data recovery; it also skips the normal save because selecting a view does not change member records.</p> <p>The sequence diagram shows a typed <code class="hljs inline no-lang">view archived</code> followed by one button click. Both paths change the same
 model filter and update the list; the typed command also synchronizes the button after execution. The command
 path shown is a normal writable session. In recovery mode, <code class="hljs inline no-lang">LogicManager</code> permits this read-only command and
-executes it without saving as well.</p> <span class="image-wrapper"><img src="/tp/diagrams/StatusViewSequenceDiagram.png" alt="Typed view command and status button update the same model filter and visible list" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-`ModelManager` keeps one `FilteredList<person>` and two independent filter settings: the current search
-predicate and the selected `StatusFilter`. Each change recomputes the list predicate as search **and** status.
-Changing views therefore keeps a search; a new `find`, `findall`, or `findany` searches the complete directory
-and replaces the previous search while the status view stays selected. `list` clears the search predicate but
+executes it without saving as well.</p> <span class="image-wrapper"><img src="/tp/diagrams/StatusViewSequenceDiagram.png" alt="Typed view command and status button update the same model filter and visible list" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p><code class="hljs inline no-lang">ModelManager</code> keeps one <code class="hljs inline no-lang">FilteredList&lt;Person&gt;</code> and two independent filter settings: the current search
+predicate and the selected <code class="hljs inline no-lang">StatusFilter</code>. Each change recomputes the list predicate as search <strong>and</strong> status.
+Changing views therefore keeps a search; a new <code class="hljs inline no-lang">find</code>, <code class="hljs inline no-lang">findall</code>, or <code class="hljs inline no-lang">findany</code> searches the complete directory
+and replaces the previous search while the status view stays selected. <code class="hljs inline no-lang">list</code> clears the search predicate but
 keeps the status view. Commands that clear a search after a successful data change do the same. Find feedback
-counts only members visible in the selected view. `edit`, `tag`, `untag`, `archive`, `activate`, and `delete`
-resolve their index against this same `FilteredList<person>` at execution time. They reject an index beyond the
+counts only members visible in the selected view. <code class="hljs inline no-lang">edit</code>, <code class="hljs inline no-lang">tag</code>, <code class="hljs inline no-lang">untag</code>, <code class="hljs inline no-lang">archive</code>, <code class="hljs inline no-lang">activate</code>, and <code class="hljs inline no-lang">delete</code>
+resolve their index against this same <code class="hljs inline no-lang">FilteredList&lt;Person&gt;</code> at execution time. They reject an index beyond the
 visible list, even when that index exists in the full directory. Edits, tag changes, archives, and activations
-then clear the search but retain the status view; deletion leaves the current search in place.
-
-### Recording a member with incomplete contact details
-
-`add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...` requires only email. All eight combinations
-of the other contact fields are accepted. `AddCommandParser` checks for the email prefix and a valid preamble,
+then clear the search but retain the status view; deletion leaves the current search in place.</p> <h3 id="recording-a-member-with-incomplete-contact-details">Recording a member with incomplete contact details<a class="fa fa-anchor" href="#recording-a-member-with-incomplete-contact-details" onclick="event.stopPropagation()"></a></h3> <p><code class="hljs inline no-lang">add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...</code> requires only email. All eight combinations
+of the other contact fields are accepted. <code class="hljs inline no-lang">AddCommandParser</code> checks for the email prefix and a valid preamble,
 rejects repeated contact prefixes, then validates supplied name, supplied phone, email, supplied address and tags
 in that order. Omitted optional prefixes become empty optionals; supplied blank values still fail validation.
 Existing tokenization is unchanged: recognized prefixes need an ordinary preceding space, and unknown prefix-like
-text may become part of a field value. New members have active status and may have tags.
-
-`EditCommand` uses the descriptor&#39;s supplied values or the member&#39;s existing optionals to construct the replacement.
+text may become part of a field value. New members have active status and may have tags.</p> <p><code class="hljs inline no-lang">EditCommand</code> uses the descriptor&#39;s supplied values or the member&#39;s existing optionals to construct the replacement.
 An omitted edit preserves either the value or its absence. Blank edits cannot clear a detail. Tags and status are
 preserved. Tag commands also pass the optional contact details and status through unchanged. Add and edit still
 check email conflicts throughout the directory; a repeated add never merges records. Successful add, edit and tag
-commands clear the search and show members in the selected status view.
-
-Add, edit, tag and delete commands use `Messages.formatProvidedDetails` to omit absent contact fields and empty tags from their success messages.
-The formatter label a supplied name as `Name: <person name>` consistently across command confirmations.
+commands clear the search and show members in the selected status view.</p> <p>Add, edit, tag and delete commands use <code class="hljs inline no-lang">Messages.formatProvidedDetails</code> to omit absent contact fields and empty tags from their success messages.
+The formatter label a supplied name as <code class="hljs inline no-lang">Name: &lt;person name&gt;</code> consistently across command confirmations.
 Unnamed duplicate errors identify the existing
-member by email only. `PersonCard` uses the canonical email as its heading when the name is absent and displays
-`Phone: -` or `Address: -` in the existing rows. No new card row, membership state or badge
+member by email only. <code class="hljs inline no-lang">PersonCard</code> uses the canonical email as its heading when the name is absent and displays
+<code class="hljs inline no-lang">Phone: -</code> or <code class="hljs inline no-lang">Address: -</code> in the existing rows. No new card row, membership state or badge
 is introduced. Once supplied, contact values use the existing display style. Name and phone predicates return
-false for absent fields. Email search remains available, and display placeholders are never model values.
-
-`JsonAdaptedPerson` maps between optional model values and nullable saved strings. An email-only record can be
-represented as `{&quot;name&quot;:null,&quot;phone&quot;:null,&quot;email&quot;:&quot;alex@u.nus.edu&quot;,&quot;address&quot;:null,&quot;status&quot;:&quot;active&quot;,&quot;tags&quot;:[]}`.
+false for absent fields. Email search remains available, and display placeholders are never model values.</p> <p><code class="hljs inline no-lang">JsonAdaptedPerson</code> maps between optional model values and nullable saved strings. An email-only record can be
+represented as <code class="hljs inline no-lang">{&quot;name&quot;:null,&quot;phone&quot;:null,&quot;email&quot;:&quot;alex@u.nus.edu&quot;,&quot;address&quot;:null,&quot;status&quot;:&quot;active&quot;,&quot;tags&quot;:[]}</code>.
 Reading does not rewrite the file; the next successfully saved command writes explicit nulls. Older versions requiring
 complete contact details reject the entire file if it contains an incomplete member. With their existing loading
-behavior, they may then overwrite that file after a successful command; users must back up before downgrading.
-
-Automatic saving uses [save-failure recovery](#saving-member-data-safely).
-[CSV import](#importing-member-directories-from-csv) also accepts absent name, phone, and address, but requires status.
-
-Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
+behavior, they may then overwrite that file after a successful command; users must back up before downgrading.</p> <p>Automatic saving uses <a href="#saving-member-data-safely">save-failure recovery</a>.
+<a href="#importing-member-directories-from-csv">CSV import</a> also accepts absent name, phone, and address, but requires status.</p> <p>Tests cover optional-field combinations, unchanged validation, explicit null persistence, legacy loading,
 incremental completion across reloads, filtered edits, unnamed duplicates, email reuse, searches, tags and deletion.
 The import regression checks supplied-field validation and that imported emails conflict with existing
-incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
-`PersonUtil` omits absent prefixes when generating commands.
-
-### Finding members by contact details or tag
-
-The partial class diagram below shows the shared search design. Parsers validate input and construct predicates;
-`FindCommand` applies the supplied predicate through the `Model` interface. `Predicate<person>` is the common
-contract for field matching and AND/OR combinations. `NameContainsKeywordsPredicate` represents the field
-predicates; other field predicates and parsing helpers are omitted.
-
-<span class="image-wrapper"><img src="/tp/diagrams/SearchClassDiagram.png" alt="Partial search class diagram showing shared command execution and predicate composition" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-`AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
-arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
-before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
-
-`FindCommandParser` accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
-its restrictions against repeated prefixes, multiple fields and multiple values within a prefixed condition.
-
-`FindAllCommandParser` and `FindAnyCommandParser` use `SearchParserUtil.parseConditions` to require at least
-one explicitly prefixed condition. It reads every occurrence with `ArgumentMultimap.getAllValues`, rejects
+incomplete members. <code class="hljs inline no-lang">PersonBuilder</code> supports absent fields and preserves status when copying a member;
+<code class="hljs inline no-lang">PersonUtil</code> omits absent prefixes when generating commands.</p> <h3 id="finding-members-by-contact-details-or-tag">Finding members by contact details or tag<a class="fa fa-anchor" href="#finding-members-by-contact-details-or-tag" onclick="event.stopPropagation()"></a></h3> <p>The partial class diagram below shows the shared search design. Parsers validate input and construct predicates;
+<code class="hljs inline no-lang">FindCommand</code> applies the supplied predicate through the <code class="hljs inline no-lang">Model</code> interface. <code class="hljs inline no-lang">Predicate&lt;Person&gt;</code> is the common
+contract for field matching and AND/OR combinations. <code class="hljs inline no-lang">NameContainsKeywordsPredicate</code> represents the field
+predicates; other field predicates and parsing helpers are omitted.</p> <span class="image-wrapper"><img src="/tp/diagrams/SearchClassDiagram.png" alt="Partial search class diagram showing shared command execution and predicate composition" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p><code class="hljs inline no-lang">AddressBookParser</code> routes <code class="hljs inline no-lang">find</code>, <code class="hljs inline no-lang">findall</code> and <code class="hljs inline no-lang">findany</code> to their respective parsers, including multiline
+arguments. <code class="hljs inline no-lang">SearchParserUtil</code> validates lowercase <code class="hljs inline no-lang">n/</code>, <code class="hljs inline no-lang">p/</code>, <code class="hljs inline no-lang">e/</code> and <code class="hljs inline no-lang">t/</code> prefixes and normalizes whitespace
+before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.</p> <p><code class="hljs inline no-lang">FindCommandParser</code> accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
+its restrictions against repeated prefixes, multiple fields and multiple values within a prefixed condition.</p> <p><code class="hljs inline no-lang">FindAllCommandParser</code> and <code class="hljs inline no-lang">FindAnyCommandParser</code> use <code class="hljs inline no-lang">SearchParserUtil.parseConditions</code> to require at least
+one explicitly prefixed condition. It reads every occurrence with <code class="hljs inline no-lang">ArgumentMultimap.getAllValues</code>, rejects
 unprefixed text and empty values, and validates the entire input before returning predicates.
-`AllConditionsPredicate` combines these with AND; `AnyConditionsPredicate` combines them with OR.
-Invalid conditions therefore reject even an OR search that could otherwise match a member.
-
-All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
+<code class="hljs inline no-lang">AllConditionsPredicate</code> combines these with AND; <code class="hljs inline no-lang">AnyConditionsPredicate</code> combines them with OR.
+Invalid conditions therefore reject even an OR search that could otherwise match a member.</p> <p>All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
-Email substrings need not be complete addresses; tags are validated through `ParserUtil.parseTag`.
+Email substrings need not be complete addresses; tags are validated through <code class="hljs inline no-lang">ParserUtil.parseTag</code>.
 Absent names or phones make the corresponding condition false. The selected status view is applied after
-the contact or tag predicate.
-
-Each parser creates one `FindCommand`, which applies its predicate once through `Model.updateFilteredPersonList`.
+the contact or tag predicate.</p> <p>Each parser creates one <code class="hljs inline no-lang">FindCommand</code>, which applies its predicate once through <code class="hljs inline no-lang">Model.updateFilteredPersonList</code>.
 The search checks the complete directory rather than the previous results. The combined filter preserves
 directory order and displays each member matching both search and status once. The command reports and logs
 the visible count, including zero for an empty result. It remains read-only for
-recovery mode and requires no changes to member data or the storage schema.
-
-Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
+recovery mode and requires no changes to member data or the storage schema.</p> <p>Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
 invalid conditions, incomplete and archived members, and searches after an earlier filter.
-Rejected searches preserve the previous results, member records and saved data.
-
-### Importing member directories from CSV
-
-Import adds valid, nonduplicate members while reporting rejected records in CSV order. It separates file parsing
+Rejected searches preserve the previous results, member records and saved data.</p> <h3 id="importing-member-directories-from-csv">Importing member directories from CSV<a class="fa fa-anchor" href="#importing-member-directories-from-csv" onclick="event.stopPropagation()"></a></h3> <p>Import adds valid, nonduplicate members while reporting rejected records in CSV order. It separates file parsing
 from changes to the live model so a fatal file error cannot leave a partially imported directory. See the
-[User Guide](UserGuide.md#importing-member-contacts-from-csv-import) for the CSV format and user-facing examples.
-
-The main responsibilities are:
-
-* `AddressBookParser` dispatches to `ImportCommandParser`, which parses one local path without file I/O.
-* `CsvMemberReader` parses the complete UTF-8 file with Apache Commons CSV before validating member records.
-  It returns an immutable list of `CsvMemberRecord` outcomes: each contains the original record number and either
-  a valid `Person` or its first validation error.
-* `ImportCommand` checks those outcomes against a temporary `AddressBook` and applies the accepted members together.
-
-The execution flow is:
-
-1. **Protect the source.** Before execution, `LogicManager` compares the CSV path with the JSON save path using
-   normalized paths and `Files.isSameFile`. This rejects aliases and links to the save file. The reader opens the
-   source for reading only.
-1. **Read and validate.** The reader checks the fixed six-column header, trims member fields, and reuses the model
-   validators. Blank name, phone, and address values become empty optionals. Email and status are required;
-   `Status.isValidStatus` accepts only `active` and `archived`. `Tag` and `Set<tag>` normalize and deduplicate tags.
-1. **Stage accepted records.** The command copies the complete directory, including archived and filtered-out members.
-   It collects validation errors and checks valid records against the copy&#39;s email identity rule, adding each accepted
-   member to that copy. This also detects duplicates of earlier accepted CSV records; invalid records reserve no email.
-1. **Apply and save.** If at least one record is accepted, the command calls `Model.setAddressBook` and clears the
-   search while retaining the selected status view. It returns counts and rejection details to `LogicManager`,
-   which performs the shared [save/recovery flow](#saving-member-data-safely). The UI receives success only after
-   that save completes.
-
-The sequence diagram below expands `ImportCommand.execute`. Source-path checks and the directory/filter snapshot
-have already completed in `LogicManager`. Incidental logging calls are omitted.
+<a href="/tp/UserGuide.html#importing-member-contacts-from-csv-import">User Guide</a> for the CSV format and user-facing examples.</p> <p>The main responsibilities are:</p> <ul><li><code class="hljs inline no-lang">AddressBookParser</code> dispatches to <code class="hljs inline no-lang">ImportCommandParser</code>, which parses one local path without file I/O.</li> <li><code class="hljs inline no-lang">CsvMemberReader</code> parses the complete UTF-8 file with Apache Commons CSV before validating member records.
+It returns an immutable list of <code class="hljs inline no-lang">CsvMemberRecord</code> outcomes: each contains the original record number and either
+a valid <code class="hljs inline no-lang">Person</code> or its first validation error.</li> <li><code class="hljs inline no-lang">ImportCommand</code> checks those outcomes against a temporary <code class="hljs inline no-lang">AddressBook</code> and applies the accepted members together.</li></ul> <p>The execution flow is:</p> <ol><li><strong>Protect the source.</strong> Before execution, <code class="hljs inline no-lang">LogicManager</code> compares the CSV path with the JSON save path using
+normalized paths and <code class="hljs inline no-lang">Files.isSameFile</code>. This rejects aliases and links to the save file. The reader opens the
+source for reading only.</li> <li><strong>Read and validate.</strong> The reader checks the fixed six-column header, trims member fields, and reuses the model
+validators. Blank name, phone, and address values become empty optionals. Email and status are required;
+<code class="hljs inline no-lang">Status.isValidStatus</code> accepts only <code class="hljs inline no-lang">active</code> and <code class="hljs inline no-lang">archived</code>. <code class="hljs inline no-lang">Tag</code> and <code class="hljs inline no-lang">Set&lt;Tag&gt;</code> normalize and deduplicate tags.</li> <li><strong>Stage accepted records.</strong> The command copies the complete directory, including archived and filtered-out members.
+It collects validation errors and checks valid records against the copy&#39;s email identity rule, adding each accepted
+member to that copy. This also detects duplicates of earlier accepted CSV records; invalid records reserve no email.</li> <li><strong>Apply and save.</strong> If at least one record is accepted, the command calls <code class="hljs inline no-lang">Model.setAddressBook</code> and clears the
+search while retaining the selected status view. It returns counts and rejection details to <code class="hljs inline no-lang">LogicManager</code>,
+which performs the shared <a href="#saving-member-data-safely">save/recovery flow</a>. The UI receives success only after
+that save completes.</li></ol> <p>The sequence diagram below expands <code class="hljs inline no-lang">ImportCommand.execute</code>. Source-path checks and the directory/filter snapshot
+have already completed in <code class="hljs inline no-lang">LogicManager</code>. Incidental logging calls are omitted.
 Where activation bars restart at alternative-branch boundaries, they continue the same pending calls;
-this is a workaround for PlantUML&#39;s linear activation tracking.
-
-<span class="image-wrapper"><img src="/tp/diagrams/ImportSequenceDiagram.png" alt="CSV import validation, duplicate checks, and success or failure outcomes" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-The `Persist changed directory` reference expands to the matching frame in the
-[save/recovery diagram](#saving-member-data-safely). Its snapshot is taken before import execution, not after it.
-
-For example, with none of the sample emails already present, [members-partial.csv](samples/members-partial.csv)
+this is a workaround for PlantUML&#39;s linear activation tracking.</p> <span class="image-wrapper"><img src="/tp/diagrams/ImportSequenceDiagram.png" alt="CSV import validation, duplicate checks, and success or failure outcomes" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>The <code class="hljs inline no-lang">Persist changed directory</code> reference expands to the matching frame in the
+<a href="#saving-member-data-safely">save/recovery diagram</a>. Its snapshot is taken before import execution, not after it.</p> <p>For example, with none of the sample emails already present, <a href="/tp/samples/members-partial.csv">members-partial.csv</a>
 stages records 2 and 5, rejects record 3&#39;s invalid phone, and rejects record 4 as a duplicate of record 2.
 Both accepted members are applied together. Record numbers include the header as 1 and exclude empty lines;
-quoted multiline cells do not create extra record numbers.
-
-| Outcome | Effect |
-| --- | --- |
-| Invalid member fields, wrong column count, or duplicate email | Reject that record and continue with the other outcomes. |
-| All records rejected | Throw `CommandException` with every rejection; preserve the model and filter and skip saving. |
-| Unreadable file, decoding error, invalid header, malformed CSV, or no member records | Fail before applying any records, even if earlier CSV records were valid. |
-| Save failure after applying accepted members | Restore the original directory and filter using the shared save/recovery flow. |
-
-Import logs contain preparation counts or fatal-file failure messages, without member fields or rejection details.
-A preparation log does not mean the later save succeeded. `CsvMemberReaderTest` and `ImportCommandTest` cover parsing
-and record outcomes; `ImportIntegrationTest` checks persistence, source protection, and failure behavior.
-
-### Saving member data safely
-
-Saving protects both the in-memory directory and the existing JSON file. A command&#39;s success is returned to the UI
+quoted multiline cells do not create extra record numbers.</p> <div class="table-responsive"><table class="markbind-table table table-bordered table-striped"><thead><tr><th>Outcome</th> <th>Effect</th></tr></thead> <tbody class="table-group-divider"><tr><td>Invalid member fields, wrong column count, or duplicate email</td> <td>Reject that record and continue with the other outcomes.</td></tr> <tr><td>All records rejected</td> <td>Throw <code class="hljs inline no-lang">CommandException</code> with every rejection; preserve the model and filter and skip saving.</td></tr> <tr><td>Unreadable file, decoding error, invalid header, malformed CSV, or no member records</td> <td>Fail before applying any records, even if earlier CSV records were valid.</td></tr> <tr><td>Save failure after applying accepted members</td> <td>Restore the original directory and filter using the shared save/recovery flow.</td></tr></tbody></table></div><p>Import logs contain preparation counts or fatal-file failure messages, without member fields or rejection details.
+A preparation log does not mean the later save succeeded. <code class="hljs inline no-lang">CsvMemberReaderTest</code> and <code class="hljs inline no-lang">ImportCommandTest</code> cover parsing
+and record outcomes; <code class="hljs inline no-lang">ImportIntegrationTest</code> checks persistence, source protection, and failure behavior.</p> <h3 id="saving-member-data-safely">Saving member data safely<a class="fa fa-anchor" href="#saving-member-data-safely" onclick="event.stopPropagation()"></a></h3> <p>Saving protects both the in-memory directory and the existing JSON file. A command&#39;s success is returned to the UI
 only after persistence succeeds. In a normal writable session, parsing and pre-execution guards run first.
-`LogicManager` then follows this sequence:
-
-1. **Snapshot.** Copy the directory and capture `Model.getFilteredPersonListPredicate()` before executing the command.
-1. **Execute.** Run `command.execute(model)`. A parser or command exception exits before saving; the save-failure
-   rollback below does not handle command-execution failures.
-1. **Write.** Delegate saving through `StorageManager` to `JsonAddressBookStorage`, which serializes the complete
-   directory before invoking its package-private `AtomicFileWriter` helper.
-1. **Replace.** The writer creates a temporary file beside the destination, writes and closes its UTF-8 contents,
-   then replaces the destination with `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. Existing symbolic links are resolved
-   to their target so the configured link remains intact. There is no non-atomic fallback.
-1. **Return or restore.** After replacement succeeds, return the command result. On `IOException` (including
-   `AccessDeniedException`) or `SecurityException` from saving, restore the directory and previous search predicate,
-   then throw a `CommandException` explaining the failure. The selected status view stays unchanged. The success
-   result is not returned.
-
-The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
-replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
+<code class="hljs inline no-lang">LogicManager</code> then follows this sequence:</p> <ol><li><strong>Snapshot.</strong> Copy the directory and capture <code class="hljs inline no-lang">Model.getFilteredPersonListPredicate()</code> before executing the command.</li> <li><strong>Execute.</strong> Run <code class="hljs inline no-lang">command.execute(model)</code>. A parser or command exception exits before saving; the save-failure
+rollback below does not handle command-execution failures.</li> <li><strong>Write.</strong> Delegate saving through <code class="hljs inline no-lang">StorageManager</code> to <code class="hljs inline no-lang">JsonAddressBookStorage</code>, which serializes the complete
+directory before invoking its package-private <code class="hljs inline no-lang">AtomicFileWriter</code> helper.</li> <li><strong>Replace.</strong> The writer creates a temporary file beside the destination, writes and closes its UTF-8 contents,
+then replaces the destination with <code class="hljs inline no-lang">Files.move(ATOMIC_MOVE, REPLACE_EXISTING)</code>. Existing symbolic links are resolved
+to their target so the configured link remains intact. There is no non-atomic fallback.</li> <li><strong>Return or restore.</strong> After replacement succeeds, return the command result. On <code class="hljs inline no-lang">IOException</code> (including
+<code class="hljs inline no-lang">AccessDeniedException</code>) or <code class="hljs inline no-lang">SecurityException</code> from saving, restore the directory and previous search predicate,
+then throw a <code class="hljs inline no-lang">CommandException</code> explaining the failure. The selected status view stays unchanged. The success
+result is not returned.</li></ol> <p>The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
+replacement. The <code class="hljs inline no-lang">saveAddressBook</code> call is forwarded through <code class="hljs inline no-lang">StorageManager</code>; that delegation is collapsed into
 one arrow. Command-specific model interactions and logging calls are omitted.
-As in the import diagram, activation bars redrawn at alternative-branch boundaries continue the pending calls.
-
-<span class="image-wrapper"><img src="/tp/diagrams/SaveRecoverySequenceDiagram.png" alt="Directory and filter snapshot, atomic saving, and rollback after a save failure" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-Failures earlier in saving, such as JSON serialization or destination checks, use the same restoration path.
-If the command itself throws, execution exits before the `Persist changed directory` frame.
-
-Restoring the search predicate, rather than just the visible list, preserves subsequent search behavior, including searches
+As in the import diagram, activation bars redrawn at alternative-branch boundaries continue the pending calls.</p> <span class="image-wrapper"><img src="/tp/diagrams/SaveRecoverySequenceDiagram.png" alt="Directory and filter snapshot, atomic saving, and rollback after a save failure" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>Failures earlier in saving, such as JSON serialization or destination checks, use the same restoration path.
+If the command itself throws, execution exits before the <code class="hljs inline no-lang">Persist changed directory</code> frame.</p> <p>Restoring the search predicate, rather than just the visible list, preserves subsequent search behavior, including searches
 that matched no members. For example, if an import updates the model but atomic replacement fails, its accepted
-members disappear and the previous search is restored; the existing JSON and CSV source remain unchanged.
-
-After a failed write or replacement, the writer attempts to remove the temporary file. A cleanup failure is attached
+members disappear and the previous search is restored; the existing JSON and CSV source remain unchanged.</p> <p>After a failed write or replacement, the writer attempts to remove the temporary file. A cleanup failure is attached
 to the original exception and logged. No fallible cleanup follows a successful replacement, and a failed first save
-leaves the destination absent. Logs identify the command class and recovery metadata without raw input or member details.
-
-This covers ordinary write and replacement failures, not power loss or concurrent edits by another application.
-User-preference saving is unchanged. The separate [startup recovery guard](#storage-component) rejects member changes
-and disables saving after a partial or failed load; it is not the rollback mechanism described here.
-
-`AtomicFileWriterTest` injects partial-write and replacement failures and checks file preservation and cleanup.
-`PersistenceIntegrationTest` verifies record/filter restoration, retry, and reload across commands;
-`ImportIntegrationTest` checks the same behavior for imports. See the
-[manual save-failure scenario](#recovering-from-a-failed-save) for the GUI check.
-
-### \[Proposed\] Undo/redo feature
-
-#### Proposed Implementation
-
-The proposed undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. Additionally, it implements the following operations:
-
-* `VersionedAddressBook#commit()` -- Saves the current address book state in its history.
-* `VersionedAddressBook#undo()` -- Restores the previous address book state from its history.
-* `VersionedAddressBook#redo()` -- Restores a previously undone address book state from its history.
-
-These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()` and `Model#redoAddressBook()` respectively.
-
-Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.
-
-Step 1. The user launches the application for the first time. The `VersionedAddressBook` will be initialized with the initial address book state, and the `currentStatePointer` pointing to that single address book state.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState0.png" alt="UndoRedoState0" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-Step 2. The user executes `delete 5` command to delete the 5th person in the address book. The `delete` command calls `Model#commitAddressBook()`, causing the modified state of the address book after the `delete 5` command executes to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState1.png" alt="UndoRedoState1" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-Step 3. The user executes `add n/David …​` to add a new person. The `add` command also calls `Model#commitAddressBook()`, causing another modified address book state to be saved into the `addressBookStateList`.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState2.png" alt="UndoRedoState2" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[-->
-
-**Note:** If a command fails its execution, it will not call `Model#commitAddressBook()`, so the address book state will not be saved into the `addressBookStateList`.
-<!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div>
-
-Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command will call `Model#undoAddressBook()`, which will shift the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState3.png" alt="UndoRedoState3" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[-->
-
-**Note:** If the `currentStatePointer` is at index 0, pointing to the initial AddressBook state, then there are no previous AddressBook states to restore. The `undo` command uses `Model#canUndoAddressBook()` to check if this is the case. If so, it will return an error to the user rather
-than attempting to perform the undo.
-<!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div>
-
-The following sequence diagram shows how an undo operation goes through the `Logic` component:
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoSequenceDiagram-Logic.png" alt="UndoSequenceDiagram-Logic" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[-->
-
-**Note:** The lifeline for `UndoCommand` should end at the destroy marker (X), but due to a limitation of PlantUML, it continues to the end of the diagram.
-<!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div>
-
-Similarly, how an undo operation goes through the `Model` component is shown below:
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoSequenceDiagram-Model.png" alt="UndoSequenceDiagram-Model" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-The `redo` command does the opposite — it calls `Model#redoAddressBook()`, which shifts the `currentStatePointer` once to the right, pointing to the previously undone state, and restores the address book to that state.
-
-<div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[-->
-
-**Note:** If the `currentStatePointer` is at index `addressBookStateList.size() - 1`, pointing to the latest address book state, then there are no undone AddressBook states to restore. The `redo` command uses `Model#canRedoAddressBook()` to check if this is the case. If so, it will return an error to the user rather than attempting to perform the redo.
-<!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div>
-
-Step 5. The user then decides to execute the command `list`. Commands that do not modify the address book, such as `list`, will usually not call `Model#commitAddressBook()`, `Model#undoAddressBook()` or `Model#redoAddressBook()`. Thus, the `addressBookStateList` remains unchanged.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState4.png" alt="UndoRedoState4" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-Step 6. The user executes `clear`, which calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: It no longer makes sense to redo the `add n/David …` command. This is the behavior that most modern desktop applications follow.
-
-<span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState5.png" alt="UndoRedoState5" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-The following activity diagram summarizes what happens when a user executes a new command:
-
-<span class="image-wrapper"><img src="/tp/diagrams/CommitActivityDiagram.png" width="250" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span>
-
-#### Design considerations:
-
-**Aspect: How undo &amp; redo execute:**
-
-* **Alternative 1 (current choice):** Saves the entire address book.
-  * Pros: Easy to implement.
-  * Cons: May have performance issues in terms of memory usage.
-
-* **Alternative 2:** Individual command knows how to undo/redo by
-  itself.
-  * Pros: Will use less memory (e.g. for `delete`, just save the person being deleted).
-  * Cons: We must ensure that the implementation of each individual command is correct.
-
-_{more aspects and alternatives to be added}_
-
-### \[Proposed\] Data archiving
-
-_{Explain here how the data archiving feature will be implemented}_
-
-
---------------------------------------------------------------------------------------------------------------------
-
-## **Documentation, logging, testing, dev-ops**
-
-* [Documentation guide](Documentation.md)
-* [Testing guide](Testing.md)
-* [Logging guide](Logging.md)
-* [DevOps guide](DevOps.md)
-
---------------------------------------------------------------------------------------------------------------------
-
-## **Appendix: Requirements**
-
-### Product scope
-
-**Target user profile**:
-
-Secretary of an NUS student society who
-
-* has to manage the contact details of 50 to 300 active and former members
-* currently juggles spreadsheets and chat histories to look up members
-* prefers desktop apps over other types of applications
-* can type fast, and prefers typing to mouse interactions
-* is comfortable using CLI apps
-
-**Value proposition**: Help NUS society secretaries keep member contact details, roles, committees, and membership status accurate and instantly searchable, so routine membership administration takes seconds instead of searching across spreadsheets and chat histories.
-
-
-### User stories
-
-Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could have) - `*`
-
-| Priority | As a …                                                                | I want to …                                                                  | So that I can…                                                                                |
-|----------|------------------------------------------------------------------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
-| `* * *`  | secretary with an existing directory                                   | import existing contacts into NUSocietyDesk and review any rejected records  | adopt the product without manual re-entry or risking silent data loss                         |
-| `* * *`  | secretary                                                              | attach consistent society-related information to a member                    | organise contacts according to their place in the society                                     |
-| `* * *`  | secretary who remembers only part of a member’s information            | search across relevant contact fields                                        | locate the member without knowing their exact name                                            |
-| `* * *`  | secretary                                                              | combine name, phone, email and tag search conditions                          | find members by contact details, committee or role                                            |
-| `* * *`  | secretary                                                              | change selected member information without replacing unrelated details       | make corrections safely                                                                       |
-| `* * *`  | secretary                                                              | mark former members as archived without deleting their records              | retain their contact history                                                                   |
-| `* * *`  | secretary                                                              | activate a member who was archived                                           | correct an incorrect archive or record a returning member                                     |
-| `* * *`  | secretary                                                              | switch between all, active and archived members while searching             | focus on current members and still retrieve former members                                    |
-| `* * *`  | secretary dealing with members who have similar or duplicate names     | distinguish their records using additional information                       | avoid contacting or modifying the wrong member                                                |
-| `* * *`  | secretary                                                              | receive precise confirmation and error messages                              | know exactly what changed and how to correct a failed operation                               |
-| `* *`    | secretary who has to manage local and international members            | store phone numbers with country codes                                       | contact members who have international phone numbers                                          |
-| `* *`    | secretary with incomplete information                                  | record a member using a NUS email and any other available details             | capture the contact immediately and complete it later                                         |
-| `* *`    | secretary who only has a member’s phone number                         | create an incomplete record using that unique phone number                   | save the contact immediately and complete the remaining details later                         |
-| `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                         | spend less time on repetitive maintenance                                                     |
-| `* *`    | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
-| `* *`    | secretary who made an incorrect change                                 | reverse a recent data-changing operation                                     | prevent a typing mistake from permanently damaging the directory                              |
-| `* *`    | secretary reviewing a long list of results                             | order the results predictably                                                | scan them efficiently                                                                          |
-| `* *`    | frequent user                                                          | repeat or adapt recent commands                                              | complete recurring work with less typing                                                      |
-| `* *`    | returning user                                                         | rediscover relevant command syntax without leaving my current task           | use the product occasionally without having to relearn it                                     |
-| `*`      | potential user exploring the product                                   | view representative sample member records                                    | understand the application before using real data                                             |
-| `*`      | expert user                                                            | use shorter alternatives for frequent commands                               | enter routine operations faster                                                               |
-| `*`      | secretary                                                              | view a concise summary of members by status or committee                     | spot obviously inconsistent records                                                           |
-
-### Use cases
-
-(For all use cases below, the **System** is `NUSocietyDesk` and the **Actor** is the `Secretary`, unless specified otherwise.)
-
-**Use case: UC01 - Delete a member**
-
-**MSS**
-
-1. Secretary requests to list members.
-2. NUSocietyDesk shows a list of members.
-3. Secretary requests to delete a specific member in the list.
-4. NUSocietyDesk deletes the member and confirms the deletion.
-
-   Use case ends.
-
-**Extensions**
-
-* 2a. The list is empty.
-
-  Use case ends.
-
-* 3a. The specified member is not in the list.
-
-  * 3a1. NUSocietyDesk shows an error message.
-
-    Use case resumes at step 2.
-
-**Use case: UC02 - Add a member**
-
-**MSS**
-
-1. Secretary requests to add a member, providing a NUS email address and any known name, phone, address or tags.
-2. NUSocietyDesk adds the member and displays a confirmation with the member&#39;s details.
-
-   Use case ends.
-
-**Extensions**
-
-* 1a. Email is missing, or a provided detail is blank or invalid.
-
-  * 1a1. NUSocietyDesk shows an error message and does not add the member.
-
-    Use case ends.
-
-* 1b. A member record with the same canonical email already exists, regardless of its name or phone number.
-
-  * 1b1. NUSocietyDesk shows a duplicate member record error and does not add the member.
-
-    Use case ends.
-
-**Use case: UC03 - Find and inspect members**
-
-**MSS**
-
-1. Secretary requests to find members using name, phone, email or tag criteria, choosing whether all or any
-   criteria must match when combining conditions.
-2. NUSocietyDesk displays matching members with their available contact details, tags and the number of matches.
-3. Secretary inspects the displayed details to identify the intended members.
-
-   Use case ends.
-
-**Extensions**
-
-* 1a. Secretary supplies missing or invalid search criteria.
-
-  * 1a1. NUSocietyDesk shows an error message explaining how to correct the search.
-  * 1a2. NUSocietyDesk keeps the previous results and member records unchanged.
-
-    Use case ends.
-
-* 2a. No members match the search.
-
-  * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
-
-    Use case ends.
-
-### Non-Functional Requirements
-
-1. **Performance:** NUSocietyDesk should respond to typical commands within 2 second when managing up to 100 member records.
-
-2. **Capacity:** NUSocietyDesk should support at least 200 active and former member records without noticeable sluggishness during typical usage.
-
-3. **Usability:** A secretary who is familiar with the available commands and has above-average typing speed should be able to complete common tasks—such as adding, updating, and finding a member—faster using commands than with a conventional mouse-driven interface.
-
-4. **Keyboard accessibility:** All core membership-management features should be usable without requiring a mouse.
-
-5. **Reliability:** After a command that modifies member data completes successfully, the updated data should remain available after the application is restarted.
-
-6. **Data integrity:** Invalid commands or member information should be rejected with an informative error message without altering previously stored valid data.
-
-7. **Privacy:** Member information should be stored only on the user&#39;s local computer and should not be transmitted to any remote server.
-
-8. **Offline availability:** All core features should remain usable without an Internet connection.
-
-9. **Human-editable storage:** Application data should be stored locally in a human-editable text format, with at least the same level of support for manual file editing as the original AB3 application.
-
-10. **Platform independence:** NUSocietyDesk should work on Windows, Linux, and macOS on a computer with Java 25 installed, without relying on OS-specific features.
-
-11. **Portability:** The application should run without an installer and should be distributed as a single JAR file of no more than 100 MB.
-
-12. **Display compatibility:** The GUI should work well at resolutions of 1920×1080 or higher at 100% and 125% scaling, and remain fully usable at resolutions of 1280×720 or higher at 150% scaling.
-
-### Glossary
-
-* **Active member**: A member whose record has active membership status
-* **Archived member record**: A retained record with archived status; it appears in All or Archived view when it matches the current search
-* **Committee**: A subgroup of the society to which a member belongs, such as Publicity or Logistics
-* **Contact details**: A member&#39;s name, phone number, email address, and address
-* **Duplicate member record**: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ
-* **Former member**: A member who is no longer active in the society; their retained record can be marked `archived`
-* **Incomplete member record**: A valid member record with an email and at least one of name, phone number, or address absent
-* **Member**: A person whose contact and society-related information is stored in NUSocietyDesk
-* **Member directory**: All member records stored in NUSocietyDesk, including archived members and members outside the current search results
-* **Member record**: One member&#39;s contact details, membership status, and tags; their email determines identity
-* **Membership status**: A record&#39;s `active` or `archived` classification, stored separately from its tags; `former` is not a valid status value
-* **Status view**: The GUI&#39;s All, Active or Archived selection; it limits the displayed list and search results without changing saved member statuses
-* **Rejected record**: A CSV member record skipped because of invalid fields, missing required values,
-  an incorrect column count, or a duplicate email. Missing optional contact details alone do not cause rejection
-* **Role**: A position or responsibility held by a member in the society, such as President or Treasurer
-* **Tag**: A label attached to a member record to represent information such as a committee or role
-
---------------------------------------------------------------------------------------------------------------------
-
-## **Appendix: Instructions for manual testing**
-
-Given below are instructions to test the app manually.
-
-<div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[-->
-
-**Note:** These instructions only provide a starting point for testers to work on;
-testers are expected to do more *exploratory* testing.
-<!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div>
-
-### Launch and shutdown
-
-1. Initial launch
-
-   1. Download the JAR file and copy it into an empty folder.
-
-   1. Double-click the JAR file.<br>
-      Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
-
-1. Saving window preferences
-
-   1. Resize the window to an optimal size. Move the window to a different location. Close the window.
-
-   1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
-
-1. _{ more test cases … }_
-
-### Viewing command help and the online guide
-
-1. Run `help` with Internet access unavailable.<br>
-   Expected: The Help window shows the User Guide link at the top, followed by descriptions, usage, and examples
-   for all 16 commands, including all five `find` forms. No browser opens. The command box clears, and the result
-   pane shows `Opened help window.`.
-1. Resize the Help window, scroll to the last entry and notation legend, select text, and copy it.<br>
-   Expected: The entire reference is readable, long lines wrap, and the link and Copy URL button remain above it.
-1. Run `help` again after scrolling to the end.<br>
-   Expected: It focuses the same Help window with the complete reference; no example executes and the directory is unchanged.
-1. Close the Help window, then try `help 1`, `help add`, and `help --guide`.<br>
-   Expected: Each reports an invalid-command-format error with help usage guidance, retains the input with error styling,
-   and does not open the Help window. Running ` help ` with surrounding spaces still opens it.
-1. Select a status view and search for a member, then run `help`.<br>
-   Expected: The current search, status view, displayed members, and saved data are unchanged.
-1. Type an unsent draft, select part of it, and press F1; repeat using Help → Help.<br>
-   Expected: The existing guide URL and Copy URL button appear above the command reference. The draft and its selection
-   remain unchanged. Copy URL still supplies the full online guide&#39;s address. Restore the window manually if minimized.
-1. Use the startup-recovery and failed-save setups documented below, then run `help`.<br>
-   Expected: Help still succeeds, does not save, and preserves the existing data file. A missing data file is not
-   created by help. Commands that change members retain their existing recovery and save-failure behavior.
-
-### Switching between All, Active and Archived views
-
-Use a disposable application folder with `data/addressbook.json` containing `{&quot;persons&quot;:[]}` before launch.
-
-1. Add `add e/active@u.nus.edu` and `add e/former@u.nus.edu`, then run `archive 2`.<br>
-   Expected: The button reads `ALL`. Both members appear; the second has an `ARCHIVED` badge.
-1. Click the status button once, then again, then a third time.<br>
-   Expected: Its text and list change together: `ACTIVE` shows only `active@u.nus.edu`, `ARCHIVED` shows only
-   `former@u.nus.edu`, and `ALL` shows both members.
-1. Run `find e/active`, then click through Active and Archived.<br>
-   Expected: Active shows the matching member, Archived shows an empty list, and the search remains in effect.
-1. Run `view active`, then `view archived`, then `view all`.<br>
-   Expected: The button and list follow each command. The existing search remains in effect, so `view archived`
-   shows no matches and `view all` restores the active match. No member statuses change.
-1. Run `view archived`, then `list`.<br>
-   Expected: The search clears, the button still reads `ARCHIVED`, and `former@u.nus.edu` appears at index 1.
-1. Run `edit 1 n/Former Member`, then `tag 1 t/Alumni`, followed by `untag 1 t/Alumni`.<br>
-   Expected: Each command updates `former@u.nus.edu`, the member at index 1 in the current Archived view.
-   `active@u.nus.edu` stays unchanged. The selected view remains Archived.
-1. Run `activate 1`.<br>
-   Expected: The member leaves the Archived list. Switching to All or Active shows both active members.
-   Restarting the app returns the button to `ALL`; the activated status remains saved.
-
-### Recalling commands and restoring drafts
-
-Use a disposable application folder for these checks, particularly `clear` and save-failure tests.
-
-1. On a fresh launch, type a draft, select part of it, and press Up/Down.<br>
-   Expected: Empty history leaves text, caret and selection unchanged.
-1. Submit `list`, then `lisst`.<br>
-   Expected: `list` succeeds and clears the box; `lisst` shows `Unknown command.` and remains with error styling.
-   Press Up once: `list` is recalled with normal styling, while the error message remains in the result pane.
-   Press Down to return to `lisst`, correct it to `list` and submit; the result is `Listed members in the selected status view.`.
-   Repeat the invalid submission consecutively: one Up still reaches the preceding entry.
-   Edit the failed input, press Down several times, then Up once: Down preserves the edit and selection,
-   and Up recalls the preceding entry. Down returns to the retained edit without executing it.
-   On a fresh launch with only one failed submission, Up leaves the text, selection and error styling unchanged.
-1. Type `find n/Alex`, select text from right to left, and browse backward and forward.<br>
-   Expected: Recalled entries put the caret at the end; Down past the newest restores the exact draft and selection.
-   Edit two recalled entries and navigate away and back, including a visit to the draft: each edit returns.
-   Deleting a recalled entry&#39;s text also survives navigation. Submitting edited text records it as a new command
-   and clears other temporary edits; earlier submitted entries remain unchanged.
-   Up at the oldest and Down at the draft
-   preserve text, selection and styling. Held arrows repeat but never wrap or execute commands.
-1. Submit the newest command again, then submit spaces only, then repeat that command.<br>
-   Expected: Nonblank submissions still execute but occupy one consecutive entry. Spaces alone do nothing.
-   Repeat after browsing to an older entry: submission resets browsing and discards the old draft.
-1. Submit distinct harmless inputs `list 1` through `list 101` (extra list arguments are ignored).<br>
-   Expected: Only `list 2` through `list 101` remain. Repeating `list 101` does not evict `list 2`.
-1. Check Shift/Ctrl/Alt/Meta arrows and arrow keys in other controls; press F1, minimize/restore, and reopen Help.<br>
-   Expected: Existing shortcuts/control behavior remain; history and drafts survive focus/window changes.
-   Navigation alone never changes result feedback. `clear` clears members but leaves prior history recallable.
-1. Use the failed-save setup described below and submit a command that cannot be saved.<br>
-   Expected: Existing recovery feedback and behavior remain; the submitted command is still recallable and editable.
-1. Launch a separate instance from another disposable folder, then restart the original instance.<br>
-   Expected: Each new instance has empty history; no history file appears and no entries are loaded from logs.
-
-These physical-keyboard and application-lifetime checks require manual execution; automated tests cover
-history transitions and JavaFX event handling without driving a native keyboard.
-
-### Recording and completing an email-only member
-
-Use a disposable application folder. Before launching, create `data/addressbook.json` containing
-`{&quot;persons&quot;:[]}`. A missing file would load sample members instead.
-
-1. Run `add e/Alex@U.NUS.EDU`.<br>
-   Expected: One active member is added with heading `alex@u.nus.edu`, missing phone/address placeholders,
-   and feedback `New person added: Email: alex@u.nus.edu`.
-1. Close and reopen the app before filling any details.<br>
-   Expected: The same incomplete member loads; saved name, phone and address values are null.
-1. Run `find e/alex`, then `edit 1 n/Alex Tan`. Close and reopen again.<br>
-   Expected: Alex Tan is the heading; phone and address remain absent.
-1. Run `edit 1 p/91234567`, then `edit 1 a/Kent Ridge`, and restart.<br>
-   Expected: Exactly one complete member remains with all supplied values.
-1. Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
-   Expected: Only the intended member changes. Each successful edit clears the search and shows members in the
-   selected status view.
-1. Try `add e/new@u.nus.edu p/`, `edit 1 n/`, and a duplicate `add e/ALEX@U.NUS.EDU`.<br>
-   Expected: Each is rejected without changing records, filters or saved data.
-1. Add `add e/unnamed@u.nus.edu t/Publicity`. Search by its email, add/remove a tag, and delete it.<br>
-   Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.
-1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
-   Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
-
-### Importing member directories
-
-Use a disposable application folder in All view. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
-Keep a separate copy of the CSV for comparison. Start with neither `alex@u.nus.edu` nor `jamie@u.nus.edu` in the
-directory, and confirm startup has not disabled saving. Run `list` to ensure the JSON file exists, then back it up.
+leaves the destination absent. Logs identify the command class and recovery metadata without raw input or member details.</p> <p>This covers ordinary write and replacement failures, not power loss or concurrent edits by another application.
+User-preference saving is unchanged. The separate <a href="#storage-component">startup recovery guard</a> rejects member changes
+and disables saving after a partial or failed load; it is not the rollback mechanism described here.</p> <p><code class="hljs inline no-lang">AtomicFileWriterTest</code> injects partial-write and replacement failures and checks file preservation and cleanup.
+<code class="hljs inline no-lang">PersistenceIntegrationTest</code> verifies record/filter restoration, retry, and reload across commands;
+<code class="hljs inline no-lang">ImportIntegrationTest</code> checks the same behavior for imports. See the
+<a href="#recovering-from-a-failed-save">manual save-failure scenario</a> for the GUI check.</p> <h3 id="proposed-undo-redo-feature">[Proposed] Undo/redo feature<a class="fa fa-anchor" href="#proposed-undo-redo-feature" onclick="event.stopPropagation()"></a></h3> <h4 id="proposed-implementation">Proposed Implementation<a class="fa fa-anchor" href="#proposed-implementation" onclick="event.stopPropagation()"></a></h4> <p>The proposed undo/redo mechanism is facilitated by <code class="hljs inline no-lang">VersionedAddressBook</code>. It extends <code class="hljs inline no-lang">AddressBook</code> with an undo/redo history, stored internally as an <code class="hljs inline no-lang">addressBookStateList</code> and <code class="hljs inline no-lang">currentStatePointer</code>. Additionally, it implements the following operations:</p> <ul><li><code class="hljs inline no-lang">VersionedAddressBook#commit()</code> -- Saves the current address book state in its history.</li> <li><code class="hljs inline no-lang">VersionedAddressBook#undo()</code> -- Restores the previous address book state from its history.</li> <li><code class="hljs inline no-lang">VersionedAddressBook#redo()</code> -- Restores a previously undone address book state from its history.</li></ul> <p>These operations are exposed in the <code class="hljs inline no-lang">Model</code> interface as <code class="hljs inline no-lang">Model#commitAddressBook()</code>, <code class="hljs inline no-lang">Model#undoAddressBook()</code> and <code class="hljs inline no-lang">Model#redoAddressBook()</code> respectively.</p> <p>Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.</p> <p>Step 1. The user launches the application for the first time. The <code class="hljs inline no-lang">VersionedAddressBook</code> will be initialized with the initial address book state, and the <code class="hljs inline no-lang">currentStatePointer</code> pointing to that single address book state.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState0.png" alt="UndoRedoState0" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>Step 2. The user executes <code class="hljs inline no-lang">delete 5</code> command to delete the 5th person in the address book. The <code class="hljs inline no-lang">delete</code> command calls <code class="hljs inline no-lang">Model#commitAddressBook()</code>, causing the modified state of the address book after the <code class="hljs inline no-lang">delete 5</code> command executes to be saved in the <code class="hljs inline no-lang">addressBookStateList</code>, and the <code class="hljs inline no-lang">currentStatePointer</code> is shifted to the newly inserted address book state.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState1.png" alt="UndoRedoState1" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>Step 3. The user executes <code class="hljs inline no-lang">add n/David …​</code> to add a new person. The <code class="hljs inline no-lang">add</code> command also calls <code class="hljs inline no-lang">Model#commitAddressBook()</code>, causing another modified address book state to be saved into the <code class="hljs inline no-lang">addressBookStateList</code>.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState2.png" alt="UndoRedoState2" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[--><p><strong>Note:</strong> If a command fails its execution, it will not call <code class="hljs inline no-lang">Model#commitAddressBook()</code>, so the address book state will not be saved into the <code class="hljs inline no-lang">addressBookStateList</code>.</p><!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div> <p>Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the <code class="hljs inline no-lang">undo</code> command. The <code class="hljs inline no-lang">undo</code> command will call <code class="hljs inline no-lang">Model#undoAddressBook()</code>, which will shift the <code class="hljs inline no-lang">currentStatePointer</code> once to the left, pointing it to the previous address book state, and restores the address book to that state.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState3.png" alt="UndoRedoState3" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[--><p><strong>Note:</strong> If the <code class="hljs inline no-lang">currentStatePointer</code> is at index 0, pointing to the initial AddressBook state, then there are no previous AddressBook states to restore. The <code class="hljs inline no-lang">undo</code> command uses <code class="hljs inline no-lang">Model#canUndoAddressBook()</code> to check if this is the case. If so, it will return an error to the user rather
+than attempting to perform the undo.</p><!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div> <p>The following sequence diagram shows how an undo operation goes through the <code class="hljs inline no-lang">Logic</code> component:</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoSequenceDiagram-Logic.png" alt="UndoSequenceDiagram-Logic" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[--><p><strong>Note:</strong> The lifeline for <code class="hljs inline no-lang">UndoCommand</code> should end at the destroy marker (X), but due to a limitation of PlantUML, it continues to the end of the diagram.</p><!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div> <p>Similarly, how an undo operation goes through the <code class="hljs inline no-lang">Model</code> component is shown below:</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoSequenceDiagram-Model.png" alt="UndoSequenceDiagram-Model" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>The <code class="hljs inline no-lang">redo</code> command does the opposite — it calls <code class="hljs inline no-lang">Model#redoAddressBook()</code>, which shifts the <code class="hljs inline no-lang">currentStatePointer</code> once to the right, pointing to the previously undone state, and restores the address book to that state.</p> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[--><p><strong>Note:</strong> If the <code class="hljs inline no-lang">currentStatePointer</code> is at index <code class="hljs inline no-lang">addressBookStateList.size() - 1</code>, pointing to the latest address book state, then there are no undone AddressBook states to restore. The <code class="hljs inline no-lang">redo</code> command uses <code class="hljs inline no-lang">Model#canRedoAddressBook()</code> to check if this is the case. If so, it will return an error to the user rather than attempting to perform the redo.</p><!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div> <p>Step 5. The user then decides to execute the command <code class="hljs inline no-lang">list</code>. Commands that do not modify the address book, such as <code class="hljs inline no-lang">list</code>, will usually not call <code class="hljs inline no-lang">Model#commitAddressBook()</code>, <code class="hljs inline no-lang">Model#undoAddressBook()</code> or <code class="hljs inline no-lang">Model#redoAddressBook()</code>. Thus, the <code class="hljs inline no-lang">addressBookStateList</code> remains unchanged.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState4.png" alt="UndoRedoState4" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>Step 6. The user executes <code class="hljs inline no-lang">clear</code>, which calls <code class="hljs inline no-lang">Model#commitAddressBook()</code>. Since the <code class="hljs inline no-lang">currentStatePointer</code> is not pointing at the end of the <code class="hljs inline no-lang">addressBookStateList</code>, all address book states after the <code class="hljs inline no-lang">currentStatePointer</code> will be purged. Reason: It no longer makes sense to redo the <code class="hljs inline no-lang">add n/David …</code> command. This is the behavior that most modern desktop applications follow.</p> <span class="image-wrapper"><img src="/tp/diagrams/UndoRedoState5.png" alt="UndoRedoState5" width="" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <p>The following activity diagram summarizes what happens when a user executes a new command:</p> <span class="image-wrapper"><img src="/tp/diagrams/CommitActivityDiagram.png" width="250" height="" loading="eager" class="img-fluid rounded"><span class="image-caption"><!--[--><!--]--></span></span> <h4 id="design-considerations">Design considerations:<a class="fa fa-anchor" href="#design-considerations" onclick="event.stopPropagation()"></a></h4> <p><strong>Aspect: How undo &amp; redo execute:</strong></p> <ul><li><p><strong>Alternative 1 (current choice):</strong> Saves the entire address book.</p> <ul><li>Pros: Easy to implement.</li> <li>Cons: May have performance issues in terms of memory usage.</li></ul></li> <li><p><strong>Alternative 2:</strong> Individual command knows how to undo/redo by
+itself.</p> <ul><li>Pros: Will use less memory (e.g. for <code class="hljs inline no-lang">delete</code>, just save the person being deleted).</li> <li>Cons: We must ensure that the implementation of each individual command is correct.</li></ul></li></ul> <p><em>{more aspects and alternatives to be added}</em></p> <h3 id="proposed-data-archiving">[Proposed] Data archiving<a class="fa fa-anchor" href="#proposed-data-archiving" onclick="event.stopPropagation()"></a></h3> <p><em>{Explain here how the data archiving feature will be implemented}</em></p> <hr> <h2 id="documentation-logging-testing-dev-ops"><strong>Documentation, logging, testing, dev-ops</strong><a class="fa fa-anchor" href="#documentation-logging-testing-dev-ops" onclick="event.stopPropagation()"></a></h2> <ul><li><a href="/tp/Documentation.html">Documentation guide</a></li> <li><a href="/tp/Testing.html">Testing guide</a></li> <li><a href="/tp/Logging.html">Logging guide</a></li> <li><a href="/tp/DevOps.html">DevOps guide</a></li></ul> <hr> <h2 id="appendix-requirements"><strong>Appendix: Requirements</strong><a class="fa fa-anchor" href="#appendix-requirements" onclick="event.stopPropagation()"></a></h2> <h3 id="product-scope">Product scope<a class="fa fa-anchor" href="#product-scope" onclick="event.stopPropagation()"></a></h3> <p><strong>Target user profile</strong>:</p> <p>Secretary of an NUS student society who</p> <ul><li>has to manage the contact details of 50 to 300 active and former members</li> <li>currently juggles spreadsheets and chat histories to look up members</li> <li>prefers desktop apps over other types of applications</li> <li>can type fast, and prefers typing to mouse interactions</li> <li>is comfortable using CLI apps</li></ul> <p><strong>Value proposition</strong>: Help NUS society secretaries keep member contact details, roles, committees, and membership status accurate and instantly searchable, so routine membership administration takes seconds instead of searching across spreadsheets and chat histories.</p> <h3 id="user-stories">User stories<a class="fa fa-anchor" href="#user-stories" onclick="event.stopPropagation()"></a></h3> <p>Priorities: High (must have) - <code class="hljs inline no-lang">* * *</code>, Medium (should have) - <code class="hljs inline no-lang">* *</code>, Low (could have) - <code class="hljs inline no-lang">*</code></p> <div class="table-responsive"><table class="markbind-table table table-bordered table-striped"><thead><tr><th>Priority</th> <th>As a …</th> <th>I want to …</th> <th>So that I can…</th></tr></thead> <tbody class="table-group-divider"><tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary with an existing directory</td> <td>import existing contacts into NUSocietyDesk and review any rejected records</td> <td>adopt the product without manual re-entry or risking silent data loss</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>attach consistent society-related information to a member</td> <td>organise contacts according to their place in the society</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary who remembers only part of a member’s information</td> <td>search across relevant contact fields</td> <td>locate the member without knowing their exact name</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>combine name, phone, email and tag search conditions</td> <td>find members by contact details, committee or role</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>change selected member information without replacing unrelated details</td> <td>make corrections safely</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>mark former members as archived without deleting their records</td> <td>retain their contact history</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>activate a member who was archived</td> <td>correct an incorrect archive or record a returning member</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>switch between all, active and archived members while searching</td> <td>focus on current members and still retrieve former members</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary dealing with members who have similar or duplicate names</td> <td>distinguish their records using additional information</td> <td>avoid contacting or modifying the wrong member</td></tr> <tr><td><code class="hljs inline no-lang">* * *</code></td> <td>secretary</td> <td>receive precise confirmation and error messages</td> <td>know exactly what changed and how to correct a failed operation</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary who has to manage local and international members</td> <td>store phone numbers with country codes</td> <td>contact members who have international phone numbers</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary with incomplete information</td> <td>record a member using a NUS email and any other available details</td> <td>capture the contact immediately and complete it later</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary who only has a member’s phone number</td> <td>create an incomplete record using that unique phone number</td> <td>save the contact immediately and complete the remaining details later</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary processing the same organisational change for several members</td> <td>update the relevant records together</td> <td>spend less time on repetitive maintenance</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary</td> <td>detect and resolve possible duplicate member records</td> <td>prevent conflicting records for the same member in the directory</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary who made an incorrect change</td> <td>reverse a recent data-changing operation</td> <td>prevent a typing mistake from permanently damaging the directory</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>secretary reviewing a long list of results</td> <td>order the results predictably</td> <td>scan them efficiently</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>frequent user</td> <td>repeat or adapt recent commands</td> <td>complete recurring work with less typing</td></tr> <tr><td><code class="hljs inline no-lang">* *</code></td> <td>returning user</td> <td>rediscover relevant command syntax without leaving my current task</td> <td>use the product occasionally without having to relearn it</td></tr> <tr><td><code class="hljs inline no-lang">*</code></td> <td>potential user exploring the product</td> <td>view representative sample member records</td> <td>understand the application before using real data</td></tr> <tr><td><code class="hljs inline no-lang">*</code></td> <td>expert user</td> <td>use shorter alternatives for frequent commands</td> <td>enter routine operations faster</td></tr> <tr><td><code class="hljs inline no-lang">*</code></td> <td>secretary</td> <td>view a concise summary of members by status or committee</td> <td>spot obviously inconsistent records</td></tr></tbody></table></div><h3 id="use-cases">Use cases<a class="fa fa-anchor" href="#use-cases" onclick="event.stopPropagation()"></a></h3> <p>(For all use cases below, the <strong>System</strong> is <code class="hljs inline no-lang">NUSocietyDesk</code> and the <strong>Actor</strong> is the <code class="hljs inline no-lang">Secretary</code>, unless specified otherwise.)</p> <p><strong>Use case: UC01 - Delete a member</strong></p> <p><strong>MSS</strong></p> <ol><li><p>Secretary requests to list members.</p></li> <li><p>NUSocietyDesk shows a list of members.</p></li> <li><p>Secretary requests to delete a specific member in the list.</p></li> <li><p>NUSocietyDesk deletes the member and confirms the deletion.</p> <p>Use case ends.</p></li></ol> <p><strong>Extensions</strong></p> <ul><li><p>2a. The list is empty.</p> <p>Use case ends.</p></li> <li><p>3a. The specified member is not in the list.</p> <ul><li><p>3a1. NUSocietyDesk shows an error message.</p> <p>Use case resumes at step 2.</p></li></ul></li></ul> <p><strong>Use case: UC02 - Add a member</strong></p> <p><strong>MSS</strong></p> <ol><li><p>Secretary requests to add a member, providing a NUS email address and any known name, phone, address or tags.</p></li> <li><p>NUSocietyDesk adds the member and displays a confirmation with the member&#39;s details.</p> <p>Use case ends.</p></li></ol> <p><strong>Extensions</strong></p> <ul><li><p>1a. Email is missing, or a provided detail is blank or invalid.</p> <ul><li><p>1a1. NUSocietyDesk shows an error message and does not add the member.</p> <p>Use case ends.</p></li></ul></li> <li><p>1b. A member record with the same canonical email already exists, regardless of its name or phone number.</p> <ul><li><p>1b1. NUSocietyDesk shows a duplicate member record error and does not add the member.</p> <p>Use case ends.</p></li></ul></li></ul> <p><strong>Use case: UC03 - Find and inspect members</strong></p> <p><strong>MSS</strong></p> <ol><li><p>Secretary requests to find members using name, phone, email or tag criteria, choosing whether all or any
+criteria must match when combining conditions.</p></li> <li><p>NUSocietyDesk displays matching members with their available contact details, tags and the number of matches.</p></li> <li><p>Secretary inspects the displayed details to identify the intended members.</p> <p>Use case ends.</p></li></ol> <p><strong>Extensions</strong></p> <ul><li><p>1a. Secretary supplies missing or invalid search criteria.</p> <ul><li><p>1a1. NUSocietyDesk shows an error message explaining how to correct the search.</p></li> <li><p>1a2. NUSocietyDesk keeps the previous results and member records unchanged.</p> <p>Use case ends.</p></li></ul></li> <li><p>2a. No members match the search.</p> <ul><li><p>2a1. NUSocietyDesk displays an empty list and reports zero matches.</p> <p>Use case ends.</p></li></ul></li></ul> <h3 id="non-functional-requirements">Non-Functional Requirements<a class="fa fa-anchor" href="#non-functional-requirements" onclick="event.stopPropagation()"></a></h3> <ol><li><p><strong>Performance:</strong> NUSocietyDesk should respond to typical commands within 2 second when managing up to 100 member records.</p></li> <li><p><strong>Capacity:</strong> NUSocietyDesk should support at least 200 active and former member records without noticeable sluggishness during typical usage.</p></li> <li><p><strong>Usability:</strong> A secretary who is familiar with the available commands and has above-average typing speed should be able to complete common tasks—such as adding, updating, and finding a member—faster using commands than with a conventional mouse-driven interface.</p></li> <li><p><strong>Keyboard accessibility:</strong> All core membership-management features should be usable without requiring a mouse.</p></li> <li><p><strong>Reliability:</strong> After a command that modifies member data completes successfully, the updated data should remain available after the application is restarted.</p></li> <li><p><strong>Data integrity:</strong> Invalid commands or member information should be rejected with an informative error message without altering previously stored valid data.</p></li> <li><p><strong>Privacy:</strong> Member information should be stored only on the user&#39;s local computer and should not be transmitted to any remote server.</p></li> <li><p><strong>Offline availability:</strong> All core features should remain usable without an Internet connection.</p></li> <li><p><strong>Human-editable storage:</strong> Application data should be stored locally in a human-editable text format, with at least the same level of support for manual file editing as the original AB3 application.</p></li> <li><p><strong>Platform independence:</strong> NUSocietyDesk should work on Windows, Linux, and macOS on a computer with Java 25 installed, without relying on OS-specific features.</p></li> <li><p><strong>Portability:</strong> The application should run without an installer and should be distributed as a single JAR file of no more than 100 MB.</p></li> <li><p><strong>Display compatibility:</strong> The GUI should work well at resolutions of 1920×1080 or higher at 100% and 125% scaling, and remain fully usable at resolutions of 1280×720 or higher at 150% scaling.</p></li></ol> <h3 id="glossary">Glossary<a class="fa fa-anchor" href="#glossary" onclick="event.stopPropagation()"></a></h3> <ul><li><strong>Active member</strong>: A member whose record has active membership status</li> <li><strong>Archived member record</strong>: A retained record with archived status; it appears in All or Archived view when it matches the current search</li> <li><strong>Committee</strong>: A subgroup of the society to which a member belongs, such as Publicity or Logistics</li> <li><strong>Contact details</strong>: A member&#39;s name, phone number, email address, and address</li> <li><strong>Duplicate member record</strong>: A member record with the same email after lowercasing as an existing record. Members may share a name or phone number when their emails differ</li> <li><strong>Former member</strong>: A member who is no longer active in the society; their retained record can be marked <code class="hljs inline no-lang">archived</code></li> <li><strong>Incomplete member record</strong>: A valid member record with an email and at least one of name, phone number, or address absent</li> <li><strong>Member</strong>: A person whose contact and society-related information is stored in NUSocietyDesk</li> <li><strong>Member directory</strong>: All member records stored in NUSocietyDesk, including archived members and members outside the current search results</li> <li><strong>Member record</strong>: One member&#39;s contact details, membership status, and tags; their email determines identity</li> <li><strong>Membership status</strong>: A record&#39;s <code class="hljs inline no-lang">active</code> or <code class="hljs inline no-lang">archived</code> classification, stored separately from its tags; <code class="hljs inline no-lang">former</code> is not a valid status value</li> <li><strong>Status view</strong>: The GUI&#39;s All, Active or Archived selection; it limits the displayed list and search results without changing saved member statuses</li> <li><strong>Rejected record</strong>: A CSV member record skipped because of invalid fields, missing required values,
+an incorrect column count, or a duplicate email. Missing optional contact details alone do not cause rejection</li> <li><strong>Role</strong>: A position or responsibility held by a member in the society, such as President or Treasurer</li> <li><strong>Tag</strong>: A label attached to a member record to represent information such as a committee or role</li></ul> <hr> <h2 id="appendix-instructions-for-manual-testing"><strong>Appendix: Instructions for manual testing</strong><a class="fa fa-anchor" href="#appendix-instructions-for-manual-testing" onclick="event.stopPropagation()"></a></h2> <p>Given below are instructions to test the app manually.</p> <div class="alert box-container seamless" style="" data-v-2c3d295c><!--Icon and vertical divider for seamless header box--><!----><div class="header-and-body" data-v-2c3d295c><!-- Header wrapper, not rendered if there is no header attribute --><!----><!-- Body wrapper --><div class="box-body-wrapper" data-v-2c3d295c><!-- icon on the left, not shown if there is a header --><div class="icon-wrapper text-info" style="" data-v-2c3d295c><!--[--><i class="fas fa-info" data-v-2c3d295c></i><!--]--></div><!-- Icon -- content divider for seamless boxes without the header attribute --><div class="alert-info vertical-divider" aria-hidden="true" data-v-2c3d295c></div><!-- Content wrapper --><div class="contents" style="" data-v-2c3d295c><!--[--><p><strong>Note:</strong> These instructions only provide a starting point for testers to work on;
+testers are expected to do more <em>exploratory</em> testing.</p><!--]--></div><!-- dismiss button on the right, not shown if there is a header --><!----></div></div></div> <h3 id="launch-and-shutdown">Launch and shutdown<a class="fa fa-anchor" href="#launch-and-shutdown" onclick="event.stopPropagation()"></a></h3> <ol><li><p>Initial launch</p> <ol><li><p>Download the JAR file and copy it into an empty folder.</p></li> <li><p>Double-click the JAR file.<br>
+Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.</p></li></ol></li> <li><p>Saving window preferences</p> <ol><li><p>Resize the window to an optimal size. Move the window to a different location. Close the window.</p></li> <li><p>Relaunch the app by double-clicking the JAR file.<br>
+Expected: The most recent window size and location are retained.</p></li></ol></li> <li><p><em>{ more test cases … }</em></p></li></ol> <h3 id="viewing-command-help-and-the-online-guide">Viewing command help and the online guide<a class="fa fa-anchor" href="#viewing-command-help-and-the-online-guide" onclick="event.stopPropagation()"></a></h3> <ol><li>Run <code class="hljs inline no-lang">help</code> with Internet access unavailable.<br>
+Expected: The Help window shows the User Guide link at the top, followed by descriptions, usage, and examples
+for all 16 commands, including all five <code class="hljs inline no-lang">find</code> forms. No browser opens. The command box clears, and the result
+pane shows <code class="hljs inline no-lang">Opened help window.</code>.</li> <li>Resize the Help window, scroll to the last entry and notation legend, select text, and copy it.<br>
+Expected: The entire reference is readable, long lines wrap, and the link and Copy URL button remain above it.</li> <li>Run <code class="hljs inline no-lang">help</code> again after scrolling to the end.<br>
+Expected: It focuses the same Help window with the complete reference; no example executes and the directory is unchanged.</li> <li>Close the Help window, then try <code class="hljs inline no-lang">help 1</code>, <code class="hljs inline no-lang">help add</code>, and <code class="hljs inline no-lang">help --guide</code>.<br>
+Expected: Each reports an invalid-command-format error with help usage guidance, retains the input with error styling,
+and does not open the Help window. Running <code class="hljs inline no-lang">help</code> with surrounding spaces still opens it.</li> <li>Select a status view and search for a member, then run <code class="hljs inline no-lang">help</code>.<br>
+Expected: The current search, status view, displayed members, and saved data are unchanged.</li> <li>Type an unsent draft, select part of it, and press F1; repeat using Help → Help.<br>
+Expected: The existing guide URL and Copy URL button appear above the command reference. The draft and its selection
+remain unchanged. Copy URL still supplies the full online guide&#39;s address. Restore the window manually if minimized.</li> <li>Use the startup-recovery and failed-save setups documented below, then run <code class="hljs inline no-lang">help</code>.<br>
+Expected: Help still succeeds, does not save, and preserves the existing data file. A missing data file is not
+created by help. Commands that change members retain their existing recovery and save-failure behavior.</li></ol> <h3 id="switching-between-all-active-and-archived-views">Switching between All, Active and Archived views<a class="fa fa-anchor" href="#switching-between-all-active-and-archived-views" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder with <code class="hljs inline no-lang">data/addressbook.json</code> containing <code class="hljs inline no-lang">{&quot;persons&quot;:[]}</code> before launch.</p> <ol><li>Add <code class="hljs inline no-lang">add e/active@u.nus.edu</code> and <code class="hljs inline no-lang">add e/former@u.nus.edu</code>, then run <code class="hljs inline no-lang">archive 2</code>.<br>
+Expected: The button reads <code class="hljs inline no-lang">ALL</code>. Both members appear; the second has an <code class="hljs inline no-lang">ARCHIVED</code> badge.</li> <li>Click the status button once, then again, then a third time.<br>
+Expected: Its text and list change together: <code class="hljs inline no-lang">ACTIVE</code> shows only <code class="hljs inline no-lang">active@u.nus.edu</code>, <code class="hljs inline no-lang">ARCHIVED</code> shows only
+<code class="hljs inline no-lang">former@u.nus.edu</code>, and <code class="hljs inline no-lang">ALL</code> shows both members.</li> <li>Run <code class="hljs inline no-lang">find e/active</code>, then click through Active and Archived.<br>
+Expected: Active shows the matching member, Archived shows an empty list, and the search remains in effect.</li> <li>Run <code class="hljs inline no-lang">view active</code>, then <code class="hljs inline no-lang">view archived</code>, then <code class="hljs inline no-lang">view all</code>.<br>
+Expected: The button and list follow each command. The existing search remains in effect, so <code class="hljs inline no-lang">view archived</code>
+shows no matches and <code class="hljs inline no-lang">view all</code> restores the active match. No member statuses change.</li> <li>Run <code class="hljs inline no-lang">view archived</code>, then <code class="hljs inline no-lang">list</code>.<br>
+Expected: The search clears, the button still reads <code class="hljs inline no-lang">ARCHIVED</code>, and <code class="hljs inline no-lang">former@u.nus.edu</code> appears at index 1.</li> <li>Run <code class="hljs inline no-lang">edit 1 n/Former Member</code>, then <code class="hljs inline no-lang">tag 1 t/Alumni</code>, followed by <code class="hljs inline no-lang">untag 1 t/Alumni</code>.<br>
+Expected: Each command updates <code class="hljs inline no-lang">former@u.nus.edu</code>, the member at index 1 in the current Archived view.
+<code class="hljs inline no-lang">active@u.nus.edu</code> stays unchanged. The selected view remains Archived.</li> <li>Run <code class="hljs inline no-lang">activate 1</code>.<br>
+Expected: The member leaves the Archived list. Switching to All or Active shows both active members.
+Restarting the app returns the button to <code class="hljs inline no-lang">ALL</code>; the activated status remains saved.</li></ol> <h3 id="recalling-commands-and-restoring-drafts">Recalling commands and restoring drafts<a class="fa fa-anchor" href="#recalling-commands-and-restoring-drafts" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder for these checks, particularly <code class="hljs inline no-lang">clear</code> and save-failure tests.</p> <ol><li>On a fresh launch, type a draft, select part of it, and press Up/Down.<br>
+Expected: Empty history leaves text, caret and selection unchanged.</li> <li>Submit <code class="hljs inline no-lang">list</code>, then <code class="hljs inline no-lang">lisst</code>.<br>
+Expected: <code class="hljs inline no-lang">list</code> succeeds and clears the box; <code class="hljs inline no-lang">lisst</code> shows <code class="hljs inline no-lang">Unknown command.</code> and remains with error styling.
+Press Up once: <code class="hljs inline no-lang">list</code> is recalled with normal styling, while the error message remains in the result pane.
+Press Down to return to <code class="hljs inline no-lang">lisst</code>, correct it to <code class="hljs inline no-lang">list</code> and submit; the result is <code class="hljs inline no-lang">Listed members in the selected status view.</code>.
+Repeat the invalid submission consecutively: one Up still reaches the preceding entry.
+Edit the failed input, press Down several times, then Up once: Down preserves the edit and selection,
+and Up recalls the preceding entry. Down returns to the retained edit without executing it.
+On a fresh launch with only one failed submission, Up leaves the text, selection and error styling unchanged.</li> <li>Type <code class="hljs inline no-lang">find n/Alex</code>, select text from right to left, and browse backward and forward.<br>
+Expected: Recalled entries put the caret at the end; Down past the newest restores the exact draft and selection.
+Edit two recalled entries and navigate away and back, including a visit to the draft: each edit returns.
+Deleting a recalled entry&#39;s text also survives navigation. Submitting edited text records it as a new command
+and clears other temporary edits; earlier submitted entries remain unchanged.
+Up at the oldest and Down at the draft
+preserve text, selection and styling. Held arrows repeat but never wrap or execute commands.</li> <li>Submit the newest command again, then submit spaces only, then repeat that command.<br>
+Expected: Nonblank submissions still execute but occupy one consecutive entry. Spaces alone do nothing.
+Repeat after browsing to an older entry: submission resets browsing and discards the old draft.</li> <li>Submit distinct harmless inputs <code class="hljs inline no-lang">list 1</code> through <code class="hljs inline no-lang">list 101</code> (extra list arguments are ignored).<br>
+Expected: Only <code class="hljs inline no-lang">list 2</code> through <code class="hljs inline no-lang">list 101</code> remain. Repeating <code class="hljs inline no-lang">list 101</code> does not evict <code class="hljs inline no-lang">list 2</code>.</li> <li>Check Shift/Ctrl/Alt/Meta arrows and arrow keys in other controls; press F1, minimize/restore, and reopen Help.<br>
+Expected: Existing shortcuts/control behavior remain; history and drafts survive focus/window changes.
+Navigation alone never changes result feedback. <code class="hljs inline no-lang">clear</code> clears members but leaves prior history recallable.</li> <li>Use the failed-save setup described below and submit a command that cannot be saved.<br>
+Expected: Existing recovery feedback and behavior remain; the submitted command is still recallable and editable.</li> <li>Launch a separate instance from another disposable folder, then restart the original instance.<br>
+Expected: Each new instance has empty history; no history file appears and no entries are loaded from logs.</li></ol> <p>These physical-keyboard and application-lifetime checks require manual execution; automated tests cover
+history transitions and JavaFX event handling without driving a native keyboard.</p> <h3 id="recording-and-completing-an-email-only-member">Recording and completing an email-only member<a class="fa fa-anchor" href="#recording-and-completing-an-email-only-member" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder. Before launching, create <code class="hljs inline no-lang">data/addressbook.json</code> containing
+<code class="hljs inline no-lang">{&quot;persons&quot;:[]}</code>. A missing file would load sample members instead.</p> <ol><li>Run <code class="hljs inline no-lang">add e/Alex@U.NUS.EDU</code>.<br>
+Expected: One active member is added with heading <code class="hljs inline no-lang">alex@u.nus.edu</code>, missing phone/address placeholders,
+and feedback <code class="hljs inline no-lang">New person added: Email: alex@u.nus.edu</code>.</li> <li>Close and reopen the app before filling any details.<br>
+Expected: The same incomplete member loads; saved name, phone and address values are null.</li> <li>Run <code class="hljs inline no-lang">find e/alex</code>, then <code class="hljs inline no-lang">edit 1 n/Alex Tan</code>. Close and reopen again.<br>
+Expected: Alex Tan is the heading; phone and address remain absent.</li> <li>Run <code class="hljs inline no-lang">edit 1 p/91234567</code>, then <code class="hljs inline no-lang">edit 1 a/Kent Ridge</code>, and restart.<br>
+Expected: Exactly one complete member remains with all supplied values.</li> <li>Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
+Expected: Only the intended member changes. Each successful edit clears the search and shows members in the
+selected status view.</li> <li>Try <code class="hljs inline no-lang">add e/new@u.nus.edu p/</code>, <code class="hljs inline no-lang">edit 1 n/</code>, and a duplicate <code class="hljs inline no-lang">add e/ALEX@U.NUS.EDU</code>.<br>
+Expected: Each is rejected without changing records, filters or saved data.</li> <li>Add <code class="hljs inline no-lang">add e/unnamed@u.nus.edu t/Publicity</code>. Search by its email, add/remove a tag, and delete it.<br>
+Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.</li> <li>Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
+Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.</li></ol> <h3 id="importing-member-directories">Importing member directories<a class="fa fa-anchor" href="#importing-member-directories" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder in All view. Copy <code class="hljs inline no-lang">docs/samples/members.csv</code> into it as <code class="hljs inline no-lang">member contacts.csv</code>.
+Keep a separate copy of the CSV for comparison. Start with neither <code class="hljs inline no-lang">alex@u.nus.edu</code> nor <code class="hljs inline no-lang">jamie@u.nus.edu</code> in the
+directory, and confirm startup has not disabled saving. Run <code class="hljs inline no-lang">list</code> to ensure the JSON file exists, then back it up.
 For independent cases below, restore that starting state. Keep the app&#39;s launch folder fixed so relative paths resolve
 to the prepared CSV files. Inspect the full feedback message for rejection details.
-CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.
-
-1. Test case: `import &quot;member contacts.csv&quot;`<br>
-   Expected: Two members are appended after existing members, all members are displayed, and feedback states
-   `Imported 2 member(s); rejected 0 record(s) from member contacts.csv.`
-   Alex Tan has `active` status and the `exco`/`publicity` tags; Jamie Lee has `archived`
-   status, displays `ARCHIVED`, and has no tags. The CSV is unchanged. Restart and confirm these records persist.
-
-1. After the successful import above, run `find e/alex`, then import the same CSV again.<br>
-   Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
-   Member records, search results, and saved JSON are unchanged.
-
-1. In a fresh copy of the CSV, change the second member&#39;s status to `former`. Run the import in a fresh disposable
-   directory, or first remove the previously imported example members.<br>
-   Expected: Alex is imported and Jamie is skipped. Feedback reports one import and one rejection, with a status
-   validation error for CSV record 3. Existing members and the source CSV are unchanged; all members are displayed.
-   Restart and confirm only Alex was added.
-
-1. In separate fresh copies of the original CSV, change Jamie&#39;s email to `jamie@gmail.com`, remove Jamie&#39;s status,
-   change Jamie&#39;s email to `ALEX@U.NUS.EDU`, or remove/add a column in Jamie&#39;s record. Restore the starting directory
-   before each import.<br>
-   Expected: Alex is imported; Jamie is rejected as record 3 with the relevant validation or duplicate-email reason.
-1. Repeat with a reordered header, a header-only file, and an unterminated quoted cell after a valid record.<br>
-   Expected: The whole import fails; no valid prefix is imported and records, search results and JSON are unchanged.
-
-1. In a fresh disposable directory, copy `docs/samples/members-partial.csv` into the application folder and run
-   `import members-partial.csv`.<br>
-   Expected: Two imports and two rejections. Record 3 has an invalid phone; record 4 duplicates record 2&#39;s email.
-   The final member has no name, phone or address, retains archived status and the publicity tag, and shows its email
-   as its heading. Every rejection is readable by scrolling the feedback pane. Restart and confirm both imports persist.
-1. Correct the invalid phone in a copy of that CSV and import it again.<br>
-   Expected: Only the corrected Jamie record is added. Previously imported emails and the duplicate Alex row are
-   rejected. Existing member details and statuses are not overwritten.
-
-1. Test cases: `import`, `import &quot;&quot;`, `import member contacts.csv`, and `import missing.csv`.<br>
-   Expected: Format errors explain the command syntax; a missing file gives a file-reading error.
-   Member records, current search results, and saved JSON remain unchanged.
-
-1. Test case: `import data/addressbook.json`, using the app&#39;s configured JSON save file.<br>
-   Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
-   and the original JSON remain unchanged.
-
-These GUI checks require manual execution. `ImportIntegrationTest` covers persistence and source protection;
-`ImportCommandTest` checks the partial-import sample&#39;s documented counts.
-
-### Recovering from a failed save
-
-Use the current application build in a disposable folder on a filesystem that supports atomic replacement.
-Use the default data-file location, `data/addressbook.json`, and keep a separate backup of that file.
-The following steps use a file manager and do not require a particular operating system or shell.
-
-1. Launch in All view with at least two members, including one matching `find e/alex` and one that does not. Confirm startup
-   has not disabled saving and `retry@u.nus.edu` is absent. Run `find e/alex` and note the displayed records.
-1. Keep the app running. In a file manager, rename `data/addressbook.json` to `data/addressbook.saved.json`.
-   Create a folder named `addressbook.json` inside `data`, and place a text file named `keep.txt` in that folder.
-   The nonempty folder prevents the app from replacing the destination with a JSON file.
-1. In the app, run `add e/retry@u.nus.edu`.<br>
-   Expected: Saving fails; feedback says records and the previous search filter were restored. The original search
-   results remain visible. Do not run another command until the file path is restored; verify the missing member
-   with `list` after restoration. No success confirmation is displayed.
-1. Compare `data/addressbook.saved.json` with the backup.<br>
-   Expected: The original JSON is unchanged, the test folder and `keep.txt` still exist, and there is no leftover
-   `.nusocietydesk-*.tmp` file in `data` (enable hidden-file display if necessary).
-1. Remove only the test folder `data/addressbook.json` and its `keep.txt`, then rename `data/addressbook.saved.json`
-   back to `data/addressbook.json`. Restore this path before restarting the app.
-   Run `list` to confirm that `retry@u.nus.edu` was not added, then run `find e/alex` to restore the test&#39;s search.
-1. Retry `add e/retry@u.nus.edu`, then close and restart the app.<br>
-   Expected: The add succeeds, all members are displayed, and exactly one new member survives restarting.
-1. Run `find e/alex` again, make a fresh backup, and repeat the path-conflict steps with a valid CSV containing a new
-   member email.<br>
-   Expected: The previous records and filter are restored; the original JSON and source CSV remain unchanged.
-   Remove the test folder and restore the original JSON filename before closing the app.
-
-These GUI checks require manual execution. `AtomicFileWriterTest`, `PersistenceIntegrationTest`, and
-`ImportIntegrationTest` inject failures without changing real user files.
-
-### Combining search conditions
-
-In a disposable application copy, start with an empty directory and add:
-
-```text
-add n/John Tan e/john.tan@u.nus.edu t/exco t/publicity
-add n/John Lee e/john.lee@u.nus.edu t/exco
-add n/Alice Tan e/alice.tan@u.nus.edu t/publicity
-```
-
-Run these searches in order; later searches must check the complete directory despite the earlier filter.
-
-| Command | Expected result |
-| --- | --- |
-| `findall n/John n/Tan t/exco` | John Tan; count 1 |
-| `findall t/exco t/publicity` | John Tan; count 1 |
-| `findany t/exco t/publicity` | All three members, each once in insertion order; count 3 |
-| `findany n/Alice e/john.lee` | John Lee, then Alice Tan; count 2 |
-| `findall n/Nobody t/exco` | Empty list; count 0 |
-
-Run `find n/Alice`, then try `findall John t/exco`, `findall n/John Tan` and `findany n/John p/abc`.
-Each must report an error and leave Alice Tan displayed, with member records and saved JSON unchanged.
-
-### Finding members by name
-
-Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
-Run these setup commands one at a time:
-
-```text
-add n/Alice Tan e/namealice@u.nus.edu
-add n/Bob Lee e/namebob@u.nus.edu
-add n/Alison Tan e/namealison@u.nus.edu
-```
-
-1. Test cases: `find n/Alice`, `find n/aLiCe`, `find Alice` and `find n/ Alice `.<br>
-   Expected: Only Alice Tan is displayed; the count is one. Case and surrounding whitespace do not affect matching.
-1. Test cases: `find Alice Bob` and `find Bob ALICE`.<br>
-   Expected: Alice Tan and Bob Lee are displayed; the count is two. Either keyword can match, in any order.
-1. Test cases: `find n/Ali` and `find Ali`.<br>
-   Expected: No members are displayed; the count is zero. Partial words match neither Alice nor Alison.
-1. Run `find n/Alice`, then record the displayed result and make a copy of `data/addressbook.json`.<br>
-   Try `find n/Alice Bob`, `find n/Alice  Bob` and `find n/Alice Alice`.<br>
-   Expected: Each reports &quot;Prefixed name searches accept only one keyword. Use find Alice Bob to match names
-   containing Alice OR Bob.&quot; Alice Tan remains the only displayed member, and the saved JSON matches the copy.
-1. After running `find n/Alice`, try `find n/`, `find n/Alice n/Bob`, `find n/Alice p/9123` and
-   `find Alice n/Bob`.<br>
-   Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
-   Alice Tan remains displayed, and member records and saved JSON remain unchanged.
-1. Run `list`, then close and reopen the app.<br>
-   Expected: All three records retain their names and email addresses. Searching has not changed member data.
-
-Automated parser and logic tests also cover keywords separated by tabs, LF and CRLF line breaks, including the
+CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.</p> <ol><li><p>Test case: <code class="hljs inline no-lang">import &quot;member contacts.csv&quot;</code><br>
+Expected: Two members are appended after existing members, all members are displayed, and feedback states
+<code class="hljs inline no-lang">Imported 2 member(s); rejected 0 record(s) from member contacts.csv.</code>
+Alex Tan has <code class="hljs inline no-lang">active</code> status and the <code class="hljs inline no-lang">exco</code>/<code class="hljs inline no-lang">publicity</code> tags; Jamie Lee has <code class="hljs inline no-lang">archived</code>
+status, displays <code class="hljs inline no-lang">ARCHIVED</code>, and has no tags. The CSV is unchanged. Restart and confirm these records persist.</p></li> <li><p>After the successful import above, run <code class="hljs inline no-lang">find e/alex</code>, then import the same CSV again.<br>
+Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
+Member records, search results, and saved JSON are unchanged.</p></li> <li><p>In a fresh copy of the CSV, change the second member&#39;s status to <code class="hljs inline no-lang">former</code>. Run the import in a fresh disposable
+directory, or first remove the previously imported example members.<br>
+Expected: Alex is imported and Jamie is skipped. Feedback reports one import and one rejection, with a status
+validation error for CSV record 3. Existing members and the source CSV are unchanged; all members are displayed.
+Restart and confirm only Alex was added.</p></li> <li><p>In separate fresh copies of the original CSV, change Jamie&#39;s email to <code class="hljs inline no-lang">jamie@gmail.com</code>, remove Jamie&#39;s status,
+change Jamie&#39;s email to <code class="hljs inline no-lang">ALEX@U.NUS.EDU</code>, or remove/add a column in Jamie&#39;s record. Restore the starting directory
+before each import.<br>
+Expected: Alex is imported; Jamie is rejected as record 3 with the relevant validation or duplicate-email reason.</p></li> <li><p>Repeat with a reordered header, a header-only file, and an unterminated quoted cell after a valid record.<br>
+Expected: The whole import fails; no valid prefix is imported and records, search results and JSON are unchanged.</p></li> <li><p>In a fresh disposable directory, copy <code class="hljs inline no-lang">docs/samples/members-partial.csv</code> into the application folder and run
+<code class="hljs inline no-lang">import members-partial.csv</code>.<br>
+Expected: Two imports and two rejections. Record 3 has an invalid phone; record 4 duplicates record 2&#39;s email.
+The final member has no name, phone or address, retains archived status and the publicity tag, and shows its email
+as its heading. Every rejection is readable by scrolling the feedback pane. Restart and confirm both imports persist.</p></li> <li><p>Correct the invalid phone in a copy of that CSV and import it again.<br>
+Expected: Only the corrected Jamie record is added. Previously imported emails and the duplicate Alex row are
+rejected. Existing member details and statuses are not overwritten.</p></li> <li><p>Test cases: <code class="hljs inline no-lang">import</code>, <code class="hljs inline no-lang">import &quot;&quot;</code>, <code class="hljs inline no-lang">import member contacts.csv</code>, and <code class="hljs inline no-lang">import missing.csv</code>.<br>
+Expected: Format errors explain the command syntax; a missing file gives a file-reading error.
+Member records, current search results, and saved JSON remain unchanged.</p></li> <li><p>Test case: <code class="hljs inline no-lang">import data/addressbook.json</code>, using the app&#39;s configured JSON save file.<br>
+Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
+and the original JSON remain unchanged.</p></li></ol> <p>These GUI checks require manual execution. <code class="hljs inline no-lang">ImportIntegrationTest</code> covers persistence and source protection;
+<code class="hljs inline no-lang">ImportCommandTest</code> checks the partial-import sample&#39;s documented counts.</p> <h3 id="recovering-from-a-failed-save">Recovering from a failed save<a class="fa fa-anchor" href="#recovering-from-a-failed-save" onclick="event.stopPropagation()"></a></h3> <p>Use the current application build in a disposable folder on a filesystem that supports atomic replacement.
+Use the default data-file location, <code class="hljs inline no-lang">data/addressbook.json</code>, and keep a separate backup of that file.
+The following steps use a file manager and do not require a particular operating system or shell.</p> <ol><li>Launch in All view with at least two members, including one matching <code class="hljs inline no-lang">find e/alex</code> and one that does not. Confirm startup
+has not disabled saving and <code class="hljs inline no-lang">retry@u.nus.edu</code> is absent. Run <code class="hljs inline no-lang">find e/alex</code> and note the displayed records.</li> <li>Keep the app running. In a file manager, rename <code class="hljs inline no-lang">data/addressbook.json</code> to <code class="hljs inline no-lang">data/addressbook.saved.json</code>.
+Create a folder named <code class="hljs inline no-lang">addressbook.json</code> inside <code class="hljs inline no-lang">data</code>, and place a text file named <code class="hljs inline no-lang">keep.txt</code> in that folder.
+The nonempty folder prevents the app from replacing the destination with a JSON file.</li> <li>In the app, run <code class="hljs inline no-lang">add e/retry@u.nus.edu</code>.<br>
+Expected: Saving fails; feedback says records and the previous search filter were restored. The original search
+results remain visible. Do not run another command until the file path is restored; verify the missing member
+with <code class="hljs inline no-lang">list</code> after restoration. No success confirmation is displayed.</li> <li>Compare <code class="hljs inline no-lang">data/addressbook.saved.json</code> with the backup.<br>
+Expected: The original JSON is unchanged, the test folder and <code class="hljs inline no-lang">keep.txt</code> still exist, and there is no leftover
+<code class="hljs inline no-lang">.nusocietydesk-*.tmp</code> file in <code class="hljs inline no-lang">data</code> (enable hidden-file display if necessary).</li> <li>Remove only the test folder <code class="hljs inline no-lang">data/addressbook.json</code> and its <code class="hljs inline no-lang">keep.txt</code>, then rename <code class="hljs inline no-lang">data/addressbook.saved.json</code>
+back to <code class="hljs inline no-lang">data/addressbook.json</code>. Restore this path before restarting the app.
+Run <code class="hljs inline no-lang">list</code> to confirm that <code class="hljs inline no-lang">retry@u.nus.edu</code> was not added, then run <code class="hljs inline no-lang">find e/alex</code> to restore the test&#39;s search.</li> <li>Retry <code class="hljs inline no-lang">add e/retry@u.nus.edu</code>, then close and restart the app.<br>
+Expected: The add succeeds, all members are displayed, and exactly one new member survives restarting.</li> <li>Run <code class="hljs inline no-lang">find e/alex</code> again, make a fresh backup, and repeat the path-conflict steps with a valid CSV containing a new
+member email.<br>
+Expected: The previous records and filter are restored; the original JSON and source CSV remain unchanged.
+Remove the test folder and restore the original JSON filename before closing the app.</li></ol> <p>These GUI checks require manual execution. <code class="hljs inline no-lang">AtomicFileWriterTest</code>, <code class="hljs inline no-lang">PersistenceIntegrationTest</code>, and
+<code class="hljs inline no-lang">ImportIntegrationTest</code> inject failures without changing real user files.</p> <h3 id="combining-search-conditions">Combining search conditions<a class="fa fa-anchor" href="#combining-search-conditions" onclick="event.stopPropagation()"></a></h3> <p>In a disposable application copy, start with an empty directory and add:</p> <pre><code class="hljs text"><span>add n/John Tan e/john.tan@u.nus.edu t/exco t/publicity
+</span><span>add n/John Lee e/john.lee@u.nus.edu t/exco
+</span><span>add n/Alice Tan e/alice.tan@u.nus.edu t/publicity
+</span></code></pre><p>Run these searches in order; later searches must check the complete directory despite the earlier filter.</p> <div class="table-responsive"><table class="markbind-table table table-bordered table-striped"><thead><tr><th>Command</th> <th>Expected result</th></tr></thead> <tbody class="table-group-divider"><tr><td><code class="hljs inline no-lang">findall n/John n/Tan t/exco</code></td> <td>John Tan; count 1</td></tr> <tr><td><code class="hljs inline no-lang">findall t/exco t/publicity</code></td> <td>John Tan; count 1</td></tr> <tr><td><code class="hljs inline no-lang">findany t/exco t/publicity</code></td> <td>All three members, each once in insertion order; count 3</td></tr> <tr><td><code class="hljs inline no-lang">findany n/Alice e/john.lee</code></td> <td>John Lee, then Alice Tan; count 2</td></tr> <tr><td><code class="hljs inline no-lang">findall n/Nobody t/exco</code></td> <td>Empty list; count 0</td></tr></tbody></table></div><p>Run <code class="hljs inline no-lang">find n/Alice</code>, then try <code class="hljs inline no-lang">findall John t/exco</code>, <code class="hljs inline no-lang">findall n/John Tan</code> and <code class="hljs inline no-lang">findany n/John p/abc</code>.
+Each must report an error and leave Alice Tan displayed, with member records and saved JSON unchanged.</p> <h3 id="finding-members-by-name">Finding members by name<a class="fa fa-anchor" href="#finding-members-by-name" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder in All view and an empty directory (<code class="hljs inline no-lang">clear</code> removes all members in that copy).
+Run these setup commands one at a time:</p> <pre><code class="hljs text"><span>add n/Alice Tan e/namealice@u.nus.edu
+</span><span>add n/Bob Lee e/namebob@u.nus.edu
+</span><span>add n/Alison Tan e/namealison@u.nus.edu
+</span></code></pre><ol><li>Test cases: <code class="hljs inline no-lang">find n/Alice</code>, <code class="hljs inline no-lang">find n/aLiCe</code>, <code class="hljs inline no-lang">find Alice</code> and <code class="hljs inline no-lang">find n/ Alice </code>.<br>
+Expected: Only Alice Tan is displayed; the count is one. Case and surrounding whitespace do not affect matching.</li> <li>Test cases: <code class="hljs inline no-lang">find Alice Bob</code> and <code class="hljs inline no-lang">find Bob ALICE</code>.<br>
+Expected: Alice Tan and Bob Lee are displayed; the count is two. Either keyword can match, in any order.</li> <li>Test cases: <code class="hljs inline no-lang">find n/Ali</code> and <code class="hljs inline no-lang">find Ali</code>.<br>
+Expected: No members are displayed; the count is zero. Partial words match neither Alice nor Alison.</li> <li>Run <code class="hljs inline no-lang">find n/Alice</code>, then record the displayed result and make a copy of <code class="hljs inline no-lang">data/addressbook.json</code>.<br>
+Try <code class="hljs inline no-lang">find n/Alice Bob</code>, <code class="hljs inline no-lang">find n/Alice  Bob</code> and <code class="hljs inline no-lang">find n/Alice Alice</code>.<br>
+Expected: Each reports &quot;Prefixed name searches accept only one keyword. Use find Alice Bob to match names
+containing Alice OR Bob.&quot; Alice Tan remains the only displayed member, and the saved JSON matches the copy.</li> <li>After running <code class="hljs inline no-lang">find n/Alice</code>, try <code class="hljs inline no-lang">find n/</code>, <code class="hljs inline no-lang">find n/Alice n/Bob</code>, <code class="hljs inline no-lang">find n/Alice p/9123</code> and
+<code class="hljs inline no-lang">find Alice n/Bob</code>.<br>
+Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
+Alice Tan remains displayed, and member records and saved JSON remain unchanged.</li> <li>Run <code class="hljs inline no-lang">list</code>, then close and reopen the app.<br>
+Expected: All three records retain their names and email addresses. Searching has not changed member data.</li></ol> <p>Automated parser and logic tests also cover keywords separated by tabs, LF and CRLF line breaks, including the
 error guidance and preservation of previous results, records and saved JSON. The GUI checks above are provided
-for manual execution.
-
-### Finding members by phone number
-
-Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
-Run these setup commands one at a time:
-
-```text
-add n/Alice Tan p/91234567 e/phonealice@u.nus.edu
-add n/Bob Lee p/89123000 e/phonebob@u.nus.edu
-add n/Carol Lim p/00145678 e/phonecarol@u.nus.edu
-add n/9123 Member e/phonemissing@u.nus.edu
-```
-
-The `p/` prefix selects the phone field. Its value matches a consecutive sequence of digits anywhere in the
-number, including the middle or end.
-
-1. Test cases: `find p/9123` and `find p/ 9123 `.<br>
-   Expected: Alice Tan and Bob Lee are displayed; the count is two. A substring can occur anywhere in the phone
-   number, and surrounding whitespace is ignored. The member named 9123 Member has no phone and does not match.
-1. Test cases: `find p/91234567` and `find p/2345`.<br>
-   Expected: Only Alice Tan is displayed; the count is one. Both full numbers and consecutive digit fragments match.
-1. Test cases: `find p/9` and `find p/89`.<br>
-   Expected: The first displays Alice Tan and Bob Lee; the second displays only Bob Lee.
-   Search values may contain fewer than the three digits required when storing a phone number.
-1. Test case: `find p/001`.<br>
-   Expected: Only Carol Lim is displayed; the count is one. Leading zeros are preserved in the search value.
-1. Test cases: `find p/555` and `find p/923`.<br>
-   Expected: Each produces an empty list and a count of zero. Digits must occur consecutively, in the given order.
-1. Run `find 9123`, followed by `find p/9123`.<br>
-   Expected: The first displays only 9123 Member because unprefixed searches consider names.
-   The second displays Alice Tan and Bob Lee, searching the complete directory despite the earlier filter.
-1. After running `find p/9123`, make a copy of `data/addressbook.json` and try `find p/9123 1234`.<br>
-   Expected: The error is &quot;Phone searches accept only one substring. Search each substring in a separate find command.&quot;
-   Alice Tan and Bob Lee remain displayed, and the saved JSON matches the copy.
-1. Test cases: `find p/abc`, `find p/91a3`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.<br>
-   Expected: Each reports &quot;Phone searches accept digits (0-9) only. Example: find p/9123.&quot;
-   The previous results, member records and saved JSON remain unchanged.
-1. Test cases: `find p/`, `find p/9123 p/4567`, `find p/9123 n/Alice` and `find Alice p/9123`.<br>
-   Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
-   The previous results, member records and saved JSON remain unchanged.
-1. Run `list`, then close and reopen the app.<br>
-   Expected: All four records retain their contact details, including Carol&#39;s leading zeros and the missing phone
-   for 9123 Member. Searching has not changed member data.
-
-Automated parser tests also cover phone substrings and prefixes separated by tabs or line breaks. Logic tests
+for manual execution.</p> <h3 id="finding-members-by-phone-number">Finding members by phone number<a class="fa fa-anchor" href="#finding-members-by-phone-number" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder in All view and an empty directory (<code class="hljs inline no-lang">clear</code> removes all members in that copy).
+Run these setup commands one at a time:</p> <pre><code class="hljs text"><span>add n/Alice Tan p/91234567 e/phonealice@u.nus.edu
+</span><span>add n/Bob Lee p/89123000 e/phonebob@u.nus.edu
+</span><span>add n/Carol Lim p/00145678 e/phonecarol@u.nus.edu
+</span><span>add n/9123 Member e/phonemissing@u.nus.edu
+</span></code></pre><p>The <code class="hljs inline no-lang">p/</code> prefix selects the phone field. Its value matches a consecutive sequence of digits anywhere in the
+number, including the middle or end.</p> <ol><li>Test cases: <code class="hljs inline no-lang">find p/9123</code> and <code class="hljs inline no-lang">find p/ 9123 </code>.<br>
+Expected: Alice Tan and Bob Lee are displayed; the count is two. A substring can occur anywhere in the phone
+number, and surrounding whitespace is ignored. The member named 9123 Member has no phone and does not match.</li> <li>Test cases: <code class="hljs inline no-lang">find p/91234567</code> and <code class="hljs inline no-lang">find p/2345</code>.<br>
+Expected: Only Alice Tan is displayed; the count is one. Both full numbers and consecutive digit fragments match.</li> <li>Test cases: <code class="hljs inline no-lang">find p/9</code> and <code class="hljs inline no-lang">find p/89</code>.<br>
+Expected: The first displays Alice Tan and Bob Lee; the second displays only Bob Lee.
+Search values may contain fewer than the three digits required when storing a phone number.</li> <li>Test case: <code class="hljs inline no-lang">find p/001</code>.<br>
+Expected: Only Carol Lim is displayed; the count is one. Leading zeros are preserved in the search value.</li> <li>Test cases: <code class="hljs inline no-lang">find p/555</code> and <code class="hljs inline no-lang">find p/923</code>.<br>
+Expected: Each produces an empty list and a count of zero. Digits must occur consecutively, in the given order.</li> <li>Run <code class="hljs inline no-lang">find 9123</code>, followed by <code class="hljs inline no-lang">find p/9123</code>.<br>
+Expected: The first displays only 9123 Member because unprefixed searches consider names.
+The second displays Alice Tan and Bob Lee, searching the complete directory despite the earlier filter.</li> <li>After running <code class="hljs inline no-lang">find p/9123</code>, make a copy of <code class="hljs inline no-lang">data/addressbook.json</code> and try <code class="hljs inline no-lang">find p/9123 1234</code>.<br>
+Expected: The error is &quot;Phone searches accept only one substring. Search each substring in a separate find command.&quot;
+Alice Tan and Bob Lee remain displayed, and the saved JSON matches the copy.</li> <li>Test cases: <code class="hljs inline no-lang">find p/abc</code>, <code class="hljs inline no-lang">find p/91a3</code>, <code class="hljs inline no-lang">find p/+659123</code>, <code class="hljs inline no-lang">find p/9123-4567</code> and <code class="hljs inline no-lang">find p/９１２３</code>.<br>
+Expected: Each reports &quot;Phone searches accept digits (0-9) only. Example: find p/9123.&quot;
+The previous results, member records and saved JSON remain unchanged.</li> <li>Test cases: <code class="hljs inline no-lang">find p/</code>, <code class="hljs inline no-lang">find p/9123 p/4567</code>, <code class="hljs inline no-lang">find p/9123 n/Alice</code> and <code class="hljs inline no-lang">find Alice p/9123</code>.<br>
+Expected: Each reports the relevant existing format, duplicate-prefix or multiple-field error.
+The previous results, member records and saved JSON remain unchanged.</li> <li>Run <code class="hljs inline no-lang">list</code>, then close and reopen the app.<br>
+Expected: All four records retain their contact details, including Carol&#39;s leading zeros and the missing phone
+for 9123 Member. Searching has not changed member data.</li></ol> <p>Automated parser tests also cover phone substrings and prefixes separated by tabs or line breaks. Logic tests
 verify that invalid phone values preserve member records and the previous results. The GUI checks above are
-provided for manual execution.
-
-### Finding members by tag
-
-Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
-Run these setup commands one at a time:
-
-```text
-add n/Tag Search Active e/tagactive@u.nus.edu t/Publicity t/Exco
-add e/tagarchived@u.nus.edu t/publicity
-add e/tagyear@u.nus.edu t/publicity2026
-add e/tagshort@u.nus.edu t/pub
-add n/Publicity Example e/taguntagged@u.nus.edu
-find e/tagarchived
-archive 1
-```
-
-The directory now contains five members. The archived member has no name, phone or address.
-
-1. Test cases: `find t/publicity`, `find t/PUBLICITY` and `find t/pUbLiCiTy`.<br>
-   Expected: Only `tagactive@u.nus.edu` and `tagarchived@u.nus.edu` are displayed; the count is two.
-   The archived member retains the `ARCHIVED` badge. The member named Publicity Example does not match because
-   that member has no tags. The `publicity2026` tag does not match.
-1. Test case: `find t/pub`.<br>
-   Expected: Only `tagshort@u.nus.edu` is displayed; the count is one. Neither `publicity` nor `publicity2026` matches.
-1. Test cases: `find t/public` and `find t/volunteer`.<br>
-   Expected: Each produces an empty list and a count of zero.
-1. Run `find e/tagshort`, followed by `find t/publicity`.<br>
-   Expected: The second search finds both publicity members across the complete directory.
-1. After running `find t/publicity`, try each of the following invalid commands:<br>
-   `find t/`, `find t/publicity exco`, `find t/publicity t/exco`, `find t/publicity n/Tag`,
-   `find p/9123 t/publicity`, `find t/publicity e/tagactive`, `find Tag t/publicity` and `find t/publicity!`.<br>
-   Expected: Each shows an informative error, and the two publicity members remain displayed.
-   Multiple values report &quot;Tag searches accept only one tag. Example: find t/publicity.&quot;
-1. Test cases: `find N/`, `find P/9123`, `find E/tagactive`, `find T/publicity`, `find T/ E/`
-   and `find n/Tag T/publicity`.<br>
-   Expected: Each reports &quot;Search prefixes must be lowercase. Use n/, p/, e/ or t/.&quot;
-   The previous results remain displayed. Lowercase prefixes with uppercase values, such as `find n/TAG`,
-   `find e/TAGACTIVE` and `find t/PUBLICITY`, still work.
-1. Test cases: `find G/`, `find F/value`, `find H/`, `find g/value`, `find name/Tag`
-   and `find n/Tag G/value`.<br>
-   Expected: Each reports an unsupported search prefix and lists `n/`, `p/`, `e/` and `t/` as supported options.
-   For `G/`, the message is &quot;Unsupported search prefix: G/. Use n/, p/, e/ or t/.&quot;
-   Previous results, member records and saved data remain unchanged.
-1. Test cases: `find e/G/` and `find e/name/Tag`.<br>
-   Expected: Both are valid literal email-substring searches with zero matches in the test directory.
-   The slashes inside the attached values do not trigger prefix errors.
-1. Run `list`, then close and reopen the app.<br>
-   Expected: All five records retain their contact details, tags and status. Searching has not changed member data.
-   The application log contains an `INFO` completion message with the match count for each successful search.
-
-Automated tests also cover tag values and prefixes separated by tabs or line breaks, and verify that rejected
-searches leave saved data unchanged. The GUI checks above are provided for manual execution.
-
-### Finding members by email
-
-1. Search using the sample members from a fresh launch with no data file.
-
-   1. Test case: `find e/ALEX`<br>
-      Expected: Alex Yeoh is displayed and the result count is one.
-
-   1. Test case: `find e/ALExYeOh@U.NUS.EDU`<br>
-      Expected: Alex Yeoh is displayed and the result count is one.
-
-   1. Test case: `find e/@u.nus.edu`<br>
-      Expected: All sample members are displayed and the count equals the directory size.
-
-   1. Test case: `find e/no-such-email`<br>
-      Expected: The list is empty and the result count is zero.
-
-1. Reject invalid email searches after running `find e/ALEX`.
-
-   1. Test cases: `find e/`, `find e/alex david`, `find e/alex e/david`, `find e/alex n/Alex`,
-      `find e/alex p/9103` and `find Alex e/alex`<br>
-      Expected: An informative error is displayed. Alex Yeoh remains displayed and member records are unchanged.
-
-1. Search the complete directory after a previous search.
-
-   1. Test case: `find n/David`, followed by `find e/ALEX`<br>
-      Expected: The email search displays Alex Yeoh even though he was absent from the preceding results.
-
-### Deleting a person
-
-1. Deleting a person while all persons are being shown
-
-   1. Prerequisites: Select All view, then list all persons using `list`, with multiple persons in the list.
-
-   1. Test case: `delete 1`<br>
-      Expected: The first contact is deleted from the list. The status message shows the deleted contact&#39;s details.
-
-   1. Test case: `delete 0`<br>
-      Expected: No person is deleted. The status message shows error details.
-
-   1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
-      Expected: Similar to previous.
-
-1. _{ more test cases … }_
-
-### Tag identity and editing
-
-1. In a disposable application folder, confirm saving is enabled and `tagtest@u.nus.edu` is absent.
-   Add a person with case variants of a tag.
-
-   1. Test case: `add n/Tag Test p/91234567 e/tagtest@u.nus.edu a/Kent Ridge t/Publicity t/publicity t/Exco`<br>
-      Expected: The card displays exactly two tags, `exco` and `publicity`, in lowercase.
-
-   1. Run `list` and note the displayed index of Tag Test. In the following commands, replace `INDEX` with that index.
-
-   1. Test case: `edit INDEX p/98765432`<br>
-      Expected: The phone number changes and both tags remain.
-
-   1. Test cases: `edit INDEX t/Publicity`, `edit INDEX t/`, and `edit INDEX a/New Address t/Publicity`<br>
-      Expected: Each command is rejected with guidance to use `tag` or `untag`. All person details remain
-      unchanged.
-
-1. Add and remove individual tags using Tag Test from the previous steps.
-
-   1. Test case: `tag INDEX t/Volunteer`<br>
-      Expected: The member has `exco`, `publicity`, and `volunteer`; contact details and other members remain unchanged.
-
-   1. Test case: `tag INDEX t/VOLUNTEER`<br>
-      Expected: Success with the same three tags and no duplicate.
-
-   1. Test case: `untag INDEX t/PUBLICITY`<br>
-      Expected: Only `exco` and `volunteer` remain.
-
-   1. Repeat `untag INDEX t/publicity`.<br>
-      Expected: Success with the same two tags.
-
-   1. Close and reopen the app.<br>
-      Expected: The member still has only `exco` and `volunteer`.
-
-   1. Remove the remaining tags with `untag INDEX t/Exco` and `untag INDEX t/Volunteer`.<br>
-      Expected: The member has no tags and retains all contact details.
-
-1. Check displayed indices and invalid input.
-
-   1. Run `find Tag`, note Tag Test&#39;s displayed index, and run `tag INDEX t/Volunteer` using that index.<br>
-      Expected: Only Tag Test gains the tag; the search clears and the selected status view remains.
-
-   1. Run `find Tag` again and run `untag INDEX t/Volunteer` using the new displayed index.<br>
-      Expected: Only Tag Test loses the tag; the search clears and the selected status view remains.
-
-   1. For each of `tag` and `untag`, try arguments `0 t/Volunteer`, `1 2 t/Volunteer`, `1`, `1 t/`,
-      `1 t/Publicity Team`, `1 t/Volunteer t/Exco`, and an index larger than the displayed list.<br>
-      Expected: Each command is rejected; records and the current filter remain unchanged.
-
-1. Load tags from an existing saved record.
-
-   1. Close the app in the disposable test directory and back up `data/addressbook.json`.
-      Set Tag Test&#39;s saved tags to `[&quot;Publicity&quot;, &quot;publicity&quot;, &quot;Exco&quot;]`, leaving all other JSON unchanged.
-
-   1. Relaunch the app.<br>
-      Expected: The card displays only `exco` and `publicity`.
-
-   1. Execute `list` and inspect the saved record.<br>
-      Expected: It contains exactly two tag names, `exco` and `publicity`, regardless of their order in the file.
-
-### Saving data
-
-1. Dealing with invalid data files
-
-   1. In a disposable test directory, run `list` to create `data/addressbook.json`, close the app, and back it up.
-   1. Give two saved records the emails `Alex@U.NUS.EDU` and `alex@u.nus.edu`, then relaunch.<br>
-      Expected: the first valid occurrence and other valid members load. A warning shows the file path,
-      recovered-member count, and original positions of the duplicate records. The file remains unchanged.
-   1. Run `list`, `find e/alex`, and `help`, then try `clear` and `delete 1`.<br>
-      Expected: viewing, searching, and help work. Changes are rejected before modifying any records, with
-      instructions to repair the file and restart. The file remains unchanged, including after `exit`.
-   1. Correct the second email and relaunch.<br>
-      Expected: all records load with lowercase emails, no warning appears, and normal saving resumes.
-   1. Repeat with malformed JSON, a null record, or an email with surrounding whitespace.<br>
-      Expected: malformed JSON produces a protected empty view. A null record or invalid email is skipped while
-      other valid records load. Warnings identify errors, and commands cannot overwrite any of these files.
-      A missing file still starts with sample members; a valid empty file stays empty and allows normal saving.
-
-### Email domain validation
-
-1. Add `add n/Nus Test p/91234567 e/Nus.Test@U.NUS.EDU a/Kent Ridge`.<br>
-   Expected: success with `nus.test@u.nus.edu` in the result and card. Restart after saving to confirm persistence.
-1. Using its displayed index, try edits with `e/nus.test`, `e/nus.test@gmail.com`, `e/nus.test@nus.edu`,
-   `e/nus.test@sub.u.nus.edu`, `e/nus.test@u.nus.edu.com`, and `e/nus..test@u.nus.edu`.<br>
-   Expected: each shows the shared email-constraints message. Records, filter, and saved file stay unchanged.
-1. Try the same invalid emails in otherwise valid `add` commands.<br>
-   Expected: the same rejection without adding members.
-1. Add a different member with `e/nus.test+society@u.nus.edu`.<br>
-   Expected: success because aliases remain distinct. New domains are never appended or substituted automatically.
-
-### Email identity
-
-1. On a fresh launch with no data file, run `find Morgan`.<br>
-   Expected: both sample members named Morgan Lee appear. They share a phone number but have different emails.
-1. In a disposable directory with `data/addressbook.json` containing `{&quot;persons&quot;:[]}`, run:
-   * `add n/Alex Tan p/91234567 e/Alex.One@U.NUS.EDU a/Kent Ridge`
-   * `add n/Alex Tan p/91234567 e/alex.two@u.nus.edu a/Clementi`
-   Expected: both succeed and show lowercase emails.
-1. Run `edit 2 e/ALEX.ONE@U.NUS.EDU`.<br>
-   Expected: `Email &quot;alex.one@u.nus.edu&quot; is already used by &quot;Alex Tan&quot;. No changes were made.`
-1. Run `edit 1 n/Alexander Tan e/ALEX.ONE@U.NUS.EDU`, then `find Alex`, then
-   `edit 1 e/alex.one@u.nus.edu`.<br>
-   Expected: the rename succeeds; `find Alex` shows only Alex Tan. The final edit fails because that email
-   belongs to Alexander Tan outside the displayed filter.
-1. Run `list`, then `edit 1 e/alex.new@u.nus.edu`, then
-   `add n/Alex Tan p/91234567 e/alex.one@u.nus.edu a/Bukit Timah`.<br>
-   Expected: both commands succeed. Restart to confirm the saved email changes.
-</tag></person></person></person></person></div> <nav id="page-nav" data-v-6b1b63d2><!--[--><div class="nav-component slim-scroll"><nav id="mb-page-nav" class="nav nav-pills flex-column my-0 small no-flex-wrap" data-v-6b1b63d2><!--[--><a class="nav-link py-1" href="#nusocietydesk-developer-guide">NUSocietyDesk Developer Guide‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#acknowledgements">Acknowledgements‎</a> <a class="nav-link py-1" href="#setting-up-getting-started">Setting up, getting started‎</a> <a class="nav-link py-1" href="#design">Design‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#architecture">Architecture‎</a> <a class="nav-link py-1" href="#ui-component">UI component‎</a> <a class="nav-link py-1" href="#logic-component">Logic component‎</a> <a class="nav-link py-1" href="#model-component">Model component‎</a> <a class="nav-link py-1" href="#storage-component">Storage component‎</a> <a class="nav-link py-1" href="#common-classes">Common classes‎</a></nav> <a class="nav-link py-1" href="#implementation">Implementation‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#viewing-the-offline-command-reference">Viewing the offline command reference‎</a> <a class="nav-link py-1" href="#recalling-submitted-commands">Recalling submitted commands‎</a> <a class="nav-link py-1" href="#archiving-and-activating-members">Archiving and activating members‎</a> <a class="nav-link py-1" href="#filtering-the-member-list-by-status">Filtering the member list by status‎</a></nav></nav><!--]--><!--v-if--></nav></div><!--]--><!--v-if--></nav> <div class="scroll-top-button fa-lg d-print-none" style="display:none;bottom:2%;right:2%;position:fixed;" aria-hidden="true"><!--[--><i class="fas fa-arrow-circle-up"></i><!--]--></div></div> <footer><div class="text-center"><small>[<span><strong>Powered by</strong></span> <img src="https://markbind.org/favicon.ico" width="30"> <a href="https://markbind.org/">MarkBind 7.2.1</a>, generated on Sat, 24 Oct 2026, 10:34:27 GMT+8]</small></div></footer><!--]--></div>
+provided for manual execution.</p> <h3 id="finding-members-by-tag">Finding members by tag<a class="fa fa-anchor" href="#finding-members-by-tag" onclick="event.stopPropagation()"></a></h3> <p>Use a disposable application folder in All view and an empty directory (<code class="hljs inline no-lang">clear</code> removes all members in that copy).
+Run these setup commands one at a time:</p> <pre><code class="hljs text"><span>add n/Tag Search Active e/tagactive@u.nus.edu t/Publicity t/Exco
+</span><span>add e/tagarchived@u.nus.edu t/publicity
+</span><span>add e/tagyear@u.nus.edu t/publicity2026
+</span><span>add e/tagshort@u.nus.edu t/pub
+</span><span>add n/Publicity Example e/taguntagged@u.nus.edu
+</span><span>find e/tagarchived
+</span><span>archive 1
+</span></code></pre><p>The directory now contains five members. The archived member has no name, phone or address.</p> <ol><li>Test cases: <code class="hljs inline no-lang">find t/publicity</code>, <code class="hljs inline no-lang">find t/PUBLICITY</code> and <code class="hljs inline no-lang">find t/pUbLiCiTy</code>.<br>
+Expected: Only <code class="hljs inline no-lang">tagactive@u.nus.edu</code> and <code class="hljs inline no-lang">tagarchived@u.nus.edu</code> are displayed; the count is two.
+The archived member retains the <code class="hljs inline no-lang">ARCHIVED</code> badge. The member named Publicity Example does not match because
+that member has no tags. The <code class="hljs inline no-lang">publicity2026</code> tag does not match.</li> <li>Test case: <code class="hljs inline no-lang">find t/pub</code>.<br>
+Expected: Only <code class="hljs inline no-lang">tagshort@u.nus.edu</code> is displayed; the count is one. Neither <code class="hljs inline no-lang">publicity</code> nor <code class="hljs inline no-lang">publicity2026</code> matches.</li> <li>Test cases: <code class="hljs inline no-lang">find t/public</code> and <code class="hljs inline no-lang">find t/volunteer</code>.<br>
+Expected: Each produces an empty list and a count of zero.</li> <li>Run <code class="hljs inline no-lang">find e/tagshort</code>, followed by <code class="hljs inline no-lang">find t/publicity</code>.<br>
+Expected: The second search finds both publicity members across the complete directory.</li> <li>After running <code class="hljs inline no-lang">find t/publicity</code>, try each of the following invalid commands:<br> <code class="hljs inline no-lang">find t/</code>, <code class="hljs inline no-lang">find t/publicity exco</code>, <code class="hljs inline no-lang">find t/publicity t/exco</code>, <code class="hljs inline no-lang">find t/publicity n/Tag</code>,
+<code class="hljs inline no-lang">find p/9123 t/publicity</code>, <code class="hljs inline no-lang">find t/publicity e/tagactive</code>, <code class="hljs inline no-lang">find Tag t/publicity</code> and <code class="hljs inline no-lang">find t/publicity!</code>.<br>
+Expected: Each shows an informative error, and the two publicity members remain displayed.
+Multiple values report &quot;Tag searches accept only one tag. Example: find t/publicity.&quot;</li> <li>Test cases: <code class="hljs inline no-lang">find N/</code>, <code class="hljs inline no-lang">find P/9123</code>, <code class="hljs inline no-lang">find E/tagactive</code>, <code class="hljs inline no-lang">find T/publicity</code>, <code class="hljs inline no-lang">find T/ E/</code>
+and <code class="hljs inline no-lang">find n/Tag T/publicity</code>.<br>
+Expected: Each reports &quot;Search prefixes must be lowercase. Use n/, p/, e/ or t/.&quot;
+The previous results remain displayed. Lowercase prefixes with uppercase values, such as <code class="hljs inline no-lang">find n/TAG</code>,
+<code class="hljs inline no-lang">find e/TAGACTIVE</code> and <code class="hljs inline no-lang">find t/PUBLICITY</code>, still work.</li> <li>Test cases: <code class="hljs inline no-lang">find G/</code>, <code class="hljs inline no-lang">find F/value</code>, <code class="hljs inline no-lang">find H/</code>, <code class="hljs inline no-lang">find g/value</code>, <code class="hljs inline no-lang">find name/Tag</code>
+and <code class="hljs inline no-lang">find n/Tag G/value</code>.<br>
+Expected: Each reports an unsupported search prefix and lists <code class="hljs inline no-lang">n/</code>, <code class="hljs inline no-lang">p/</code>, <code class="hljs inline no-lang">e/</code> and <code class="hljs inline no-lang">t/</code> as supported options.
+For <code class="hljs inline no-lang">G/</code>, the message is &quot;Unsupported search prefix: G/. Use n/, p/, e/ or t/.&quot;
+Previous results, member records and saved data remain unchanged.</li> <li>Test cases: <code class="hljs inline no-lang">find e/G/</code> and <code class="hljs inline no-lang">find e/name/Tag</code>.<br>
+Expected: Both are valid literal email-substring searches with zero matches in the test directory.
+The slashes inside the attached values do not trigger prefix errors.</li> <li>Run <code class="hljs inline no-lang">list</code>, then close and reopen the app.<br>
+Expected: All five records retain their contact details, tags and status. Searching has not changed member data.
+The application log contains an <code class="hljs inline no-lang">INFO</code> completion message with the match count for each successful search.</li></ol> <p>Automated tests also cover tag values and prefixes separated by tabs or line breaks, and verify that rejected
+searches leave saved data unchanged. The GUI checks above are provided for manual execution.</p> <h3 id="finding-members-by-email">Finding members by email<a class="fa fa-anchor" href="#finding-members-by-email" onclick="event.stopPropagation()"></a></h3> <ol><li><p>Search using the sample members from a fresh launch with no data file.</p> <ol><li><p>Test case: <code class="hljs inline no-lang">find e/ALEX</code><br>
+Expected: Alex Yeoh is displayed and the result count is one.</p></li> <li><p>Test case: <code class="hljs inline no-lang">find e/ALExYeOh@U.NUS.EDU</code><br>
+Expected: Alex Yeoh is displayed and the result count is one.</p></li> <li><p>Test case: <code class="hljs inline no-lang">find e/@u.nus.edu</code><br>
+Expected: All sample members are displayed and the count equals the directory size.</p></li> <li><p>Test case: <code class="hljs inline no-lang">find e/no-such-email</code><br>
+Expected: The list is empty and the result count is zero.</p></li></ol></li> <li><p>Reject invalid email searches after running <code class="hljs inline no-lang">find e/ALEX</code>.</p> <ol><li>Test cases: <code class="hljs inline no-lang">find e/</code>, <code class="hljs inline no-lang">find e/alex david</code>, <code class="hljs inline no-lang">find e/alex e/david</code>, <code class="hljs inline no-lang">find e/alex n/Alex</code>,
+<code class="hljs inline no-lang">find e/alex p/9103</code> and <code class="hljs inline no-lang">find Alex e/alex</code><br>
+Expected: An informative error is displayed. Alex Yeoh remains displayed and member records are unchanged.</li></ol></li> <li><p>Search the complete directory after a previous search.</p> <ol><li>Test case: <code class="hljs inline no-lang">find n/David</code>, followed by <code class="hljs inline no-lang">find e/ALEX</code><br>
+Expected: The email search displays Alex Yeoh even though he was absent from the preceding results.</li></ol></li></ol> <h3 id="deleting-a-person">Deleting a person<a class="fa fa-anchor" href="#deleting-a-person" onclick="event.stopPropagation()"></a></h3> <ol><li><p>Deleting a person while all persons are being shown</p> <ol><li><p>Prerequisites: Select All view, then list all persons using <code class="hljs inline no-lang">list</code>, with multiple persons in the list.</p></li> <li><p>Test case: <code class="hljs inline no-lang">delete 1</code><br>
+Expected: The first contact is deleted from the list. The status message shows the deleted contact&#39;s details.</p></li> <li><p>Test case: <code class="hljs inline no-lang">delete 0</code><br>
+Expected: No person is deleted. The status message shows error details.</p></li> <li><p>Other incorrect delete commands to try: <code class="hljs inline no-lang">delete</code>, <code class="hljs inline no-lang">delete x</code>, <code class="hljs inline no-lang">...</code> (where x is larger than the list size)<br>
+Expected: Similar to previous.</p></li></ol></li> <li><p><em>{ more test cases … }</em></p></li></ol> <h3 id="tag-identity-and-editing">Tag identity and editing<a class="fa fa-anchor" href="#tag-identity-and-editing" onclick="event.stopPropagation()"></a></h3> <ol><li><p>In a disposable application folder, confirm saving is enabled and <code class="hljs inline no-lang">tagtest@u.nus.edu</code> is absent.
+Add a person with case variants of a tag.</p> <ol><li><p>Test case: <code class="hljs inline no-lang">add n/Tag Test p/91234567 e/tagtest@u.nus.edu a/Kent Ridge t/Publicity t/publicity t/Exco</code><br>
+Expected: The card displays exactly two tags, <code class="hljs inline no-lang">exco</code> and <code class="hljs inline no-lang">publicity</code>, in lowercase.</p></li> <li><p>Run <code class="hljs inline no-lang">list</code> and note the displayed index of Tag Test. In the following commands, replace <code class="hljs inline no-lang">INDEX</code> with that index.</p></li> <li><p>Test case: <code class="hljs inline no-lang">edit INDEX p/98765432</code><br>
+Expected: The phone number changes and both tags remain.</p></li> <li><p>Test cases: <code class="hljs inline no-lang">edit INDEX t/Publicity</code>, <code class="hljs inline no-lang">edit INDEX t/</code>, and <code class="hljs inline no-lang">edit INDEX a/New Address t/Publicity</code><br>
+Expected: Each command is rejected with guidance to use <code class="hljs inline no-lang">tag</code> or <code class="hljs inline no-lang">untag</code>. All person details remain
+unchanged.</p></li></ol></li> <li><p>Add and remove individual tags using Tag Test from the previous steps.</p> <ol><li><p>Test case: <code class="hljs inline no-lang">tag INDEX t/Volunteer</code><br>
+Expected: The member has <code class="hljs inline no-lang">exco</code>, <code class="hljs inline no-lang">publicity</code>, and <code class="hljs inline no-lang">volunteer</code>; contact details and other members remain unchanged.</p></li> <li><p>Test case: <code class="hljs inline no-lang">tag INDEX t/VOLUNTEER</code><br>
+Expected: Success with the same three tags and no duplicate.</p></li> <li><p>Test case: <code class="hljs inline no-lang">untag INDEX t/PUBLICITY</code><br>
+Expected: Only <code class="hljs inline no-lang">exco</code> and <code class="hljs inline no-lang">volunteer</code> remain.</p></li> <li><p>Repeat <code class="hljs inline no-lang">untag INDEX t/publicity</code>.<br>
+Expected: Success with the same two tags.</p></li> <li><p>Close and reopen the app.<br>
+Expected: The member still has only <code class="hljs inline no-lang">exco</code> and <code class="hljs inline no-lang">volunteer</code>.</p></li> <li><p>Remove the remaining tags with <code class="hljs inline no-lang">untag INDEX t/Exco</code> and <code class="hljs inline no-lang">untag INDEX t/Volunteer</code>.<br>
+Expected: The member has no tags and retains all contact details.</p></li></ol></li> <li><p>Check displayed indices and invalid input.</p> <ol><li><p>Run <code class="hljs inline no-lang">find Tag</code>, note Tag Test&#39;s displayed index, and run <code class="hljs inline no-lang">tag INDEX t/Volunteer</code> using that index.<br>
+Expected: Only Tag Test gains the tag; the search clears and the selected status view remains.</p></li> <li><p>Run <code class="hljs inline no-lang">find Tag</code> again and run <code class="hljs inline no-lang">untag INDEX t/Volunteer</code> using the new displayed index.<br>
+Expected: Only Tag Test loses the tag; the search clears and the selected status view remains.</p></li> <li><p>For each of <code class="hljs inline no-lang">tag</code> and <code class="hljs inline no-lang">untag</code>, try arguments <code class="hljs inline no-lang">0 t/Volunteer</code>, <code class="hljs inline no-lang">1 2 t/Volunteer</code>, <code class="hljs inline no-lang">1</code>, <code class="hljs inline no-lang">1 t/</code>,
+<code class="hljs inline no-lang">1 t/Publicity Team</code>, <code class="hljs inline no-lang">1 t/Volunteer t/Exco</code>, and an index larger than the displayed list.<br>
+Expected: Each command is rejected; records and the current filter remain unchanged.</p></li></ol></li> <li><p>Load tags from an existing saved record.</p> <ol><li><p>Close the app in the disposable test directory and back up <code class="hljs inline no-lang">data/addressbook.json</code>.
+Set Tag Test&#39;s saved tags to <code class="hljs inline no-lang">[&quot;Publicity&quot;, &quot;publicity&quot;, &quot;Exco&quot;]</code>, leaving all other JSON unchanged.</p></li> <li><p>Relaunch the app.<br>
+Expected: The card displays only <code class="hljs inline no-lang">exco</code> and <code class="hljs inline no-lang">publicity</code>.</p></li> <li><p>Execute <code class="hljs inline no-lang">list</code> and inspect the saved record.<br>
+Expected: It contains exactly two tag names, <code class="hljs inline no-lang">exco</code> and <code class="hljs inline no-lang">publicity</code>, regardless of their order in the file.</p></li></ol></li></ol> <h3 id="saving-data">Saving data<a class="fa fa-anchor" href="#saving-data" onclick="event.stopPropagation()"></a></h3> <ol><li><p>Dealing with invalid data files</p> <ol><li>In a disposable test directory, run <code class="hljs inline no-lang">list</code> to create <code class="hljs inline no-lang">data/addressbook.json</code>, close the app, and back it up.</li> <li>Give two saved records the emails <code class="hljs inline no-lang">Alex@U.NUS.EDU</code> and <code class="hljs inline no-lang">alex@u.nus.edu</code>, then relaunch.<br>
+Expected: the first valid occurrence and other valid members load. A warning shows the file path,
+recovered-member count, and original positions of the duplicate records. The file remains unchanged.</li> <li>Run <code class="hljs inline no-lang">list</code>, <code class="hljs inline no-lang">find e/alex</code>, and <code class="hljs inline no-lang">help</code>, then try <code class="hljs inline no-lang">clear</code> and <code class="hljs inline no-lang">delete 1</code>.<br>
+Expected: viewing, searching, and help work. Changes are rejected before modifying any records, with
+instructions to repair the file and restart. The file remains unchanged, including after <code class="hljs inline no-lang">exit</code>.</li> <li>Correct the second email and relaunch.<br>
+Expected: all records load with lowercase emails, no warning appears, and normal saving resumes.</li> <li>Repeat with malformed JSON, a null record, or an email with surrounding whitespace.<br>
+Expected: malformed JSON produces a protected empty view. A null record or invalid email is skipped while
+other valid records load. Warnings identify errors, and commands cannot overwrite any of these files.
+A missing file still starts with sample members; a valid empty file stays empty and allows normal saving.</li></ol></li></ol> <h3 id="email-domain-validation">Email domain validation<a class="fa fa-anchor" href="#email-domain-validation" onclick="event.stopPropagation()"></a></h3> <ol><li>Add <code class="hljs inline no-lang">add n/Nus Test p/91234567 e/Nus.Test@U.NUS.EDU a/Kent Ridge</code>.<br>
+Expected: success with <code class="hljs inline no-lang">nus.test@u.nus.edu</code> in the result and card. Restart after saving to confirm persistence.</li> <li>Using its displayed index, try edits with <code class="hljs inline no-lang">e/nus.test</code>, <code class="hljs inline no-lang">e/nus.test@gmail.com</code>, <code class="hljs inline no-lang">e/nus.test@nus.edu</code>,
+<code class="hljs inline no-lang">e/nus.test@sub.u.nus.edu</code>, <code class="hljs inline no-lang">e/nus.test@u.nus.edu.com</code>, and <code class="hljs inline no-lang">e/nus..test@u.nus.edu</code>.<br>
+Expected: each shows the shared email-constraints message. Records, filter, and saved file stay unchanged.</li> <li>Try the same invalid emails in otherwise valid <code class="hljs inline no-lang">add</code> commands.<br>
+Expected: the same rejection without adding members.</li> <li>Add a different member with <code class="hljs inline no-lang">e/nus.test+society@u.nus.edu</code>.<br>
+Expected: success because aliases remain distinct. New domains are never appended or substituted automatically.</li></ol> <h3 id="email-identity">Email identity<a class="fa fa-anchor" href="#email-identity" onclick="event.stopPropagation()"></a></h3> <ol><li>On a fresh launch with no data file, run <code class="hljs inline no-lang">find Morgan</code>.<br>
+Expected: both sample members named Morgan Lee appear. They share a phone number but have different emails.</li> <li>In a disposable directory with <code class="hljs inline no-lang">data/addressbook.json</code> containing <code class="hljs inline no-lang">{&quot;persons&quot;:[]}</code>, run:
+<ul><li><code class="hljs inline no-lang">add n/Alex Tan p/91234567 e/Alex.One@U.NUS.EDU a/Kent Ridge</code></li> <li><code class="hljs inline no-lang">add n/Alex Tan p/91234567 e/alex.two@u.nus.edu a/Clementi</code>
+Expected: both succeed and show lowercase emails.</li></ul></li> <li>Run <code class="hljs inline no-lang">edit 2 e/ALEX.ONE@U.NUS.EDU</code>.<br>
+Expected: <code class="hljs inline no-lang">Email &quot;alex.one@u.nus.edu&quot; is already used by &quot;Alex Tan&quot;. No changes were made.</code></li> <li>Run <code class="hljs inline no-lang">edit 1 n/Alexander Tan e/ALEX.ONE@U.NUS.EDU</code>, then <code class="hljs inline no-lang">find Alex</code>, then
+<code class="hljs inline no-lang">edit 1 e/alex.one@u.nus.edu</code>.<br>
+Expected: the rename succeeds; <code class="hljs inline no-lang">find Alex</code> shows only Alex Tan. The final edit fails because that email
+belongs to Alexander Tan outside the displayed filter.</li> <li>Run <code class="hljs inline no-lang">list</code>, then <code class="hljs inline no-lang">edit 1 e/alex.new@u.nus.edu</code>, then
+<code class="hljs inline no-lang">add n/Alex Tan p/91234567 e/alex.one@u.nus.edu a/Bukit Timah</code>.<br>
+Expected: both commands succeed. Restart to confirm the saved email changes.</li></ol></div> <nav id="page-nav" data-v-6b1b63d2><!--[--><div class="nav-component slim-scroll"><nav id="mb-page-nav" class="nav nav-pills flex-column my-0 small no-flex-wrap" data-v-6b1b63d2><!--[--><a class="nav-link py-1" href="#nusocietydesk-developer-guide">NUSocietyDesk Developer Guide‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#acknowledgements">Acknowledgements‎</a> <a class="nav-link py-1" href="#setting-up-getting-started">Setting up, getting started‎</a> <a class="nav-link py-1" href="#design">Design‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#architecture">Architecture‎</a> <a class="nav-link py-1" href="#ui-component">UI component‎</a> <a class="nav-link py-1" href="#logic-component">Logic component‎</a> <a class="nav-link py-1" href="#model-component">Model component‎</a> <a class="nav-link py-1" href="#storage-component">Storage component‎</a> <a class="nav-link py-1" href="#common-classes">Common classes‎</a></nav> <a class="nav-link py-1" href="#implementation">Implementation‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#viewing-the-offline-command-reference">Viewing the offline command reference‎</a> <a class="nav-link py-1" href="#recalling-submitted-commands">Recalling submitted commands‎</a> <a class="nav-link py-1" href="#archiving-and-activating-members">Archiving and activating members‎</a> <a class="nav-link py-1" href="#filtering-the-member-list-by-status">Filtering the member list by status‎</a> <a class="nav-link py-1" href="#recording-a-member-with-incomplete-contact-details">Recording a member with incomplete contact details‎</a> <a class="nav-link py-1" href="#finding-members-by-contact-details-or-tag">Finding members by contact details or tag‎</a> <a class="nav-link py-1" href="#importing-member-directories-from-csv">Importing member directories from CSV‎</a> <a class="nav-link py-1" href="#saving-member-data-safely">Saving member data safely‎</a> <a class="nav-link py-1" href="#proposed-undo-redo-feature">[Proposed] Undo/redo feature‎</a> <a class="nav-link py-1" href="#proposed-data-archiving">[Proposed] Data archiving‎</a></nav> <a class="nav-link py-1" href="#documentation-logging-testing-dev-ops">Documentation, logging, testing, dev-ops‎</a> <a class="nav-link py-1" href="#appendix-requirements">Appendix: Requirements‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#product-scope">Product scope‎</a> <a class="nav-link py-1" href="#user-stories">User stories‎</a> <a class="nav-link py-1" href="#use-cases">Use cases‎</a> <a class="nav-link py-1" href="#non-functional-requirements">Non-Functional Requirements‎</a> <a class="nav-link py-1" href="#glossary">Glossary‎</a></nav> <a class="nav-link py-1" href="#appendix-instructions-for-manual-testing">Appendix: Instructions for manual testing‎</a> <nav class="nav nav-pills flex-column my-0 nested no-flex-wrap"><a class="nav-link py-1" href="#launch-and-shutdown">Launch and shutdown‎</a> <a class="nav-link py-1" href="#viewing-command-help-and-the-online-guide">Viewing command help and the online guide‎</a> <a class="nav-link py-1" href="#switching-between-all-active-and-archived-views">Switching between All, Active and Archived views‎</a> <a class="nav-link py-1" href="#recalling-commands-and-restoring-drafts">Recalling commands and restoring drafts‎</a> <a class="nav-link py-1" href="#recording-and-completing-an-email-only-member">Recording and completing an email-only member‎</a> <a class="nav-link py-1" href="#importing-member-directories">Importing member directories‎</a> <a class="nav-link py-1" href="#recovering-from-a-failed-save">Recovering from a failed save‎</a> <a class="nav-link py-1" href="#combining-search-conditions">Combining search conditions‎</a> <a class="nav-link py-1" href="#finding-members-by-name">Finding members by name‎</a> <a class="nav-link py-1" href="#finding-members-by-phone-number">Finding members by phone number‎</a> <a class="nav-link py-1" href="#finding-members-by-tag">Finding members by tag‎</a> <a class="nav-link py-1" href="#finding-members-by-email">Finding members by email‎</a> <a class="nav-link py-1" href="#deleting-a-person">Deleting a person‎</a> <a class="nav-link py-1" href="#tag-identity-and-editing">Tag identity and editing‎</a> <a class="nav-link py-1" href="#saving-data">Saving data‎</a> <a class="nav-link py-1" href="#email-domain-validation">Email domain validation‎</a> <a class="nav-link py-1" href="#email-identity">Email identity‎</a></nav></nav><!--]--><!--v-if--></nav></div><!--]--><!--v-if--></nav> <div class="scroll-top-button fa-lg d-print-none" style="display:none;bottom:2%;right:2%;position:fixed;" aria-hidden="true"><!--[--><i class="fas fa-arrow-circle-up"></i><!--]--></div></div> <footer><div class="text-center"><small>[<span><strong>Powered by</strong></span> <img src="https://markbind.org/favicon.ico" width="30"> <a href="https://markbind.org/">MarkBind 7.2.1</a>, generated on Sat, 24 Oct 2026, 16:14:46 GMT+8]</small></div></footer><!--]--></div>
 </body><script src="/tp/markbind/js/bootstrap-utility.min.js"></script>
 <script src="/tp/markbind/js/polyfill.min.js"></script>
 <script src="/tp/markbind/js/vue.global.prod.min.js"></script>
