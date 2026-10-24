@@ -36,7 +36,7 @@ public class EmailIdentityIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        dataFile = testFolder.resolve("addressbook.json");
+        dataFile = testFolder.resolve("nusocietydesk.json");
         storage = new JsonAddressBookStorage(dataFile);
         model = new ModelManager(new AddressBook(), new UserPrefs());
         logic = new LogicManager(model, new StorageManager(storage,
