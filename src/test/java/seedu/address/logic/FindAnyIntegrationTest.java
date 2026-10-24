@@ -41,7 +41,7 @@ public class FindAnyIntegrationTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        savedFile = temporaryFolder.resolve("addressBook.json");
+        savedFile = temporaryFolder.resolve("nusocietydesk.json");
         JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(savedFile);
         StorageManager storage = new StorageManager(addressBookStorage,
                 new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json")));

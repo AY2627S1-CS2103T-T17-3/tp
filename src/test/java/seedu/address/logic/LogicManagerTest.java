@@ -61,7 +61,7 @@ public class LogicManagerTest {
     @BeforeEach
     public void setUp() {
         JsonAddressBookStorage addressBookStorage =
-                new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"));
+                new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"));
         JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"));
         StorageManager storage = new StorageManager(addressBookStorage, userPrefsStorage);
         logic = new LogicManager(model, storage);
@@ -105,13 +105,13 @@ public class LogicManagerTest {
             assertEquals(displayedMembers, model.getFilteredPersonList());
             assertSame(search, model.getFilteredPersonListPredicate());
             assertEquals(status, model.getStatusFilter());
-            assertFalse(Files.exists(temporaryFolder.resolve("addressBook.json")));
+            assertFalse(Files.exists(temporaryFolder.resolve("nusocietydesk.json")));
         }
     }
 
     @Test
     public void execute_help_skipsFailingSaveAndPreservesExistingFile() throws Exception {
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         Files.writeString(savedFile, "{\"persons\":[]}");
         byte[] originalData = Files.readAllBytes(savedFile);
         JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(savedFile) {
@@ -131,7 +131,7 @@ public class LogicManagerTest {
 
     @Test
     public void execute_help_remainsAvailableWhenSavingIsDisabled() throws Exception {
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         Files.writeString(savedFile, "invalid JSON");
         JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(savedFile);
         addressBookStorage.loadAddressBook();
@@ -148,7 +148,7 @@ public class LogicManagerTest {
     public void execute_view_changesSessionOnlyWithoutSaving() throws Exception {
         Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
         model.addPerson(person);
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
 
         assertEquals(new CommandResult("Switched to archived view."), logic.execute("view archived"));
         assertEquals(StatusFilter.ARCHIVED, logic.getStatusFilter());
@@ -166,7 +166,7 @@ public class LogicManagerTest {
     public void execute_view_remainsAvailableWhenSavingIsDisabled() throws Exception {
         Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
         model.addPerson(person);
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         Files.writeString(savedFile, "invalid JSON");
         JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(savedFile);
         addressBookStorage.loadAddressBook();
@@ -183,7 +183,7 @@ public class LogicManagerTest {
     public void execute_archiveAndActivate_persistsStatus() throws Exception {
         Person person = new PersonBuilder().withEmail("member@u.nus.edu").build();
         model.addPerson(person);
-        JsonAddressBookStorage savedData = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"));
+        JsonAddressBookStorage savedData = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"));
 
         logic.execute("archive 1");
         assertEquals(Status.ARCHIVED, model.getFilteredPersonList().get(0).getStatus());
@@ -206,7 +206,7 @@ public class LogicManagerTest {
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
         assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
         assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(model.getAddressBook(), savedAddressBook);
     }
@@ -226,7 +226,7 @@ public class LogicManagerTest {
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 2), result.getFeedbackToUser());
         assertEquals(List.of(alice, bob), logic.getFilteredPersonList());
         assertEquals(List.of(alice, bob), model.getAddressBook().getPersonList());
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(model.getAddressBook(), savedAddressBook);
     }
@@ -239,7 +239,7 @@ public class LogicManagerTest {
         model.addPerson(bob);
         logic.execute("find n/Alice");
         assertEquals(List.of(alice), logic.getFilteredPersonList());
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         String savedData = Files.readString(savedFile);
 
         for (String command : List.of("find n/Alice Bob", "find n/Alice  Bob", "find n/Alice\tBob",
@@ -261,7 +261,7 @@ public class LogicManagerTest {
         CommandResult result = logic.execute("find t/PUBLICITY");
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
         assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
-        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         String savedData = Files.readString(savedFile);
 
         for (String command : List.of("find t/", "find t/publicity exco", "find t/publicity t/exco",
@@ -331,7 +331,7 @@ public class LogicManagerTest {
 
         assertCommandSuccess("tag 1 t/Volunteer", expectedMessage, expectedModel);
         assertCommandSuccess("tag 1 t/VOLUNTEER", expectedMessage, expectedModel);
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
     }
@@ -348,7 +348,7 @@ public class LogicManagerTest {
 
         assertCommandSuccess("untag 1 t/publicity", expectedMessage, expectedModel);
         assertCommandSuccess("untag 1 t/PUBLICITY", expectedMessage, expectedModel);
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("addressBook.json"))
+        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
     }

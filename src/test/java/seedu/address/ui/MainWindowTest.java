@@ -48,7 +48,7 @@ public class MainWindowTest {
     @Test
     public void help_displaysReferenceBelowGuideLinkInSharedPopup() throws Exception {
         JavaFxTestUtil.initialize();
-        Path dataFile = temporaryFolder.resolve("addressBook.json");
+        Path dataFile = temporaryFolder.resolve("nusocietydesk.json");
         Logic logic = new LogicManager(new ModelManager(), new StorageManager(new JsonAddressBookStorage(dataFile),
                 new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"))));
 
@@ -151,7 +151,7 @@ public class MainWindowTest {
         addressBook.addPerson(active);
         addressBook.addPerson(archived);
         ModelManager model = new ModelManager(addressBook, new UserPrefs());
-        Path dataFile = temporaryFolder.resolve("addressBook.json");
+        Path dataFile = temporaryFolder.resolve("nusocietydesk.json");
         Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
                 new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"))));
 

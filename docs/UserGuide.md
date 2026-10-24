@@ -652,7 +652,7 @@ If the data file cannot be fully loaded, saving and changes to members are disab
 
 ### Editing the data file
 
-AddressBook data is saved automatically as a JSON file `[JAR file location]/data/addressbook.json`. Advanced users are welcome to update data directly by editing that data file.
+NUSocietyDesk data is saved automatically as a JSON file `[JAR file location]/data/nusocietydesk.json`. Advanced users are welcome to update data directly by editing that data file.
 
 Missing names, phones, and addresses are saved as JSON `null`, for example:
 

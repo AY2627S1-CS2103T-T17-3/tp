@@ -49,7 +49,7 @@ public class ImportIntegrationTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        dataFile = testFolder.resolve("addressbook.json");
+        dataFile = testFolder.resolve("nusocietydesk.json");
         storage = new JsonAddressBookStorage(dataFile);
         model = new ModelManager(new AddressBook(), new UserPrefs());
         logic = createLogic(storage);

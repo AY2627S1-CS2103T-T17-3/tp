@@ -192,6 +192,8 @@ The `Storage` component,
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
 
+`MainApp` configures the member data file as `data/nusocietydesk.json` and passes this path to storage and the UI.
+
 The JSON root, property names and email string are unchanged. `JsonAdaptedPerson` writes absent name, phone and
 address fields as explicit `null` values. Missing properties and explicit nulls load as empty optionals; supplied
 strings still use the existing validators without trimming. Empty or whitespace-only strings are invalid.
@@ -894,7 +896,7 @@ testers are expected to do more *exploratory* testing.
 
 ### Switching between All, Active and Archived views
 
-Use a disposable application folder with `data/addressbook.json` containing `{"persons":[]}` before launch.
+Use a disposable application folder with `data/nusocietydesk.json` containing `{"persons":[]}` before launch.
 
 1. Add `add e/active@u.nus.edu` and `add e/former@u.nus.edu`, then run `archive 2`.<br>
    Expected: The button reads `ALL`. Both members appear; the second has an `ARCHIVED` badge.
@@ -954,7 +956,7 @@ history transitions and JavaFX event handling without driving a native keyboard.
 
 ### Recording and completing an email-only member
 
-Use a disposable application folder. Before launching, create `data/addressbook.json` containing
+Use a disposable application folder. Before launching, create `data/nusocietydesk.json` containing
 `{"persons":[]}`. A missing file would load sample members instead.
 
 1. Run `add e/Alex@U.NUS.EDU`.<br>
@@ -1021,7 +1023,7 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
    Expected: Format errors explain the command syntax; a missing file gives a file-reading error.
    Member records, current search results, and saved JSON remain unchanged.
 
-1. Test case: `import data/addressbook.json`, using the app's configured JSON save file.<br>
+1. Test case: `import data/nusocietydesk.json`, using the app's configured JSON save file.<br>
    Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
    and the original JSON remain unchanged.
 
@@ -1031,23 +1033,23 @@ These GUI checks require manual execution. `ImportIntegrationTest` covers persis
 ### Recovering from a failed save
 
 Use the current application build in a disposable folder on a filesystem that supports atomic replacement.
-Use the default data-file location, `data/addressbook.json`, and keep a separate backup of that file.
+Use the default data-file location, `data/nusocietydesk.json`, and keep a separate backup of that file.
 The following steps use a file manager and do not require a particular operating system or shell.
 
 1. Launch in All view with at least two members, including one matching `find e/alex` and one that does not. Confirm startup
    has not disabled saving and `retry@u.nus.edu` is absent. Run `find e/alex` and note the displayed records.
-1. Keep the app running. In a file manager, rename `data/addressbook.json` to `data/addressbook.saved.json`.
-   Create a folder named `addressbook.json` inside `data`, and place a text file named `keep.txt` in that folder.
+1. Keep the app running. In a file manager, rename `data/nusocietydesk.json` to `data/nusocietydesk.saved.json`.
+   Create a folder named `nusocietydesk.json` inside `data`, and place a text file named `keep.txt` in that folder.
    The nonempty folder prevents the app from replacing the destination with a JSON file.
 1. In the app, run `add e/retry@u.nus.edu`.<br>
    Expected: Saving fails; feedback says records and the previous search filter were restored. The original search
    results remain visible. Do not run another command until the file path is restored; verify the missing member
    with `list` after restoration. No success confirmation is displayed.
-1. Compare `data/addressbook.saved.json` with the backup.<br>
+1. Compare `data/nusocietydesk.saved.json` with the backup.<br>
    Expected: The original JSON is unchanged, the test folder and `keep.txt` still exist, and there is no leftover
    `.nusocietydesk-*.tmp` file in `data` (enable hidden-file display if necessary).
-1. Remove only the test folder `data/addressbook.json` and its `keep.txt`, then rename `data/addressbook.saved.json`
-   back to `data/addressbook.json`. Restore this path before restarting the app.
+1. Remove only the test folder `data/nusocietydesk.json` and its `keep.txt`, then rename `data/nusocietydesk.saved.json`
+   back to `data/nusocietydesk.json`. Restore this path before restarting the app.
    Run `list` to confirm that `retry@u.nus.edu` was not added, then run `find e/alex` to restore the test's search.
 1. Retry `add e/retry@u.nus.edu`, then close and restart the app.<br>
    Expected: The add succeeds, all members are displayed, and exactly one new member survives restarting.
@@ -1099,7 +1101,7 @@ add n/Alison Tan e/namealison@u.nus.edu
    Expected: Alice Tan and Bob Lee are displayed; the count is two. Either keyword can match, in any order.
 1. Test cases: `find n/Ali` and `find Ali`.<br>
    Expected: No members are displayed; the count is zero. Partial words match neither Alice nor Alison.
-1. Run `find n/Alice`, then record the displayed result and make a copy of `data/addressbook.json`.<br>
+1. Run `find n/Alice`, then record the displayed result and make a copy of `data/nusocietydesk.json`.<br>
    Try `find n/Alice Bob`, `find n/Alice  Bob` and `find n/Alice Alice`.<br>
    Expected: Each reports "Prefixed name searches accept only one keyword. Use find Alice Bob to match names
    containing Alice OR Bob." Alice Tan remains the only displayed member, and the saved JSON matches the copy.
@@ -1144,7 +1146,7 @@ number, including the middle or end.
 1. Run `find 9123`, followed by `find p/9123`.<br>
    Expected: The first displays only 9123 Member because unprefixed searches consider names.
    The second displays Alice Tan and Bob Lee, searching the complete directory despite the earlier filter.
-1. After running `find p/9123`, make a copy of `data/addressbook.json` and try `find p/9123 1234`.<br>
+1. After running `find p/9123`, make a copy of `data/nusocietydesk.json` and try `find p/9123 1234`.<br>
    Expected: The error is "Phone searches accept only one substring. Search each substring in a separate find command."
    Alice Tan and Bob Lee remain displayed, and the saved JSON matches the copy.
 1. Test cases: `find p/abc`, `find p/91a3`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.<br>
@@ -1308,7 +1310,7 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 1. Load tags from an existing saved record.
 
-   1. Close the app in the disposable test directory and back up `data/addressbook.json`.
+   1. Close the app in the disposable test directory and back up `data/nusocietydesk.json`.
       Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`, leaving all other JSON unchanged.
 
    1. Relaunch the app.<br>
@@ -1321,7 +1323,7 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 1. Dealing with invalid data files
 
-   1. In a disposable test directory, run `list` to create `data/addressbook.json`, close the app, and back it up.
+   1. In a disposable test directory, run `list` to create `data/nusocietydesk.json`, close the app, and back it up.
    1. Give two saved records the emails `Alex@U.NUS.EDU` and `alex@u.nus.edu`, then relaunch.<br>
       Expected: the first valid occurrence and other valid members load. A warning shows the file path,
       recovered-member count, and original positions of the duplicate records. The file remains unchanged.
@@ -1351,7 +1353,7 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
 1. On a fresh launch with no data file, run `find Morgan`.<br>
    Expected: both sample members named Morgan Lee appear. They share a phone number but have different emails.
-1. In a disposable directory with `data/addressbook.json` containing `{"persons":[]}`, run:
+1. In a disposable directory with `data/nusocietydesk.json` containing `{"persons":[]}`, run:
    * `add n/Alex Tan p/91234567 e/Alex.One@U.NUS.EDU a/Kent Ridge`
    * `add n/Alex Tan p/91234567 e/alex.two@u.nus.edu a/Clementi`
    Expected: both succeed and show lowercase emails.
