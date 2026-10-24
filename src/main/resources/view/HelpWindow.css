@@ -17,3 +17,9 @@
 #helpMessageContainer {
     -fx-background-color: derive(#1d1d1d, 20%);
 }
+
+#commandReference {
+    -fx-text-fill: white;
+    -fx-font-size: 13pt;
+    -fx-control-inner-background: derive(#1d1d1d, 20%);
+}

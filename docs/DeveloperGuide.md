@@ -224,6 +224,37 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
+### Viewing the offline command reference
+
+`AddressBookParser` delegates help arguments to `HelpCommandParser`, which implements `Parser<HelpCommand>`.
+The help parser creates a command only when its trimmed arguments are empty; surrounding whitespace is allowed.
+Extra arguments, such as `help 1`, produce the existing invalid-command-format error with `HelpCommand.MESSAGE_USAGE`
+before any command executes or the Help window opens. Other commands retain their argument handling.
+`HelpCommand` provides a single bundled `MESSAGE_HELP` string containing a description, usage, and example for each
+of the 16 implemented commands, including all five `find` forms and a notation legend. Examples are text only and
+are never executed.
+The command does not read or change the model. It remains read-only for startup recovery and overrides
+`requiresSave()` to return false, so `LogicManager` also skips saving in normal sessions, including when saving
+would fail. No model, storage-schema, or preference changes are needed.
+
+The command returns `SHOWING_HELP_MESSAGE` (`Opened help window.`) with `showHelp` true and `exit` false.
+`MainWindow` displays this short acknowledgement through `ResultDisplay` and opens or focuses the existing
+`HelpWindow`. The window sets its read-only, wrapping `commandReference` text area to `HelpCommand.MESSAGE_HELP`.
+Its vertical layout keeps the existing User Guide message and Copy URL button above the scrollable reference.
+The Help window is resizable, with a default content size of 760 by 560 pixels and minimum window dimensions of
+450 by 300 pixels. Submissions retain existing command-history behavior.
+
+F1 and Help → Help open the same window with both the guide link and the reference. The User Guide message and
+Copy URL action are unchanged, and the URL is not repeated in the reference. There is no browser integration,
+bundled full guide, new dependency, or persisted help state. The known minimized-help-window behavior remains unchanged.
+
+`HelpCommandTest` checks the exact reference and parses its examples without executing them. `HelpCommandParserTest`
+covers empty and whitespace arguments, rejected arguments, and null input. `AddressBookParserTest` checks dispatch
+and existing error handling. `LogicManagerTest` checks unchanged records, search and status, missing and existing
+files, a failing save implementation, and startup recovery. `MainWindowTest` checks the short acknowledgement,
+reference placement below the guide link, wrapping, popup reuse, and F1/menu access with an unsent draft.
+It also checks that rejected help arguments retain editable input with error styling and do not open a popup.
+
 ### Recalling submitted commands
 
 #### UI ownership and history state
@@ -840,6 +871,28 @@ testers are expected to do more *exploratory* testing.
        Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
+
+### Viewing command help and the online guide
+
+1. Run `help` with Internet access unavailable.<br>
+   Expected: The Help window shows the User Guide link at the top, followed by descriptions, usage, and examples
+   for all 16 commands, including all five `find` forms. No browser opens. The command box clears, and the result
+   pane shows `Opened help window.`.
+1. Resize the Help window, scroll to the last entry and notation legend, select text, and copy it.<br>
+   Expected: The entire reference is readable, long lines wrap, and the link and Copy URL button remain above it.
+1. Run `help` again after scrolling to the end.<br>
+   Expected: It focuses the same Help window with the complete reference; no example executes and the directory is unchanged.
+1. Close the Help window, then try `help 1`, `help add`, and `help --guide`.<br>
+   Expected: Each reports an invalid-command-format error with help usage guidance, retains the input with error styling,
+   and does not open the Help window. Running ` help ` with surrounding spaces still opens it.
+1. Select a status view and search for a member, then run `help`.<br>
+   Expected: The current search, status view, displayed members, and saved data are unchanged.
+1. Type an unsent draft, select part of it, and press F1; repeat using Help → Help.<br>
+   Expected: The existing guide URL and Copy URL button appear above the command reference. The draft and its selection
+   remain unchanged. Copy URL still supplies the full online guide's address. Restore the window manually if minimized.
+1. Use the startup-recovery and failed-save setups documented below, then run `help`.<br>
+   Expected: Help still succeeds, does not save, and preserves the existing data file. A missing data file is not
+   created by help. Commands that change members retain their existing recovery and save-failure behavior.
 
 ### Switching between All, Active and Archived views
 

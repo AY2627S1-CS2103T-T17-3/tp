@@ -27,7 +27,7 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
    app has an **ALL** status button and uses **ARCHIVED** instead of **FORMER** on member cards.<br>
    ![Ui](images/Ui.png)
 
-1. Type a command in the command box and press Enter to execute it. For example, type **`help`** and press Enter to open the help window.<br>
+1. Type a command in the command box and press Enter to execute it. For example, type **`help`** and press Enter to open the offline command reference in the Help window.<br>
    The status button starts at **ALL**. Click it to cycle through **ACTIVE**, **ARCHIVED**, and back to **ALL**;
    the member list changes to match the label.
    Some example commands you can try:
@@ -76,8 +76,8 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 * Parameters can be in any order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
-* Extraneous parameters for commands that take no parameters, such as `help`, `list`, `exit`, and `clear`, are ignored.<br>
-  For example, `help 123` is interpreted as `help`.
+* Extraneous parameters for `list`, `exit`, and `clear` are ignored.<br>
+  For example, `list 123` is interpreted as `list`. The `help` command rejects extra arguments.
 
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </box>
@@ -133,11 +133,42 @@ recall history is never restored from logs.
 
 ### Viewing help: `help`
 
-Shows a message explaining how to access the help page.
-
-![help message](images/helpMessage.png)
+Opens the Help window, with the User Guide link and **Copy URL** button at the top and the offline command
+reference directly below. Each of the 16 commands includes a short description, its usage syntax, and an example.
+All five `find` forms are included. Reading the command reference requires no Internet access.
 
 Format: `help`
+
+For example, the reference includes:
+
+```text
+add - Add an active member using an email and any known contact details.
+Usage: add e/EMAIL [n/NAME] [p/PHONE_NUMBER] [a/ADDRESS] [t/TAG]...
+Example: add e/alex@u.nus.edu n/Alex Tan
+```
+
+Resize the Help window or scroll its reference area to read all entries. Long lines wrap, and the text can be selected
+and copied. The main result pane shows only `Opened help window.`. Repeating `help` focuses the same Help window.
+The examples are instructions only: viewing help does not run them. Indexed examples require a suitable displayed
+member, and import examples require an existing CSV file in the documented format.
+
+Help leaves member records, the current search, and the selected status view unchanged and does not save member data.
+It remains available when saving is disabled during data recovery or when the data file cannot be written.
+Help accepts no arguments. `help 1`, `help add`, and `help --guide` show the following error without opening or
+focusing the Help window. The rejected input remains in the command box for correction:
+
+```text
+Invalid command format!
+help: Displays descriptions, usage, and examples for all commands.
+Example: help
+```
+
+Surrounding whitespace is allowed, so ` help ` still works. There is no command-specific help mode.
+Command words remain case-sensitive, so `HELP` is not recognized.
+
+For the full online User Guide, use **Copy URL** at the top of the Help window and open the URL in your browser.
+Reading the website requires Internet access. **F1** and **Help → Help** open the same window with both the guide
+link and the offline reference, preserving an unsent command-box draft. The URL is not repeated in the reference.
 
 
 ### Adding a person: `add`
@@ -683,7 +714,7 @@ _Details coming soon ..._
 ## Known issues
 
 1. **When using multiple screens**, if you move the application to a secondary screen, and later switch to using only the primary screen, the GUI will open off-screen. The remedy is to delete the `preferences.json` file created by the application before running the application again.
-2. **If you minimize the Help Window** and then run the `help` command (or use the `Help` menu, or the keyboard shortcut `F1`) again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
+2. **If you minimize the Help Window** and then run `help`, use the `Help` menu, or press `F1` again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -697,6 +728,7 @@ Action     | Format, Examples
 **Clear**  | `clear`
 **Delete** | `delete INDEX`<br> e.g., `delete 3`
 **Edit**   | `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`<br> e.g.,`edit 2 n/James Lee e/jameslee@u.nus.edu`
+**Exit**   | `exit`
 **Find**   | `find KEYWORD [MORE_KEYWORDS]...`, `find n/KEYWORD`, `find p/PHONE_SUBSTRING`, `find e/EMAIL_SUBSTRING` or `find t/TAG`<br> e.g., `find James Jake`, `find n/James`, `find p/9103`, `find e/alex`, `find t/publicity`
 **Find all** | `findall PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findall n/John t/exco`
 **Find any** | `findany PREFIX/VALUE [PREFIX/VALUE]...`<br> e.g., `findany n/Alice e/alice`

@@ -1,7 +1,9 @@
 package seedu.address.logic;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static seedu.address.logic.Messages.MESSAGE_INVALID_PERSON_DISPLAYED_INDEX;
 import static seedu.address.logic.Messages.MESSAGE_UNKNOWN_COMMAND;
 import static seedu.address.logic.commands.CommandTestUtil.ADDRESS_DESC_AMY;
@@ -17,6 +19,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import seedu.address.logic.commands.AddCommand;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.EditCommand;
 import seedu.address.logic.commands.FindCommand;
+import seedu.address.logic.commands.HelpCommand;
 import seedu.address.logic.commands.ListCommand;
 import seedu.address.logic.commands.TagAddCommand;
 import seedu.address.logic.commands.TagRemoveCommand;
@@ -79,6 +83,65 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_help_preservesRecordsSearchAndStatusWithoutSaving() throws Exception {
+        Person active = new PersonBuilder().withEmail("active@u.nus.edu").build();
+        Person archived = new PersonBuilder().withoutName().withoutPhone().withoutAddress()
+                .withEmail("archived@u.nus.edu").withStatus(Status.ARCHIVED).build();
+        model.addPerson(active);
+        model.addPerson(archived);
+        Predicate<Person> search = person -> person.getEmail().value.equals("archived@u.nus.edu");
+        model.updateFilteredPersonList(search);
+
+        for (StatusFilter status : StatusFilter.values()) {
+            model.setStatusFilter(status);
+            List<Person> displayedMembers = List.copyOf(model.getFilteredPersonList());
+
+            assertEquals(new CommandResult(HelpCommand.SHOWING_HELP_MESSAGE, true, false), logic.execute("help"));
+
+            assertEquals(List.of(active, archived), model.getAddressBook().getPersonList());
+            assertEquals(displayedMembers, model.getFilteredPersonList());
+            assertSame(search, model.getFilteredPersonListPredicate());
+            assertEquals(status, model.getStatusFilter());
+            assertFalse(Files.exists(temporaryFolder.resolve("addressBook.json")));
+        }
+    }
+
+    @Test
+    public void execute_help_skipsFailingSaveAndPreservesExistingFile() throws Exception {
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Files.writeString(savedFile, "{\"persons\":[]}");
+        byte[] originalData = Files.readAllBytes(savedFile);
+        JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(savedFile) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) throws IOException {
+                throw new IOException("Help must not attempt to save.");
+            }
+        };
+        logic = new LogicManager(model, new StorageManager(failingStorage,
+                new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"))));
+
+        assertEquals(new CommandResult(HelpCommand.SHOWING_HELP_MESSAGE, true, false), logic.execute("help"));
+
+        assertArrayEquals(originalData, Files.readAllBytes(savedFile));
+        assertEquals(List.of(), model.getAddressBook().getPersonList());
+    }
+
+    @Test
+    public void execute_help_remainsAvailableWhenSavingIsDisabled() throws Exception {
+        Path savedFile = temporaryFolder.resolve("addressBook.json");
+        Files.writeString(savedFile, "invalid JSON");
+        JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(savedFile);
+        addressBookStorage.loadAddressBook();
+        Logic readOnlyLogic = new LogicManager(model, new StorageManager(addressBookStorage,
+                new JsonUserPrefsStorage(temporaryFolder.resolve("userPrefs.json"))));
+
+        assertEquals(new CommandResult(HelpCommand.SHOWING_HELP_MESSAGE, true, false), readOnlyLogic.execute("help"));
+
+        assertEquals("invalid JSON", Files.readString(savedFile));
+        assertEquals(List.of(), model.getAddressBook().getPersonList());
     }
 
     @Test

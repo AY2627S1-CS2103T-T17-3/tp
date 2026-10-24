@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.logic.LogicManager;
+import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.HelpCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.AddressBook;
 import seedu.address.model.UserPrefs;
@@ -50,7 +52,7 @@ public class MainAppTest {
         assertTrue(app.logic.getFilteredPersonList().isEmpty());
         app.logic.execute("list");
         assertEquals(1, app.logic.getFilteredPersonList().size());
-        assertTrue(app.logic.execute("help").isShowHelp());
+        assertEquals(new CommandResult(HelpCommand.SHOWING_HELP_MESSAGE, true, false), app.logic.execute("help"));
         assertArrayEquals(original, Files.readAllBytes(file));
 
         for (String command : List.of("add e/new@u.nus.edu", "edit 1 e/new@u.nus.edu", "delete 1",
