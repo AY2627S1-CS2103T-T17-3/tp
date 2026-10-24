@@ -53,9 +53,7 @@
         "implementation": "Implementation",
         "recalling-submitted-commands": "Recalling submitted commands",
         "archiving-and-activating-members": "Archiving and activating members",
-        "filtering-the-member-list-by-status": "Filtering the member list by status",
-        "recording-a-member-with-incomplete-contact-details": "Recording a member with incomplete contact details",
-        "finding-members-by-contact-details-or-tag": "Finding members by contact details or tag"
+        "filtering-the-member-list-by-status": "Filtering the member list by status"
       },
       "headingKeywords": {}
     },

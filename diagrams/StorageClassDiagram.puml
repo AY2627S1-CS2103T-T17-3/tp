@@ -16,9 +16,15 @@ Class JsonUserPrefsStorage
 package "AddressBook Storage" #F4F6F6{
 Class JsonAddressBookStorage
 Class AtomicFileWriter
+Class AddressBookLoadResult
 Class JsonSerializableAddressBook
 Class JsonAdaptedPerson
 Class JsonAdaptedTag
+}
+
+package "CSV Import" #F4F6F6 {
+Class CsvMemberReader
+Class CsvMemberRecord
 }
 
 }
@@ -31,8 +37,15 @@ StorageManager -down-> "1" JsonUserPrefsStorage
 StorageManager -down-> "1" JsonAddressBookStorage
 
 JsonAddressBookStorage ..> JsonSerializableAddressBook
+JsonAddressBookStorage ..> AddressBookLoadResult : <<create>>
 JsonAddressBookStorage -left-> "1" AtomicFileWriter : fileWriter
 JsonSerializableAddressBook --> "*" JsonAdaptedPerson
 JsonAdaptedPerson --> "*" JsonAdaptedTag
+CsvMemberReader ..> CsvMemberRecord : <<create>>
+
+note right of AddressBookLoadResult
+  Reports success, partial recovery,
+  failure, or a missing file.
+end note
 
 @enduml

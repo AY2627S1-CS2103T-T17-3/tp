@@ -1,0 +1,68 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+
+actor User as user USER_COLOR
+participant ":CommandBox" as box UI_COLOR
+participant ":MainWindow" as window UI_COLOR
+participant ":LogicManager" as logic LOGIC_COLOR
+participant ":AddressBookParser" as parser LOGIC_COLOR
+participant ":ViewCommandParser" as viewParser LOGIC_COLOR
+participant ":ViewCommand" as view LOGIC_COLOR
+participant ":ModelManager" as model MODEL_COLOR
+participant "filteredPersons:\nFilteredList<Person>" as filtered MODEL_COLOR
+
+group Typed command: view archived
+    user -> box : submit "view archived"
+    box -> window : executeCommand("view archived")
+    window -> logic : execute("view archived")
+    logic -> parser : parseCommand("view archived")
+    parser -> viewParser : parse(" archived")
+    create view
+    viewParser -> view : new ViewCommand(ARCHIVED)
+    view --> viewParser
+    viewParser --> parser : ViewCommand(ARCHIVED)
+    parser --> logic : ViewCommand
+    logic -> view : requiresSave()
+    view --> logic : false
+    logic -> view : execute(model)
+    view -> model : setStatusFilter(ARCHIVED)
+    model -> filtered : setPredicate(search && status)
+    note right of filtered : The list observed by the UI updates.
+    filtered --> model
+    model --> view
+    view --> logic : CommandResult
+    note over logic : No address-book save is needed.
+    logic --> window : CommandResult
+    window -> logic : getStatusFilter()
+    logic -> model : getStatusFilter()
+    model --> logic : ARCHIVED
+    logic --> window : ARCHIVED
+    window -> window : update button text and style
+    window --> box : CommandResult
+end
+
+group Button click: Archived to All
+    user -> window : click status button
+    window -> logic : getStatusFilter()
+    logic -> model : getStatusFilter()
+    model --> logic : ARCHIVED
+    logic --> window : ARCHIVED
+    window -> logic : setStatusFilter(ALL)
+    logic -> model : setStatusFilter(ALL)
+    model -> filtered : setPredicate(search && status)
+    filtered --> model
+    model --> logic
+    logic --> window
+    window -> logic : getStatusFilter()
+    logic -> model : getStatusFilter()
+    model --> logic : ALL
+    logic --> window : ALL
+    window -> window : update button text and style
+end
+
+note over model, filtered
+  Both paths keep the current search predicate.
+  The selected status view starts at ALL each session.
+end note
+@enduml
