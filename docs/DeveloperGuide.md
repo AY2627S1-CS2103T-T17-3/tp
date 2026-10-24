@@ -378,8 +378,7 @@ model filter and update the list; the typed command also synchronizes the button
 path shown is a normal writable session. In recovery mode, `LogicManager` permits this read-only command and
 executes it without saving as well.
 
-<puml src="diagrams/StatusViewSequenceDiagram.puml"
-      alt="Typed view command and status button update the same model filter and visible list" />
+<puml src="diagrams/StatusViewSequenceDiagram.puml" alt="Typed view command and status button update the same model filter and visible list" />
 
 `ModelManager` keeps one `FilteredList<Person>` and two independent filter settings: the current search
 predicate and the selected `StatusFilter`. Each change recomputes the list predicate as search **and** status.
@@ -436,8 +435,7 @@ The partial class diagram below shows the shared search design. Parsers validate
 contract for field matching and AND/OR combinations. `NameContainsKeywordsPredicate` represents the field
 predicates; other field predicates and parsing helpers are omitted.
 
-<puml src="diagrams/SearchClassDiagram.puml"
-      alt="Partial search class diagram showing shared command execution and predicate composition" />
+<puml src="diagrams/SearchClassDiagram.puml" alt="Partial search class diagram showing shared command execution and predicate composition" />
 
 `AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
 arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
