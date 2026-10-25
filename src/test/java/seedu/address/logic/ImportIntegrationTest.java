@@ -137,6 +137,43 @@ public class ImportIntegrationTest {
     }
 
     @Test
+    public void execute_overlongEmails_reportsRecordErrorsAndImportsBoundaryEmail() throws Exception {
+        String boundaryEmail = "a".repeat(64) + "@u.nus.edu";
+        String rejectedRow = ",," + "a".repeat(65) + "@u.nus.edu,,,active\n";
+        Path file = writeCsv(HEADER + ",, " + boundaryEmail + " ,,,active\n" + rejectedRow);
+        String originalSource = Files.readString(file);
+        String rejection = "CSV record 3: Email local-part must contain at most 64 characters; received 65.";
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)
+                + "\nRejected records:\n" + rejection, logic.execute(importCommand(file)).getFeedbackToUser());
+        assertEquals(boundaryEmail, storage.readAddressBook().orElseThrow().getPersonList().getLast().getEmail().value);
+        assertEquals(originalSource, Files.readString(file));
+
+        file = writeCsv(HEADER + rejectedRow);
+        String originalFile = Files.readString(dataFile);
+        AddressBook originalRecords = new AddressBook(model.getAddressBook());
+        logic.execute("find Existing");
+        List<Person> originalResults = List.copyOf(model.getFilteredPersonList());
+        AtomicInteger saveAttempts = new AtomicInteger();
+        logic = createLogic(new JsonAddressBookStorage(dataFile) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) {
+                saveAttempts.incrementAndGet();
+            }
+        });
+        String command = importCommand(file);
+        CommandException error = assertThrows(CommandException.class, () -> logic.execute(command));
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 0, 1, file)
+                + "\nRejected records:\nCSV record 2: Email local-part must contain at most 64 characters; received 65."
+                + "\nNo members were imported.", error.getMessage());
+        assertEquals(originalRecords, model.getAddressBook());
+        assertEquals(originalResults, model.getFilteredPersonList());
+        assertEquals(originalFile, Files.readString(dataFile));
+        assertEquals(HEADER + rejectedRow, Files.readString(file));
+        assertEquals(0, saveAttempts.get());
+    }
+
+    @Test
     public void execute_invalidUtf8AfterValidRecord_rejectsWithoutChangingDirectory() throws Exception {
         Path file = writeCsv(HEADER + FIRST_ROW);
         Files.write(file, new byte[] {(byte) 0xc3, (byte) 0x28}, StandardOpenOption.APPEND);

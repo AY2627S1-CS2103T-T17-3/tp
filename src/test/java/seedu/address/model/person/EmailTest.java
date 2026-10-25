@@ -7,10 +7,78 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 public class EmailTest {
+
+    @Test
+    public void getValidationError_null_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> Email.getValidationError(null));
+    }
+
+    @Test
+    public void constructor_localPartWithinLimit_acceptsAndNormalizes() {
+        for (int length : new int[] {1, 63, 64}) {
+            String email = "A".repeat(length) + "@U.NUS.EDU";
+            assertTrue(Email.isValidEmail(email));
+            assertEquals(Optional.empty(), Email.getValidationError(email));
+            assertEquals("a".repeat(length) + "@u.nus.edu", new Email(email).value);
+        }
+        String separatedEmail = "a.".repeat(31) + "aa@u.nus.edu";
+        assertTrue(Email.isValidEmail(separatedEmail));
+        assertEquals(separatedEmail, new Email(separatedEmail).value);
+    }
+
+    @Test
+    public void constructor_overlongLocalPart_rejectsBeforePatternValidation() {
+        assertLengthError("a".repeat(65) + "@u.nus.edu", 65);
+        assertLengthError("a.".repeat(32) + "a@u.nus.edu", 65);
+        assertLengthError("a.".repeat(2000) + "a@u.nus.edu", 4001);
+        assertLengthError("a".repeat(65) + "@gmail.com", 65);
+        assertLengthError("a".repeat(65) + "@@u.nus.edu", 65);
+        assertLengthError("a".repeat(65), 65);
+    }
+
+    @Test
+    public void getValidationError_largeMalformedCandidates_rejectsWithoutOverflow() {
+        assertLengthError("a.".repeat(50_000) + "a@u.nus.edu", 100_001);
+        assertLengthError("a.".repeat(50_000), 100_000);
+        for (String email : new String[] {"a@" + "a.".repeat(50_000),
+            "a@@" + "a.".repeat(50_000)}) {
+            assertFalse(Email.isValidEmail(email));
+            assertEquals(Optional.of(Email.MESSAGE_CONSTRAINTS), Email.getValidationError(email));
+        }
+    }
+
+    @Test
+    public void getValidationError_localPartLength_countsNormalizedUtf16WithoutTrimming() {
+        // Lowercasing capital dotted I expands it to two UTF-16 units, which remain invalid syntax.
+        assertEquals(Optional.of(Email.MESSAGE_CONSTRAINTS),
+                Email.getValidationError("\u0130".repeat(32) + "@u.nus.edu"));
+        assertLengthError("\u0130".repeat(33) + "@u.nus.edu", 66);
+        assertLengthError("\ud83d\ude00".repeat(33) + "@u.nus.edu", 66);
+        assertLengthError(" " + "a".repeat(64) + "@u.nus.edu", 65);
+    }
+
+    @Test
+    public void getValidationError_arabicLocale_preservesExactLengthMessage() {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("ar"));
+            assertLengthError("a".repeat(65) + "@u.nus.edu", 65);
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    private static void assertLengthError(String email, int expectedLength) {
+        String expected = "Email local-part must contain at most 64 characters; received " + expectedLength + ".";
+        assertFalse(Email.isValidEmail(email));
+        assertEquals(Optional.of(expected), Email.getValidationError(email));
+        assertThrows(IllegalArgumentException.class, expected, () -> new Email(email));
+    }
 
     @Test
     public void constructor_null_throwsNullPointerException() {

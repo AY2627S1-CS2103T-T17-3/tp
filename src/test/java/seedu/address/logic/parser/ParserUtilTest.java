@@ -130,6 +130,16 @@ public class ParserUtilTest {
     }
 
     @Test
+    public void parseEmail_localPartLimit_countsAfterTrimming() throws Exception {
+        String boundaryEmail = "A".repeat(64) + "@U.NUS.EDU";
+        assertEquals(new Email(boundaryEmail), ParserUtil.parseEmail(WHITESPACE + boundaryEmail + WHITESPACE));
+        String overlongEmail = "a".repeat(65) + "@u.nus.edu";
+        String expected = "Email local-part must contain at most 64 characters; received 65.";
+        assertThrows(ParseException.class, expected, () ->
+                ParserUtil.parseEmail(WHITESPACE + overlongEmail + WHITESPACE));
+    }
+
+    @Test
     public void parseEmail_invalidValue_throwsParseException() {
         assertThrows(ParseException.class, () -> ParserUtil.parseEmail(INVALID_EMAIL));
     }
