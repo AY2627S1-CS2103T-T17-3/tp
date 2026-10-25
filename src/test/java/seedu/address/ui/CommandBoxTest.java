@@ -559,7 +559,11 @@ public class CommandBoxTest {
         Clipboard clipboard = Clipboard.getSystemClipboard();
         Map<DataFormat, Object> previousContent = new HashMap<>();
         for (DataFormat format : clipboard.getContentTypes()) {
-            previousContent.put(format, clipboard.getContent(format));
+            // X11 can advertise clipboard formats whose content JavaFX cannot read.
+            Object value = clipboard.getContent(format);
+            if (value != null) {
+                previousContent.put(format, value);
+            }
         }
         ClipboardContent content = new ClipboardContent();
         content.putString(text);
