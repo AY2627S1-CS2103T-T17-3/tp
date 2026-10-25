@@ -103,8 +103,9 @@ class JsonAdaptedPerson {
         if (email == null) {
             throw new IllegalValueException(String.format(MISSING_FIELD_MESSAGE_FORMAT, Email.class.getSimpleName()));
         }
-        if (!Email.isValidEmail(email)) {
-            throw new IllegalValueException(Email.MESSAGE_CONSTRAINTS);
+        Optional<String> emailError = Email.getValidationError(email);
+        if (emailError.isPresent()) {
+            throw new IllegalValueException(emailError.get());
         }
         final Email modelEmail = new Email(email);
 

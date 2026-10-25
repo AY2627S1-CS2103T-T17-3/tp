@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -44,6 +45,60 @@ public class MainWindowTest {
 
     @TempDir
     public Path temporaryFolder;
+
+    @Test
+    public void submit_overlongEmail_showsValidationAndAllowsRetry() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("longEmail.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("emailPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                input.setText("clear");
+                input.fireEvent(new ActionEvent());
+                assertEquals("Member directory has been cleared!", results.getText());
+                String savedBefore = Files.readString(dataFile);
+                String command = "add e/" + "a.".repeat(2000) + "a@u.nus.edu";
+                input.setText(command);
+                input.fireEvent(new ActionEvent());
+
+                assertEquals("Email local-part must contain at most 64 characters; received 4001.", results.getText());
+                assertEquals(command, input.getText());
+                assertTrue(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                assertEquals(0, model.getAddressBook().getPersonList().size());
+                assertEquals(savedBefore, Files.readString(dataFile));
+                input.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.UP,
+                        false, false, false, false));
+                assertEquals("clear", input.getText());
+                input.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.DOWN,
+                        false, false, false, false));
+                assertEquals(command, input.getText());
+
+                input.setText("add e/after@u.nus.edu");
+                input.fireEvent(new ActionEvent());
+                assertEquals("New person added: Email: after@u.nus.edu", results.getText());
+                assertEquals("", input.getText());
+                assertFalse(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                assertEquals("after@u.nus.edu", model.getAddressBook().getPersonList().getFirst().getEmail().value);
+
+                input.setText("add e/" + "a".repeat(64) + "@u.nus.edu");
+                input.fireEvent(new ActionEvent());
+                assertEquals("New person added: Email: " + "a".repeat(64) + "@u.nus.edu", results.getText());
+                assertEquals("", input.getText());
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
 
     @Test
     public void help_displaysReferenceBelowGuideLinkInSharedPopup() throws Exception {

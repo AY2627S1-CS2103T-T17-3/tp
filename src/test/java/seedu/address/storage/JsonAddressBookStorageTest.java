@@ -109,6 +109,52 @@ public class JsonAddressBookStorageTest {
     }
 
     @Test
+    public void loadAddressBook_overlongEmails_recoversValidRecordsAndProtectsFile() throws Exception {
+        Path filePath = testFolder.resolve("OverlongEmails.json");
+        String overlongRecord = "{\"email\":\"" + "a.".repeat(2000) + "a@u.nus.edu\"}";
+        for (boolean includeValidRecord : new boolean[] {true, false}) {
+            String json = "{\"persons\":[" + overlongRecord
+                    + (includeValidRecord ? ",{\"email\":\"valid@u.nus.edu\"}" : "") + "]}";
+            Files.writeString(filePath, json);
+            JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+
+            AddressBookLoadResult result = storage.loadAddressBook();
+
+            assertEquals(AddressBookLoadResult.Status.PARTIAL, result.getStatus());
+            assertEquals(includeValidRecord ? 1 : 0, result.getAddressBook().getPersonList().size());
+            if (includeValidRecord) {
+                assertEquals("valid@u.nus.edu", result.getAddressBook().getPersonList().getFirst().getEmail().value);
+            }
+            assertEquals(List.of("Record 1: Email local-part must contain at most 64 characters; received 4001."),
+                    result.getErrors());
+            assertFalse(storage.isSaveAllowed());
+            assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
+            assertThrows(DataLoadingException.class, storage::readAddressBook);
+            assertEquals(json, Files.readString(filePath));
+        }
+    }
+
+    @Test
+    public void readAndSaveAddressBook_repairedBoundaryEmail_restoresSavingOnRestart() throws Exception {
+        Path filePath = testFolder.resolve("RepairedEmail.json");
+        Files.writeString(filePath, "{\"persons\":[{\"email\":\"" + "a".repeat(65) + "@u.nus.edu\"}]}");
+        JsonAddressBookStorage protectedStorage = new JsonAddressBookStorage(filePath);
+        protectedStorage.loadAddressBook();
+        String email = "a".repeat(64) + "@u.nus.edu";
+        Files.writeString(filePath, "{\"persons\":[{\"email\":\"" + "A".repeat(64) + "@U.NUS.EDU\"}]}");
+        JsonAddressBookStorage restartedStorage = new JsonAddressBookStorage(filePath);
+
+        ReadOnlyAddressBook loaded = restartedStorage.readAddressBook().orElseThrow();
+        assertEquals(email, loaded.getPersonList().getFirst().getEmail().value);
+        assertFalse(protectedStorage.isSaveAllowed());
+        assertTrue(restartedStorage.isSaveAllowed());
+        restartedStorage.saveAddressBook(loaded);
+        assertEquals(loaded, new JsonAddressBookStorage(filePath).readAddressBook().orElseThrow());
+        JsonNode saved = JsonUtil.fromJsonString(Files.readString(filePath), JsonNode.class);
+        assertEquals(email, saved.get("persons").get(0).get("email").asText());
+    }
+
+    @Test
     public void readAddressBook_nullFilePath_throwsNullPointerException() {
         assertThrows(NullPointerException.class, () -> readAddressBook(null));
     }

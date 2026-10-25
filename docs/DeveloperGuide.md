@@ -146,9 +146,12 @@ It does not trim whitespace; model values and saved strings containing surroundi
 Command parsing trims surrounding argument whitespace using the `trim()` behavior.
 The existing local-part expression is unchanged: letters and digits may be separated by single `+`, `_`, `.`, or `-`
 characters, but punctuation cannot lead, trail, or appear consecutively. Validation uses the normalized whole string;
-no new Unicode support or length limit is introduced. Different local-part aliases remain distinct.
+no new Unicode support is introduced. The normalized local-part has an inclusive maximum of 64 UTF-16 units.
+Different local-part aliases remain distinct.
 The suffix is literal: `@nus.edu`, `@sub.u.nus.edu`, `@u.nus.edu.com`, and `@uXnusXedu` are invalid.
-Command parsers and JSON loading reuse this model validation and `Email.MESSAGE_CONSTRAINTS`.
+Construction, command parsing, CSV import, and JSON loading share the
+[email-validation rule](#validating-email-length-safely).
+Email-substring searches retain their existing independent rules, including substrings longer than 64 characters.
 
 `Person.isSamePerson` compares canonical emails only. Members can share a name or phone number when their emails
 differ. `UniquePersonList` uses this identity rule for addition, replacement, and bulk replacement, while
@@ -429,6 +432,23 @@ incremental completion across reloads, filtered edits, unnamed duplicates, email
 The import regression checks supplied-field validation and that imported emails conflict with existing
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
+
+### Validating email length safely
+
+The local-part regular expression contains a repeated group. Matching a sufficiently long, punctuation-separated
+candidate can consume excessive stack space and cause `StackOverflowError`. `Email.getValidationError` checks
+the normalized local-part length before pattern matching, bounding the recursive group matching.
+
+The helper counts UTF-16 units before the first `@`, or across the whole candidate if `@` is absent. It returns
+`Email local-part must contain at most 64 characters; received N.` when that count exceeds 64,
+`Email.MESSAGE_CONSTRAINTS` for other invalid values, or an empty optional for a valid email.
+`Email.isValidEmail` and the constructor reuse this helper, keeping the validation rule in the model.
+
+Callers adapt the selected error to their existing failure handling. `ParserUtil.parseEmail` throws
+`ParseException` before command execution or saving; the UI displays the message and retains editable input
+with error styling and history. CSV import adds the original record number and rejects that record while
+processing other records. JSON loading adds the saved record position and uses the
+[protected recovery path](#storage-component). Each caller retains its existing field-validation order.
 
 ### Finding members by contact details or tag
 
@@ -1348,6 +1368,48 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
    Expected: the same rejection without adding members.
 1. Add a different member with `e/nus.test+society@u.nus.edu`.<br>
    Expected: success because aliases remain distinct. New domains are never appended or substituted automatically.
+
+### Email local-part length validation
+
+Use a rebuilt JAR with Java 25 in a disposable writable folder. Start with an empty directory and confirm that
+normal saving is enabled. The boundary commands below contain 64 and 65 `a` characters before `@`, respectively.
+
+1. Run the following command, then restart the app:
+
+   ```text
+   add e/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@u.nus.edu
+   ```
+
+   Expected: the member is added and survives restarting with the same email.
+1. Select Active view and search for the member. Back up `data/nusocietydesk.json`, then run:
+
+   ```text
+   add e/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@u.nus.edu
+   ```
+
+   Expected: `Email local-part must contain at most 64 characters; received 65.` replaces the previous result.
+   The full command stays editable with error styling. Records, search, status view, and saved data are unchanged.
+1. Repeat with `edit INDEX e/` followed by the same overlong email, using the member's displayed index.<br>
+   Expected: the same rejection with no changes. Up/Down can recall the failed command normally.
+1. For the original reported payload on Windows, use PowerShell to copy the command, then paste and submit it:
+
+   ```powershell
+   ('add e/' + ('a.' * 2000) + 'a@u.nus.edu') | Set-Clipboard
+   ```
+
+   Expected: `Email local-part must contain at most 64 characters; received 4001.` appears with no uncaught error.
+   Run `add e/after@u.nus.edu`; it succeeds normally.
+1. Import a CSV containing a valid record and a record with a 65-character local-part.<br>
+   Expected: only the valid record imports; the rejected record's position and length error are reported.
+   Repeat with only rejected records: records, filters, and saved data remain unchanged.
+1. Close the app and, in the disposable JSON file, give one record an overlong email. Relaunch.<br>
+   Expected: other valid records load; the warning identifies the rejected record and length. The original file
+   is preserved and member changes are disabled. Repair the file and restart to restore normal saving.
+
+Automated tests cover normalized length boundaries, the original payload and larger malformed candidates,
+validation priority, command-state and file preservation, JavaFX feedback/history and retry, CSV record errors,
+and protected JSON recovery with boundary-email round trips. The packaged-JAR steps above also check the
+Windows JavaFX submission path.
 
 ### Email identity
 

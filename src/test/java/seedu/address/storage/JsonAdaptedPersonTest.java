@@ -114,6 +114,14 @@ public class JsonAdaptedPersonTest {
     }
 
     @Test
+    public void toModelType_overlongEmail_reportsLocalPartLength() {
+        JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE,
+                "a".repeat(65) + "@u.nus.edu", VALID_ADDRESS, VALID_TAGS);
+        assertThrows(IllegalValueException.class,
+                "Email local-part must contain at most 64 characters; received 65.", person::toModelType);
+    }
+
+    @Test
     public void toModelType_nullEmail_throwsIllegalValueException() {
         JsonAdaptedPerson person = new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, null, VALID_ADDRESS, VALID_TAGS);
         String expectedMessage = String.format(MISSING_FIELD_MESSAGE_FORMAT, Email.class.getSimpleName());
