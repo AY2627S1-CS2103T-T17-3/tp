@@ -205,18 +205,32 @@ lowercase. Only complete email addresses ending with exactly `@u.nus.edu` are ac
 `alex@sub.u.nus.edu`, and `alex@u.nus.edu.com` are rejected without changing any records.
 The local-part (before `@`) must contain letters or digits, optionally separated by single `+`, `_`, `.`, or `-`
 characters. It cannot start or end with punctuation or contain adjacent punctuation.
+The local-part must contain **1 to 64 characters**, inclusive. This allows at most 74 characters in a valid
+complete address, including `@u.nus.edu`. Length is checked after lowercasing and surrounding command whitespace
+is removed before validation.
 The existing character rules accept ASCII letters and digits after lowercasing; mailbox existence is not checked.
 Different aliases, such as
 `alex@u.nus.edu` and `alex+society@u.nus.edu`, count as different addresses. Command parsing trims
 surrounding argument whitespace, but email values in the data file cannot contain surrounding whitespace.
 
-Invalid email input produces this message:
+An overlong local-part is rejected before pattern validation. For example, 65 letters before `@` produce:
+
+```text
+Email local-part must contain at most 64 characters; received 65.
+```
+
+The submitted command stays editable with error styling. Member records, the current search, selected status
+view, and saved data remain unchanged. Nothing is shortened automatically; correct the email and submit again.
+If another supplied field fails earlier validation, its error is shown first.
+
+Other invalid email input produces this message:
 
 ```text
 Emails must have the format local-part@u.nus.edu.
 The local-part must contain letters or digits, optionally separated by single +, _, ., or - characters.
 It must not start or end with punctuation or contain consecutive punctuation.
 Email addresses are case-insensitive and are stored in lowercase.
+The local-part must contain at most 64 characters.
 ```
 
 Members may share a name or phone number if their emails differ. For example, both commands are valid:
@@ -281,13 +295,18 @@ Surrounding whitespace is removed from member fields before validation.
 | --- | --- |
 | `name` | Optional. Leave blank if unknown; supplied names follow the `add` rules. |
 | `phone` | Optional. Leave blank if unknown; supplied numbers contain at least three digits and no other characters. |
-| `email` | Required. A valid email ending with exactly `@u.nus.edu`; stored in lowercase. |
+| `email` | Required. A valid email ending with exactly `@u.nus.edu`, with 1 to 64 characters before `@`; stored in lowercase. |
 | `address` | Optional. Leave blank if unknown; supplied addresses follow the `add` rules. |
 | `tags` | Optional. Separate alphanumeric tags with semicolons, e.g., `Publicity;Exco`. Case variants become one lowercase tag per member. |
 | `status` | Required. Exactly `active` or `archived`. |
 
 Whitespace-only name, phone, and address cells count as absent. An empty tags cell means no tags; empty tags
 inside a list, such as `publicity;`, are invalid.
+
+An email exceeding the local-part limit rejects only that record. For a 65-character local-part in record 3,
+the rejection detail is `CSV record 3: Email local-part must contain at most 64 characters; received 65.`
+Other valid records continue importing. If every record is rejected, no members are imported and records,
+search results, and saved data remain unchanged.
 
 The imported status is preserved;
   `archived` members display the `ARCHIVED` badge. Status is separate from tags.
@@ -382,7 +401,8 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`
   before the next edit.
 * The confirmation shows the member's current supplied details, including retained values, and omits missing
   fields and empty tags. For an email-only member, it reads `Edited person: Email: 2@u.nus.edu`.
-* A provided email must follow the same `@u.nus.edu` rules as `add`. Omitting `e/` preserves the current email.
+* A provided email must follow the same `@u.nus.edu` rules as `add`, including the maximum of 64 characters
+  before `@` and the same length-error feedback. Omitting `e/` preserves the current email.
 * Existing tags are preserved. Any `t/` argument, including an empty `t/`, rejects the entire edit.
   Use `tag` or `untag` to change tags.
 * Renaming a member or re-entering their own email is allowed. Changing their email releases the previous
