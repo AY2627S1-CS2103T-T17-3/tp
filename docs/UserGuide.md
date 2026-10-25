@@ -513,6 +513,8 @@ Formats:
 
 **Rules for `find`**
 
+* When pasting a `find`, `findall` or `findany` command, runs of tabs and line breaks are converted to spaces.
+  Search values stay separated and follow the same validation rules as space-separated input.
 * Search one field per command. Combining fields, such as `find n/Alice p/9123`, `find e/alice n/Alice`
   or `find t/publicity e/alice`, is rejected.
 * Use lowercase prefixes: `n/`, `p/`, `e/` and `t/`. Uppercase prefixes such as `N/`, `P/`, `E/` and `T/`

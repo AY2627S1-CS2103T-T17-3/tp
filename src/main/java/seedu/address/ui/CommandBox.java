@@ -1,12 +1,16 @@
 package seedu.address.ui;
 
+import java.util.regex.Pattern;
+
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
 
@@ -17,6 +21,9 @@ public class CommandBox extends UiPart<Region> {
 
     public static final String ERROR_STYLE_CLASS = "error";
     private static final String FXML = "CommandBox.fxml";
+    private static final Pattern SEARCH_COMMAND = Pattern.compile(
+            "\\s*(?:" + FindCommand.COMMAND_WORD + "|" + FindCommand.COMMAND_WORD_ALL
+                    + "|" + FindCommand.COMMAND_WORD_ANY + ")(?:\\s|$)");
 
     private final CommandExecutor commandExecutor;
     private final CommandHistory history = new CommandHistory();
@@ -30,9 +37,26 @@ public class CommandBox extends UiPart<Region> {
     public CommandBox(CommandExecutor commandExecutor) {
         super(FXML);
         this.commandExecutor = commandExecutor;
+        commandTextField.setTextFormatter(new TextFormatter<>(this::normalizeSearchWhitespace));
         // calls #setStyleToDefault() whenever there is a change to the text of the command box.
         commandTextField.textProperty().addListener((unused1, unused2, unused3) -> setStyleToDefault());
         commandTextField.addEventFilter(KeyEvent.KEY_PRESSED, this::handleHistoryNavigation);
+    }
+
+    /**
+     * Converts search input separators to spaces before TextField removes tabs and line breaks.
+     */
+    private TextFormatter.Change normalizeSearchWhitespace(TextFormatter.Change change) {
+        if (!change.isContentChange() || !SEARCH_COMMAND.matcher(change.getControlNewText()).lookingAt()) {
+            return change;
+        }
+        String normalizedText = change.getText().replaceAll("[\\t\\r\\n]+", " ");
+        if (!normalizedText.equals(change.getText())) {
+            change.setText(normalizedText);
+            int caretPosition = change.getRangeStart() + normalizedText.length();
+            change.selectRange(caretPosition, caretPosition);
+        }
+        return change;
     }
 
     private void handleHistoryNavigation(KeyEvent event) {
