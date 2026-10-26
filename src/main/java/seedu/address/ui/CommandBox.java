@@ -40,15 +40,15 @@ public class CommandBox extends UiPart<Region> {
             return;
         }
         if (event.getCode() == KeyCode.UP) {
-            history.older(currentInput()).ifPresent(this::restoreInput);
+            history.recallOlder(getCurrentInput()).ifPresent(this::restoreInput);
             event.consume();
         } else if (event.getCode() == KeyCode.DOWN) {
-            history.newer(currentInput()).ifPresent(this::restoreInput);
+            history.recallNewer(getCurrentInput()).ifPresent(this::restoreInput);
             event.consume();
         }
     }
 
-    private CommandHistory.InputState currentInput() {
+    private CommandHistory.InputState getCurrentInput() {
         return new CommandHistory.InputState(commandTextField.getText(),
                 commandTextField.getAnchor(), commandTextField.getCaretPosition());
     }
@@ -65,7 +65,8 @@ public class CommandBox extends UiPart<Region> {
     @FXML
     private void handleCommandEntered() {
         String commandText = commandTextField.getText();
-        if (!history.record(commandText)) {
+        history.record(commandText);
+        if (commandText.isBlank()) {
             return;
         }
 
