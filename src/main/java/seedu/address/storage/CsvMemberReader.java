@@ -94,7 +94,7 @@ public class CsvMemberReader {
             Optional<Phone> phone = phoneValue.isEmpty() ? Optional.empty() : Optional.of(new Phone(phoneValue));
             Email email = new Email(record.get(2).trim());
             String addressValue = record.get(3).trim();
-            Optional<Address> address = addressValue.isEmpty()
+            Optional<Address> address = Address.isBlankAddress(addressValue)
                     ? Optional.empty() : Optional.of(new Address(addressValue));
             Set<Tag> tags = parseTags(record.get(4).trim());
             String statusValue = record.get(5).trim();
