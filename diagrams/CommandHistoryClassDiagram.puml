@@ -15,13 +15,13 @@ interface "CommandBox.CommandExecutor" as CommandExecutor <<interface>> {
     execute(commandText)
 }
 class CommandHistory {
-    beforeCursor: Deque<String>
-    afterCursor: Deque<String>
+    commandsBeforeCursor: Deque<String>
+    commandsAfterCursor: Deque<String>
     editedCommands: Map<Integer, String>
     --
-    record(command): boolean
-    older(currentInput): Optional<InputState>
-    newer(currentInput): Optional<InputState>
+    record(command)
+    recallOlder(currentInput): Optional<InputState>
+    recallNewer(currentInput): Optional<InputState>
     selectLatestAfterFailure()
 }
 class "CommandHistory.InputState" as InputState <<record>> {
