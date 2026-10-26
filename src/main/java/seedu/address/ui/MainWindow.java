@@ -17,6 +17,7 @@ import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
 import seedu.address.logic.Logic;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.ViewCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.StatusFilter;
@@ -181,6 +182,8 @@ public class MainWindow extends UiPart<Stage> {
         };
         logic.setStatusFilter(nextStatusFilter);
         updateStatusFilterButton();
+        resultDisplay.setFeedbackToUser(String.format(ViewCommand.MESSAGE_SUCCESS,
+                nextStatusFilter.name().toLowerCase(Locale.ROOT)));
     }
 
     private void updateStatusFilterButton() {

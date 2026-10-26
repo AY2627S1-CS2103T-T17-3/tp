@@ -383,6 +383,9 @@ Supply exactly one status. The value is case-insensitive (`view ACTIVE` also wor
 The command updates the button and list together. It keeps the current search, so `view all` can still show only
 search matches. It does not change member statuses or save data. On the next launch, the view starts at All.
 
+Clicking the status button replaces the previous result message with a view confirmation, such as
+`Switched to archived view.`, while keeping the current search.
+
 For example, after `find t/publicity`, use `view archived` to see archived matches, then `view active` to see
 active matches. Use `list` to clear the search while keeping the selected view.
 
