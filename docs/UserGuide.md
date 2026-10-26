@@ -272,9 +272,12 @@ Examples:
 
 * `import members.csv`
 * `import "member contacts.csv"`
-* `import "C:\Members\member contacts.csv"`
+* `import "C:\NUSocietyDesk\member contacts.csv"` (when the JAR is in `C:\NUSocietyDesk`)
 
 Relative paths start from the folder where you launched the app. Enclose paths containing spaces in double quotes.
+The CSV must be inside the folder containing `NUSocietyDesk.jar` or one of its subfolders. This applies to both
+absolute and relative paths. Paths and symbolic links that resolve outside that folder are rejected before the
+CSV is read. Move or copy the CSV into the application folder before importing it.
 Export Google Sheets or Excel data as a **comma-separated UTF-8 CSV** before importing.
 
 #### Prepare the CSV
@@ -341,6 +344,9 @@ reported as duplicates. Re-importing an unchanged file adds no members while tho
 
 #### Rejections and failures
 
+* **The source is outside the application folder:** The import is rejected before reading the CSV. Move the file
+  into the folder containing `NUSocietyDesk.jar` or one of its subfolders, then retry. Member records, search
+  results, and saved JSON remain unchanged.
 * **Some records are rejected:** Other valid records are imported. A record with missing or extra columns is
   rejected individually if the CSV itself can still be parsed.
 * **Every record is rejected:** Feedback lists all rejection reasons. Member records, search results, and saved

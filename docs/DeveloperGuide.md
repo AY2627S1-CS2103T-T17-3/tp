@@ -504,9 +504,14 @@ The main responsibilities are:
 
 The execution flow is:
 
-1. **Protect the source.** Before execution, `LogicManager` compares the CSV path with the JSON save path using
-   normalized paths and `Files.isSameFile`. This rejects aliases and links to the save file. The reader opens the
-   source for reading only.
+1. **Protect the source.** Before execution, `LogicManager` derives the application home from its code location:
+   the real JAR's parent folder for packaged runs, or the working directory for IDE/Gradle runs. It resolves the
+   source with `Path.toRealPath` and checks containment using `Path.startsWith`, so parent traversal, symbolic
+   links to outside files or folders, and similarly named sibling folders cannot escape the boundary. Both
+   absolute and working-directory-relative paths are accepted when their real location is inside the home folder.
+   It also compares the CSV path with the JSON save path using normalized paths and `Files.isSameFile`, rejecting
+   aliases and links to the save file. These checks complete before CSV parsing, model changes, or saving.
+   The reader opens the source for reading only.
 1. **Read and validate.** The reader checks the fixed six-column header, trims member fields, and reuses the model
    validators. Blank name, phone, and address values become empty optionals. Email and status are required;
    `Status.isValidStatus` accepts only `active` and `archived`. `Tag` and `Set<Tag>` normalize and deduplicate tags.
@@ -1046,6 +1051,19 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
 1. Test case: `import data/nusocietydesk.json`, using the app's configured JSON save file.<br>
    Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
    and the original JSON remain unchanged.
+
+1. Put a copy of the sample CSV alongside the application folder as `outside.csv`, then run
+   `import ../outside.csv` while launching from the JAR's folder. Also try the file's absolute path and a CSV in
+   a similarly named sibling folder, such as `app-backup` beside `app`.<br>
+   Expected: Each import reports that CSV files must be inside the folder containing the JAR or a subfolder.
+   Member records, search results, saved JSON, and the source files remain unchanged.
+1. Launch the JAR from a different working directory. Import an absolute path inside the JAR's folder, then try
+   an absolute path outside it. Restore the starting directory data between successful cases.<br>
+   Expected: Only the inside source is accepted; the boundary follows the JAR location, not the launch folder.
+1. Where symbolic links are supported, create a file link inside the application folder to `outside.csv`, and a
+   directory link inside it to an outside folder containing a CSV. Try importing through each link.<br>
+   Expected: Both imports are rejected without changing records, search results, or files. A link whose target
+   remains inside the application folder is accepted. A link to the JSON save file is still rejected.
 
 These GUI checks require manual execution. `ImportIntegrationTest` covers persistence and source protection;
 `ImportCommandTest` checks the partial-import sample's documented counts.

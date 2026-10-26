@@ -1,6 +1,8 @@
 package seedu.address.logic;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,13 +44,22 @@ public class LogicManager implements Logic {
     private final Model model;
     private final Storage storage;
     private final AddressBookParser addressBookParser;
+    private final URL applicationLocation;
 
     /**
      * Constructs a {@code LogicManager} with the given {@code Model} and {@code Storage}.
      */
     public LogicManager(Model model, Storage storage) {
+        this(model, storage, LogicManager.class.getProtectionDomain().getCodeSource().getLocation());
+    }
+
+    /**
+     * Constructs a manager using the given application code location to determine the import boundary.
+     */
+    LogicManager(Model model, Storage storage, URL applicationLocation) {
         this.model = model;
         this.storage = storage;
+        this.applicationLocation = applicationLocation;
         addressBookParser = new AddressBookParser();
     }
 
@@ -97,14 +108,28 @@ public class LogicManager implements Logic {
     private void verifyImportSource(Path sourceFile) throws CommandException {
         Path dataFile = storage.getAddressBookFilePath();
         try {
+            Path applicationHome = getApplicationHome();
+            Path realSource = sourceFile.toRealPath();
+            if (!realSource.startsWith(applicationHome)) {
+                throw new CommandException(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME);
+            }
             boolean isSamePath = sourceFile.toAbsolutePath().normalize().equals(dataFile.toAbsolutePath().normalize());
-            boolean isSameFile = Files.exists(sourceFile) && Files.exists(dataFile)
-                    && Files.isSameFile(sourceFile, dataFile);
+            boolean isSameFile = Files.exists(dataFile) && Files.isSameFile(realSource, dataFile);
             if (isSamePath || isSameFile) {
                 throw new CommandException(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE);
             }
         } catch (IOException e) {
             throw new CommandException(String.format(ImportCommand.MESSAGE_FAILURE, sourceFile, e.getMessage()), e);
+        }
+    }
+
+    private Path getApplicationHome() throws IOException {
+        try {
+            Path location = Path.of(applicationLocation.toURI()).toRealPath();
+            // IDE and Gradle runs use class directories rather than a packaged JAR.
+            return Files.isDirectory(location) ? Path.of("").toRealPath() : location.getParent();
+        } catch (URISyntaxException e) {
+            throw new IOException("Could not determine the application home folder.", e);
         }
     }
 

@@ -34,6 +34,9 @@ public class ImportCommand extends Command {
             + "or an earlier accepted CSV record.";
     public static final String MESSAGE_SOURCE_IS_DATA_FILE = "The import source must differ from the directory's "
             + "JSON save file. No members were imported.";
+    public static final String MESSAGE_SOURCE_OUTSIDE_HOME = "Cannot import this file: CSV files must be inside the "
+            + "folder containing NUSocietyDesk.jar or one of its subfolders.\n"
+            + "Move the CSV into that folder and retry. No members were imported.";
 
     private static final Logger logger = LogsCenter.getLogger(ImportCommand.class);
 
