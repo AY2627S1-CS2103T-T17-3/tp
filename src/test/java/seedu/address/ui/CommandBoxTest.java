@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -15,13 +17,22 @@ import org.junit.jupiter.api.Test;
 import javafx.event.ActionEvent;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import seedu.address.logic.commands.CommandResult;
+import seedu.address.logic.commands.FindCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
+import seedu.address.logic.parser.AddressBookParser;
 import seedu.address.logic.parser.exceptions.ParseException;
+import seedu.address.model.Model;
+import seedu.address.model.ModelManager;
+import seedu.address.model.person.Person;
 import seedu.address.testutil.JavaFxTestUtil;
+import seedu.address.testutil.PersonBuilder;
 
 public class CommandBoxTest {
     private final List<String> executions = new ArrayList<>();
@@ -55,6 +66,127 @@ public class CommandBoxTest {
     public void constructor_displaysHistoryHint() throws Exception {
         JavaFxTestUtil.runAndWait(() -> {
             assertEquals("Enter command here... (↑/↓ for history)", field.getPromptText());
+            return null;
+        });
+    }
+
+    @Test
+    public void paste_searchWhitespace_preservesBoundariesAndValidatesBeforeFiltering() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            Person alice = new PersonBuilder().withName("Alice").withPhone("91234567")
+                    .withEmail("alice@u.nus.edu").withTags("publicity").build();
+            Person bob = new PersonBuilder().withName("Bob").withEmail("bob@u.nus.edu").build();
+            Model model = new ModelManager();
+            model.addPerson(alice);
+            model.addPerson(bob);
+            AddressBookParser parser = new AddressBookParser();
+            List<String> errors = new ArrayList<>();
+            commandBox = new CommandBox(command -> {
+                try {
+                    return parser.parseCommand(command).execute(model);
+                } catch (ParseException e) {
+                    errors.add(e.getMessage());
+                    throw e;
+                }
+            });
+            field = (TextField) commandBox.getRoot().lookup("#commandTextField");
+            Map<String, String> invalidSearches = Map.of(
+                    "find n/Alice%sBob", FindCommand.MESSAGE_MULTIPLE_NAME_KEYWORDS,
+                    "find p/9123%s4567", FindCommand.MESSAGE_MULTIPLE_PHONE_SUBSTRINGS,
+                    "find e/alice%sbob", FindCommand.MESSAGE_MULTIPLE_EMAIL_SUBSTRINGS,
+                    "find t/pub%slicity", FindCommand.MESSAGE_MULTIPLE_TAGS,
+                    "findall p/9123%s4567", String.format(FindCommand.MESSAGE_MULTIPLE_CONDITION_VALUES, "p/"),
+                    "findany p/9123%s4567", String.format(FindCommand.MESSAGE_MULTIPLE_CONDITION_VALUES_ANY, "p/"));
+            Map<String, List<Person>> validSearches = Map.of(
+                    "find%sAlice%sBob", List.of(alice, bob),
+                    "findall%sn/Alice%st/publicity", List.of(alice),
+                    "findany%sn/Alice%sn/Bob", List.of(alice, bob),
+                    "find n/%sAlice%s", List.of(alice));
+            for (String separator : List.of("\t", "\n", "\r", "\r\n", "\t\r\n")) {
+                for (Map.Entry<String, String> search : invalidSearches.entrySet()) {
+                    submit("find n/Bob");
+                    paste(field, String.format(search.getKey(), separator));
+                    assertEquals(String.format(search.getKey(), " "), field.getText());
+                    field.fireEvent(new ActionEvent());
+                    assertTrue(hasErrorStyle());
+                    assertEquals(search.getValue(), errors.getLast());
+                    assertEquals(List.of(bob), model.getFilteredPersonList());
+                }
+                for (Map.Entry<String, List<Person>> search : validSearches.entrySet()) {
+                    field.clear();
+                    paste(field, String.format(search.getKey(), separator, separator));
+                    assertEquals(String.format(search.getKey(), " ", " "), field.getText());
+                    field.fireEvent(new ActionEvent());
+                    assertFalse(hasErrorStyle());
+                    assertEquals(search.getValue(), model.getFilteredPersonList());
+                }
+            }
+            assertEquals(List.of(alice, bob), model.getAddressBook().getPersonList());
+            return null;
+        });
+    }
+
+    @Test
+    public void paste_selectionInSearch_preservesCaretUndoAndHistory() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            for (String separator : List.of("\t", "\n", "\r\n", "\t\r\n")) {
+                field.setText("find Alice Bob");
+                field.selectRange(10, 5);
+                paste(field, "Carol" + separator + "David");
+                assertEquals("find Carol David Bob", field.getText());
+                assertEquals(16, field.getCaretPosition());
+                assertEquals(16, field.getAnchor());
+                field.undo();
+                assertEquals("find Alice Bob", field.getText());
+                field.redo();
+                assertEquals("find Carol David Bob", field.getText());
+                field.fireEvent(new ActionEvent());
+                press(KeyCode.UP);
+                assertEquals("find Carol David Bob", field.getText());
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void paste_partialSearchCommand_normalizesUsingCompleteInput() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            for (String command : List.of("find", "findall", "findany")) {
+                field.setText("fi");
+                field.positionCaret(field.getLength());
+                paste(field, command.substring(2) + "\r\nn/Alice");
+                assertEquals(command + " n/Alice", field.getText());
+                assertEquals(field.getLength(), field.getCaretPosition());
+                field.setText(command + " n/AliceBob");
+                field.positionCaret(command.length() + 8);
+                paste(field, "\t");
+                assertEquals(command + " n/Alice Bob", field.getText());
+            }
+            field.clear();
+            paste(field, "\t\r\nfind n/Alice\r\n");
+            assertEquals(" find n/Alice ", field.getText());
+            return null;
+        });
+    }
+
+    @Test
+    public void paste_otherCommands_preservesDefaultTextFieldBehavior() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            TextField defaultField = new TextField();
+            for (String command : List.of("add", "edit", "list", "help", "clear", "findOther", "findallOther",
+                    "findanyOther", "FIND", "FINDALL", "FINDANY")) {
+                for (String separator : List.of("\t", "\n", "\r\n")) {
+                    field.setText(command + " n/AliceBob");
+                    defaultField.setText(field.getText());
+                    field.positionCaret(command.length() + 8);
+                    defaultField.positionCaret(field.getCaretPosition());
+                    paste(field, separator);
+                    paste(defaultField, separator);
+                    assertEquals(defaultField.getText(), field.getText());
+                    assertEquals(defaultField.getCaretPosition(), field.getCaretPosition());
+                    assertEquals(defaultField.getAnchor(), field.getAnchor());
+                }
+            }
             return null;
         });
     }
@@ -421,6 +553,26 @@ public class CommandBoxTest {
             assertTrue(hasErrorStyle());
             return null;
         });
+    }
+
+    private void paste(TextField target, String text) {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        Map<DataFormat, Object> previousContent = new HashMap<>();
+        for (DataFormat format : clipboard.getContentTypes()) {
+            // X11 can advertise clipboard formats whose content JavaFX cannot read.
+            Object value = clipboard.getContent(format);
+            if (value != null) {
+                previousContent.put(format, value);
+            }
+        }
+        ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        try {
+            assertTrue(clipboard.setContent(content));
+            target.paste();
+        } finally {
+            clipboard.setContent(previousContent);
+        }
     }
 
     private void submit(String command) {

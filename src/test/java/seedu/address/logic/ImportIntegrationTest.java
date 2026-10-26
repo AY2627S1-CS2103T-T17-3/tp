@@ -2,10 +2,15 @@ package seedu.address.logic;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -14,7 +19,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.AnnotatedElementContext;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.io.TempDirFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -42,17 +50,21 @@ public class ImportIntegrationTest {
     private static final String FIRST_ROW = "Alex Tan,91234567,Alex@U.NUS.EDU,\"NUS, Kent Ridge\","
             + "Publicity;PUBLICITY,active\n";
 
-    @TempDir
+    @TempDir(factory = BuildDirectoryTempDirFactory.class)
     public Path testFolder;
 
     private Model model;
     private Logic logic;
     private JsonAddressBookStorage storage;
     private Path dataFile;
+    private Path applicationHome;
+    private Path applicationJar;
 
     @BeforeEach
     public void setUp() throws Exception {
-        dataFile = testFolder.resolve("nusocietydesk.json");
+        applicationHome = Files.createDirectory(testFolder.resolve("app with spaces"));
+        applicationJar = Files.createFile(applicationHome.resolve("NUSocietyDesk.jar"));
+        dataFile = applicationHome.resolve("nusocietydesk.json");
         storage = new JsonAddressBookStorage(dataFile);
         model = new ModelManager(new AddressBook(), new UserPrefs());
         logic = createLogic(storage);
@@ -97,6 +109,23 @@ public class ImportIntegrationTest {
         assertTrue(JsonUtil.fromJsonString(Files.readString(dataFile), JsonNode.class)
                 .get("persons").get(1).get("address").isNull());
         assertArrayEquals(sourceBefore, Files.readAllBytes(file));
+    }
+
+    @Test
+    public void execute_missingSaveFile_createsSaveFileAndPersistsImport() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW);
+        String sourceBefore = Files.readString(file);
+        Files.delete(dataFile);
+        assertFalse(Files.exists(dataFile));
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file), result.getFeedbackToUser());
+        assertEquals(model.getAddressBook(), storage.readAddressBook().orElseThrow());
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+        assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().getLast().getEmail().value);
+        assertEquals(model.getAddressBook().getPersonList(), model.getFilteredPersonList());
+        assertEquals(sourceBefore, Files.readString(file));
     }
 
     @Test
@@ -220,17 +249,181 @@ public class ImportIntegrationTest {
     }
 
     @Test
+    public void execute_parentTraversal_rejectsOutsideSourceWithoutChanges() throws Exception {
+        Files.writeString(testFolder.resolve("outside.csv"), HEADER + FIRST_ROW);
+        Path source = applicationHome.resolve("..").resolve("outside.csv");
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_relativeOutsideSource_rejectsWithoutChanges() throws Exception {
+        Path outside = Files.writeString(testFolder.resolve("outside.csv"), HEADER + FIRST_ROW);
+        Path source = Path.of("").toAbsolutePath().relativize(outside);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_absoluteOutsideSource_rejectsBeforeDecodingOrParsing() throws Exception {
+        Path source = testFolder.resolve("outside.csv");
+        Files.write(source, new byte[] {(byte) 0xc3, (byte) 0x28});
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_outsideSource_doesNotAttemptSaving() throws Exception {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        logic = createLogic(new JsonAddressBookStorage(dataFile) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) {
+                saveAttempts.incrementAndGet();
+            }
+        });
+        Path source = Files.writeString(testFolder.resolve("outside.csv"), HEADER + FIRST_ROW);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+        assertEquals(0, saveAttempts.get());
+    }
+
+    @Test
+    public void execute_similarlyNamedSibling_rejectsOutsideSourceWithoutChanges() throws Exception {
+        Path sibling = Files.createDirectory(testFolder.resolve("app with spaces sibling"));
+        Path source = Files.writeString(sibling.resolve("members.csv"), HEADER + FIRST_ROW);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_relativeSourceInsideHome_savesMembers() throws Exception {
+        Path source = Path.of("").toAbsolutePath().relativize(writeCsv(HEADER + FIRST_ROW));
+
+        logic.execute(importCommand(source));
+
+        assertEquals(2, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_sourceInSubfolder_savesMembers() throws Exception {
+        Path folder = Files.createDirectory(applicationHome.resolve("imports"));
+        Path source = Files.writeString(folder.resolve("members.csv"), HEADER + FIRST_ROW);
+
+        logic.execute(importCommand(source));
+
+        assertEquals(2, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_parentTraversalBackIntoHome_savesMembers() throws Exception {
+        Files.createDirectory(applicationHome.resolve("imports"));
+        Path source = writeCsv(HEADER + FIRST_ROW);
+        Path alias = applicationHome.resolve("imports").resolve("..").resolve(source.getFileName());
+
+        logic.execute(importCommand(alias));
+
+        assertEquals(2, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_symbolicLinkToOutsideFile_rejectsWithoutChanges() throws Exception {
+        Path target = Files.writeString(testFolder.resolve("outside.csv"), HEADER + FIRST_ROW);
+        Path source = createSymbolicLink(applicationHome.resolve("linked.csv"), target);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_symbolicLinkToOutsideFolder_rejectsWithoutChanges() throws Exception {
+        Path folder = Files.createDirectory(testFolder.resolve("outside"));
+        Files.writeString(folder.resolve("members.csv"), HEADER + FIRST_ROW);
+        Path link = createSymbolicLink(applicationHome.resolve("linked"), folder);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME,
+                assertRejectedWithoutChanges(link.resolve("members.csv")).getMessage());
+    }
+
+    @Test
+    public void execute_symbolicLinkInsideHome_savesMembers() throws Exception {
+        Path target = writeCsv(HEADER + FIRST_ROW);
+        Path source = createSymbolicLink(applicationHome.resolve("linked.csv"), target);
+
+        logic.execute(importCommand(source));
+
+        assertEquals(2, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_symbolicLinkHome_savesMembersUsingRealHome() throws Exception {
+        Path link = createSymbolicLink(testFolder.resolve("linked-app"), applicationHome);
+        Path source = writeCsv(HEADER + FIRST_ROW);
+        logic = new LogicManager(model, new StorageManager(storage,
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))),
+                link.resolve(applicationJar.getFileName()).toUri().toURL());
+
+        logic.execute(importCommand(source));
+
+        assertEquals(2, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_classDirectoryRun_allowsWorkingDirectorySource() throws Exception {
+        logic = new LogicManager(model, new StorageManager(storage,
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))));
+
+        logic.execute(importCommand(Path.of("docs", "samples", "members.csv")));
+
+        assertEquals(3, storage.readAddressBook().orElseThrow().getPersonList().size());
+    }
+
+    @Test
+    public void execute_classDirectoryRun_rejectsSourceOutsideWorkingDirectory(@TempDir Path outsideFolder)
+            throws Exception {
+        logic = new LogicManager(model, new StorageManager(storage,
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))));
+        Path source = Files.writeString(outsideFolder.resolve("members.csv"), HEADER + FIRST_ROW);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation") // Deliberately create a URL that cannot be converted to a URI.
+    public void execute_invalidApplicationLocation_rejectsWithoutChanges() throws Exception {
+        Path source = writeCsv(HEADER + FIRST_ROW);
+        logic = new LogicManager(model, new StorageManager(storage,
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))),
+                new URL("file:/invalid application.jar"));
+
+        CommandException error = assertRejectedWithoutChanges(source);
+
+        assertEquals(String.format(ImportCommand.MESSAGE_FAILURE, source,
+                "Could not determine the application home folder."), error.getMessage());
+        IOException cause = assertInstanceOf(IOException.class, error.getCause());
+        assertInstanceOf(URISyntaxException.class, cause.getCause());
+    }
+
+    @Test
     public void execute_sourceIsSaveFile_rejectsBeforeChangingRecordsOrFile() throws Exception {
         Files.writeString(dataFile, HEADER + FIRST_ROW);
-        assertRejectedWithoutChanges(dataFile);
-        assertRejectedWithoutChanges(dataFile.getParent().resolve(".").resolve(dataFile.getFileName()));
+        assertEquals(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE, assertRejectedWithoutChanges(dataFile).getMessage());
+        assertEquals(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE,
+                assertRejectedWithoutChanges(dataFile.getParent().resolve(".")
+                        .resolve(dataFile.getFileName())).getMessage());
     }
 
     @Test
     public void execute_sourceIsHardLinkToSaveFile_rejectsBeforeChangingRecordsOrFile() throws Exception {
         Files.writeString(dataFile, HEADER + FIRST_ROW);
-        Path source = Files.createLink(testFolder.resolve("linked.csv"), dataFile);
-        assertRejectedWithoutChanges(source);
+        Path source = Files.createLink(applicationHome.resolve("linked.csv"), dataFile);
+        assertEquals(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    public void execute_sourceIsSymbolicLinkToSaveFile_rejectsBeforeChangingRecordsOrFile() throws Exception {
+        Files.writeString(dataFile, HEADER + FIRST_ROW);
+        Path source = createSymbolicLink(applicationHome.resolve("linked.csv"), dataFile);
+
+        assertEquals(ImportCommand.MESSAGE_SOURCE_IS_DATA_FILE, assertRejectedWithoutChanges(source).getMessage());
     }
 
     @Test
@@ -257,7 +450,7 @@ public class ImportIntegrationTest {
         assertEquals(sourceBefore, Files.readString(file));
     }
 
-    private void assertRejectedWithoutChanges(Path file) throws Exception {
+    private CommandException assertRejectedWithoutChanges(Path file) throws Exception {
         AddressBook before = new AddressBook(model.getAddressBook());
         List<Person> filteredBefore = List.copyOf(model.getFilteredPersonList());
         String savedBefore = Files.readString(dataFile);
@@ -270,18 +463,41 @@ public class ImportIntegrationTest {
         assertEquals(filteredBefore, model.getFilteredPersonList());
         assertEquals(savedBefore, Files.readString(dataFile));
         assertArrayEquals(sourceBefore, Files.readAllBytes(file));
+        return error;
     }
 
-    private Logic createLogic(JsonAddressBookStorage addressBookStorage) {
+    private Logic createLogic(JsonAddressBookStorage addressBookStorage) throws Exception {
         return new LogicManager(model, new StorageManager(addressBookStorage,
-                new JsonUserPrefsStorage(testFolder.resolve("preferences.json"))));
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))), applicationJar.toUri().toURL());
     }
 
     private Path writeCsv(String contents) throws IOException {
-        return Files.writeString(testFolder.resolve("member contacts.csv"), contents);
+        return Files.writeString(applicationHome.resolve("member contacts.csv"), contents);
+    }
+
+    private Path createSymbolicLink(Path link, Path target) {
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+            assumeTrue(false, "Creating symbolic links is unavailable: " + e.getClass().getSimpleName());
+        }
+        return link;
     }
 
     private String importCommand(Path file) {
         return "import \"" + file + "\"";
+    }
+
+    /**
+     * Keeps fixtures on the working directory's drive so relative paths are valid on Windows.
+     * JUnit still creates and cleans up a separate directory for each test.
+     */
+    public static class BuildDirectoryTempDirFactory implements TempDirFactory {
+        @Override
+        public Path createTempDirectory(AnnotatedElementContext elementContext, ExtensionContext extensionContext)
+                throws IOException {
+            Path buildFolder = Files.createDirectories(Path.of("build").toAbsolutePath());
+            return Files.createTempDirectory(buildFolder, "import-test-");
+        }
     }
 }

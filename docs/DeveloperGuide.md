@@ -276,18 +276,18 @@ The diagram omits JavaFX controls, inherited UI members, and private helper meth
 
 <puml src="diagrams/CommandHistoryClassDiagram.puml" width="700" alt="CommandBox owns one CommandHistory and separately references a CommandExecutor; history can retain one draft InputState" />
 
-The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `beforeCursor` holds older entries
-and `afterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
-their concatenation is the complete retained history. An empty `afterCursor` denotes the draft position.
-Up moves the last older entry to the front of `afterCursor`; Down moves its first entry back to the end
-of `beforeCursor`. Each arrow transition uses constant-time deque end operations.
+The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `commandsBeforeCursor` holds older entries
+and `commandsAfterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
+their concatenation is the complete retained history. An empty `commandsAfterCursor` denotes the draft position.
+Up moves the last older entry to the front of `commandsAfterCursor`; Down moves its first entry back to the end
+of `commandsBeforeCursor`. Each arrow transition uses constant-time deque end operations.
 
 #### Recalling an entry and restoring a draft
 
 The first actual Up transition captures an immutable `InputState` containing exact draft text, selection
 anchor and caret. Down past the newest entry returns that snapshot and clears it. Recalled entries place
 the caret at the end. Before moving in either direction, the helper saves the selected entry's edited text
-in `editedCommands`, keyed by its chronological index (`beforeCursor.size()`). These indices remain stable
+in `editedCommands`, keyed by its chronological index (`commandsBeforeCursor.size()`). These indices remain stable
 until submission. Using indices keeps separate occurrences of the same command independently editable.
 The map contains at most one temporary string per retained entry, including empty edits. Reverting an entry
 to its submitted text removes its temporary edit. Returning to the draft does not clear edits, so browsing
@@ -297,14 +297,15 @@ denotes a no-op; a present result always restores text/selection and explicitly 
 even when the replacement text is identical. Boundary no-ops preserve edits, selection and styling.
 
 For example, after submitting `list` and `help`, the user types an unsent draft and presses Up to recall
-`help`. Now `beforeCursor` contains `["list"]` and `afterCursor` contains `["help"]`, so the selected entry's
-index is 1. If the user edits the recalled text and presses Down, the helper stores the temporary edit under
+`help`. Now `commandsBeforeCursor` contains `["list"]` and `commandsAfterCursor` contains `["help"]`,
+so the selected entry's index is 1. If the user edits the recalled text and presses Down, the helper stores the temporary edit under
 that index and restores the draft's exact text and selection. The next Up restores the edit with the caret
 at the end, while the submitted string remains `help`. None of these navigation steps executes a command.
 
 #### Recording submissions and handling failures
 
-`record` ignores `String.isBlank()` input without changing any state and returns false to prevent execution.
+`record` ignores `String.isBlank()` input without changing any state. `CommandBox` separately checks
+`String.isBlank()` to decide whether to execute the submission.
 For every other submission it resets the cursor, clears all temporary edits and the saved draft, suppresses
 an exact consecutive duplicate, and otherwise appends the raw string. `MAX_HISTORY_SIZE` is 100 across both deques. At capacity,
 the oldest entry is removed before appending. Blank inputs and suppressed duplicates do not evict entries;
@@ -315,7 +316,7 @@ After a parser or command exception, `CommandBox` calls `selectLatestAfterFailur
 without replacing the field or its selection. The first Up therefore reaches the preceding entry, while
 Down can return to the failure. If no preceding entry exists, Up is a boundary no-op preserving error styling.
 This positioning leaves `draft` null, so there is no duplicate failed-input draft beyond the newest entry.
-Down is a boundary no-op when only the newest entry remains in `afterCursor` and there is no saved draft.
+Down is a boundary no-op when only the newest entry remains in `commandsAfterCursor` and there is no saved draft.
 Repeated Down presses preserve edits and selection; the next Up still recalls the preceding entry.
 Normal browsing captures and restores a real unsent draft as before. Temporary edits survive navigation.
 
@@ -533,9 +534,14 @@ The main responsibilities are:
 
 The execution flow is:
 
-1. **Protect the source.** Before execution, `LogicManager` compares the CSV path with the JSON save path using
-   normalized paths and `Files.isSameFile`. This rejects aliases and links to the save file. The reader opens the
-   source for reading only.
+1. **Protect the source.** Before execution, `LogicManager` derives the application home from its code location:
+   the real JAR's parent folder for packaged runs, or the working directory for IDE/Gradle runs. It resolves the
+   source with `Path.toRealPath` and checks containment using `Path.startsWith`, so parent traversal, symbolic
+   links to outside files or folders, and similarly named sibling folders cannot escape the boundary. Both
+   absolute and working-directory-relative paths are accepted when their real location is inside the home folder.
+   It also compares the CSV path with the JSON save path using normalized paths and `Files.isSameFile`, rejecting
+   aliases and links to the save file. These checks complete before CSV parsing, model changes, or saving.
+   The reader opens the source for reading only.
 1. **Read and validate.** The reader checks the fixed six-column header, trims member fields, and reuses the model
    validators. Blank name, phone, and address values become empty optionals. Email and status are required;
    `Status.isValidStatus` accepts only `active` and `archived`. `Tag` and `Set<Tag>` normalize and deduplicate tags.
@@ -1102,6 +1108,19 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
 1. Test case: `import data/nusocietydesk.json`, using the app's configured JSON save file.<br>
    Expected: The source/save-path check rejects the import before parsing the file. Records, search results,
    and the original JSON remain unchanged.
+
+1. Put a copy of the sample CSV alongside the application folder as `outside.csv`, then run
+   `import ../outside.csv` while launching from the JAR's folder. Also try the file's absolute path and a CSV in
+   a similarly named sibling folder, such as `app-backup` beside `app`.<br>
+   Expected: Each import reports that CSV files must be inside the folder containing the JAR or a subfolder.
+   Member records, search results, saved JSON, and the source files remain unchanged.
+1. Launch the JAR from a different working directory. Import an absolute path inside the JAR's folder, then try
+   an absolute path outside it. Restore the starting directory data between successful cases.<br>
+   Expected: Only the inside source is accepted; the boundary follows the JAR location, not the launch folder.
+1. Where symbolic links are supported, create a file link inside the application folder to `outside.csv`, and a
+   directory link inside it to an outside folder containing a CSV. Try importing through each link.<br>
+   Expected: Both imports are rejected without changing records, search results, or files. A link whose target
+   remains inside the application folder is accepted. A link to the JSON save file is still rejected.
 
 These GUI checks require manual execution. `ImportIntegrationTest` covers persistence and source protection;
 `ImportCommandTest` checks the partial-import sample's documented counts.

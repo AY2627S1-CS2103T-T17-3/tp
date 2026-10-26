@@ -1,7 +1,6 @@
 package seedu.address.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -23,14 +22,14 @@ public class CommandHistoryTest {
 
     @Test
     public void assertions_configuredMode_matchesTestTask() {
-        boolean expected = Boolean.parseBoolean(System.getProperty("history.assertions.enabled", "true"));
-        assertEquals(expected, CommandHistory.class.desiredAssertionStatus());
+        boolean areAssertionsExpected = Boolean.parseBoolean(System.getProperty("history.assertions.enabled", "true"));
+        assertEquals(areAssertionsExpected, CommandHistory.class.desiredAssertionStatus());
     }
 
     @Test
     public void navigate_emptyHistory_doesNothing() {
-        assertTrue(older(currentInput).isEmpty());
-        assertTrue(newer().isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
+        assertTrue(recallNewer().isEmpty());
     }
 
     @Test
@@ -38,23 +37,23 @@ public class CommandHistoryTest {
         history.record("list");
         history.record("help");
         assertOlder("help");
-        assertEquals(InputState.atEnd("list"), older(InputState.atEnd("edited help")).orElseThrow());
-        assertTrue(older(InputState.atEnd("edited list")).isEmpty());
-        assertEquals(InputState.atEnd("edited help"), newer().orElseThrow());
-        assertEquals(draft, newer().orElseThrow());
-        assertTrue(newer().isEmpty());
+        assertEquals(InputState.createAtEnd("list"), recallOlder(InputState.createAtEnd("edited help")).orElseThrow());
+        assertTrue(recallOlder(InputState.createAtEnd("edited list")).isEmpty());
+        assertEquals(InputState.createAtEnd("edited help"), recallNewer().orElseThrow());
+        assertEquals(draft, recallNewer().orElseThrow());
+        assertTrue(recallNewer().isEmpty());
 
         InputState changedDraft = new InputState("list again", 0, 4);
-        assertEquals("edited help", older(changedDraft).orElseThrow().text());
+        assertEquals("edited help", recallOlder(changedDraft).orElseThrow().text());
         assertOlder("edited list");
-        assertEquals("edited help", newer().orElseThrow().text());
-        assertEquals(changedDraft, newer().orElseThrow());
+        assertEquals("edited help", recallNewer().orElseThrow().text());
+        assertEquals(changedDraft, recallNewer().orElseThrow());
     }
 
     @Test
     public void record_exactDuplicates_preservesRawTextAndNonconsecutiveDuplicates() {
         for (String command : List.of("list", "list", " list ", "LIST", "list")) {
-            assertTrue(history.record(command));
+            history.record(command);
         }
         assertHistoryNewestFirst(List.of("list", "LIST", " list ", "list"));
     }
@@ -62,17 +61,17 @@ public class CommandHistoryTest {
     @Test
     public void record_blankInput_preservesBrowsingAndDuplicateDetection() {
         history.record("list");
-        assertFalse(history.record(""));
-        assertFalse(history.record(" \t\n\u2003"));
+        history.record("");
+        history.record(" \t\n\u2003");
         history.record("list");
         assertOlder("list");
-        assertFalse(history.record(" \t"));
-        assertTrue(older(currentInput).isEmpty());
-        assertEquals(draft, newer().orElseThrow());
-        assertTrue(history.record("\u00a0"));
+        history.record(" \t");
+        assertTrue(recallOlder(currentInput).isEmpty());
+        assertEquals(draft, recallNewer().orElseThrow());
+        history.record("\u00a0");
         assertOlder("\u00a0");
         assertOlder("list");
-        assertTrue(older(currentInput).isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
     }
 
     @Test
@@ -84,16 +83,16 @@ public class CommandHistoryTest {
             }
             InputState boundedInput = draft;
             for (int i = count; i > count - 100; i--) {
-                boundedInput = boundedHistory.older(boundedInput).orElseThrow();
+                boundedInput = boundedHistory.recallOlder(boundedInput).orElseThrow();
                 assertEquals("command " + i, boundedInput.text());
             }
-            assertTrue(boundedHistory.older(boundedInput).isEmpty());
+            assertTrue(boundedHistory.recallOlder(boundedInput).isEmpty());
             for (int i = count - 98; i <= count; i++) {
-                boundedInput = boundedHistory.newer(boundedInput).orElseThrow();
+                boundedInput = boundedHistory.recallNewer(boundedInput).orElseThrow();
                 assertEquals("command " + i, boundedInput.text());
             }
-            assertEquals(draft, boundedHistory.newer(boundedInput).orElseThrow());
-            assertTrue(boundedHistory.newer(draft).isEmpty());
+            assertEquals(draft, boundedHistory.recallNewer(boundedInput).orElseThrow());
+            assertTrue(boundedHistory.recallNewer(draft).isEmpty());
         }
     }
 
@@ -102,13 +101,13 @@ public class CommandHistoryTest {
         populateHistory();
         assertOlder("command 100");
         assertOlder("command 99");
-        assertTrue(history.record("command 100"));
-        assertTrue(newer().isEmpty());
-        assertFalse(history.record(" "));
+        history.record("command 100");
+        assertTrue(recallNewer().isEmpty());
+        history.record(" ");
         for (int i = 100; i >= 1; i--) {
             assertOlder("command " + i);
         }
-        assertTrue(older(currentInput).isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
     }
 
     @Test
@@ -118,16 +117,16 @@ public class CommandHistoryTest {
             assertOlder("command " + i);
         }
         history.record("command 1");
-        InputState newDraft = InputState.atEnd("");
-        assertEquals("command 1", older(newDraft).orElseThrow().text());
+        InputState newDraft = InputState.createAtEnd("");
+        assertEquals("command 1", recallOlder(newDraft).orElseThrow().text());
         for (int i = 100; i >= 2; i--) {
             assertOlder("command " + i);
         }
-        assertTrue(older(currentInput).isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
         for (int i = 0; i < 99; i++) {
-            newer();
+            recallNewer();
         }
-        assertEquals(newDraft, newer().orElseThrow());
+        assertEquals(newDraft, recallNewer().orElseThrow());
     }
 
     @Test
@@ -135,11 +134,11 @@ public class CommandHistoryTest {
         history.record("list");
         assertOlder("list");
         history.record("help");
-        assertTrue(newer().isEmpty());
-        InputState newDraft = InputState.atEnd("new draft");
-        older(newDraft);
-        assertEquals(newDraft, newer().orElseThrow());
-        assertTrue(new CommandHistory().older(newDraft).isEmpty());
+        assertTrue(recallNewer().isEmpty());
+        InputState newDraft = InputState.createAtEnd("new draft");
+        recallOlder(newDraft);
+        assertEquals(newDraft, recallNewer().orElseThrow());
+        assertTrue(new CommandHistory().recallOlder(newDraft).isEmpty());
     }
 
     @Test
@@ -148,12 +147,12 @@ public class CommandHistoryTest {
         history.record("help");
         history.record("list");
         assertOlder("list");
-        older(InputState.atEnd("edited newest list"));
+        recallOlder(InputState.createAtEnd("edited newest list"));
         assertOlder("list");
-        currentInput = InputState.atEnd("edited oldest list");
-        assertEquals("help", newer().orElseThrow().text());
-        assertEquals("edited newest list", newer().orElseThrow().text());
-        assertEquals(draft, newer().orElseThrow());
+        currentInput = InputState.createAtEnd("edited oldest list");
+        assertEquals("help", recallNewer().orElseThrow().text());
+        assertEquals("edited newest list", recallNewer().orElseThrow().text());
+        assertEquals(draft, recallNewer().orElseThrow());
         assertOlder("edited newest list");
         assertOlder("help");
         assertOlder("edited oldest list");
@@ -163,12 +162,12 @@ public class CommandHistoryTest {
     public void navigate_blankAndRevertedEdits_retainsCurrentText() {
         history.record("list");
         assertOlder("list");
-        currentInput = InputState.atEnd("");
-        assertFalse(history.record(currentInput.text()));
-        assertEquals(draft, newer().orElseThrow());
+        currentInput = InputState.createAtEnd("");
+        history.record(currentInput.text());
+        assertEquals(draft, recallNewer().orElseThrow());
         assertOlder("");
-        currentInput = InputState.atEnd("list");
-        newer();
+        currentInput = InputState.createAtEnd("list");
+        recallNewer();
         assertOlder("list");
     }
 
@@ -177,9 +176,9 @@ public class CommandHistoryTest {
         history.record("list");
         history.record("help");
         assertOlder("help");
-        older(InputState.atEnd("edited help"));
-        currentInput = InputState.atEnd("edited list");
-        newer();
+        recallOlder(InputState.createAtEnd("edited help"));
+        currentInput = InputState.createAtEnd("edited list");
+        recallNewer();
         history.record(currentInput.text());
         assertHistoryNewestFirst(List.of("edited help", "help", "list"));
     }
@@ -188,20 +187,20 @@ public class CommandHistoryTest {
     public void record_duplicateAfterEditingAtCapacity_clearsEditsWithoutEviction() {
         populateHistory();
         assertOlder("command 100");
-        older(InputState.atEnd("edited newest"));
+        recallOlder(InputState.createAtEnd("edited newest"));
         history.record("command 100");
         for (int i = 100; i >= 1; i--) {
             assertOlder("command " + i);
         }
-        assertTrue(older(currentInput).isEmpty());
-        currentInput = InputState.atEnd("edited oldest");
-        newer();
+        assertTrue(recallOlder(currentInput).isEmpty());
+        currentInput = InputState.createAtEnd("edited oldest");
+        recallNewer();
         history.record("new command");
         assertOlder("new command");
         for (int i = 100; i >= 2; i--) {
             assertOlder("command " + i);
         }
-        assertTrue(older(currentInput).isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
     }
 
     @Test
@@ -209,17 +208,17 @@ public class CommandHistoryTest {
         history.record("list");
         history.record("invalid command");
         history.selectLatestAfterFailure();
-        currentInput = InputState.atEnd("edited invalid command");
-        assertTrue(newer().isEmpty());
-        assertTrue(newer().isEmpty());
+        currentInput = InputState.createAtEnd("edited invalid command");
+        assertTrue(recallNewer().isEmpty());
+        assertTrue(recallNewer().isEmpty());
         assertOlder("list");
-        assertEquals("edited invalid command", newer().orElseThrow().text());
-        assertTrue(newer().isEmpty());
+        assertEquals("edited invalid command", recallNewer().orElseThrow().text());
+        assertTrue(recallNewer().isEmpty());
         assertOlder("list");
         history.record("success");
         currentInput = draft;
         assertOlder("success");
-        assertEquals(draft, newer().orElseThrow());
+        assertEquals(draft, recallNewer().orElseThrow());
     }
 
     @Test
@@ -227,40 +226,40 @@ public class CommandHistoryTest {
         history.record("list");
         history.record("invalid command");
         history.selectLatestAfterFailure();
-        currentInput = InputState.atEnd("");
-        assertFalse(history.record(currentInput.text()));
-        assertTrue(newer().isEmpty());
+        currentInput = InputState.createAtEnd("");
+        history.record(currentInput.text());
+        assertTrue(recallNewer().isEmpty());
         assertOlder("list");
-        assertEquals("", newer().orElseThrow().text());
-        assertTrue(newer().isEmpty());
+        assertEquals("", recallNewer().orElseThrow().text());
+        assertTrue(recallNewer().isEmpty());
         history.record("invalid command");
         history.selectLatestAfterFailure();
-        currentInput = InputState.atEnd("invalid command");
+        currentInput = InputState.createAtEnd("invalid command");
         assertOlder("list");
-        assertTrue(older(currentInput).isEmpty());
+        assertTrue(recallOlder(currentInput).isEmpty());
     }
 
     @Test
     public void operations_fineLogging_recordsMetadataOnly() {
         Logger logger = Logger.getLogger("ab3.CommandHistory");
         Level previousLevel = logger.getLevel();
-        boolean previousParentHandlers = logger.getUseParentHandlers();
+        boolean wereParentHandlersEnabled = logger.getUseParentHandlers();
         List<LogRecord> records = new ArrayList<>();
         Handler handler = new RecordingHandler(records);
         logger.addHandler(handler);
         logger.setLevel(Level.FINE);
         logger.setUseParentHandlers(false);
         try {
-            older(currentInput);
-            newer();
+            recallOlder(currentInput);
+            recallNewer();
             history.record(" ");
             history.record("private-command-one");
             history.record("private-command-one");
             history.record("private-command-two");
-            older(currentInput);
-            older(currentInput);
-            newer();
-            newer();
+            recallOlder(currentInput);
+            recallOlder(currentInput);
+            recallNewer();
+            recallNewer();
             assertEquals(List.of(
                     "Command history navigation ignored: direction=older, reason=boundary.",
                     "Command history navigation ignored: direction=newer, reason=boundary.",
@@ -284,7 +283,7 @@ public class CommandHistoryTest {
         } finally {
             logger.removeHandler(handler);
             logger.setLevel(previousLevel);
-            logger.setUseParentHandlers(previousParentHandlers);
+            logger.setUseParentHandlers(wereParentHandlersEnabled);
         }
     }
 
@@ -295,22 +294,22 @@ public class CommandHistoryTest {
     }
 
     private void assertOlder(String expected) {
-        assertEquals(InputState.atEnd(expected), older(currentInput).orElseThrow());
+        assertEquals(InputState.createAtEnd(expected), recallOlder(currentInput).orElseThrow());
     }
 
-    private void assertHistoryNewestFirst(List<String> expected) {
-        expected.forEach(this::assertOlder);
-        assertTrue(older(currentInput).isEmpty());
+    private void assertHistoryNewestFirst(List<String> expectedCommands) {
+        expectedCommands.forEach(this::assertOlder);
+        assertTrue(recallOlder(currentInput).isEmpty());
     }
 
-    private Optional<InputState> older(InputState input) {
-        Optional<InputState> result = history.older(input);
+    private Optional<InputState> recallOlder(InputState input) {
+        Optional<InputState> result = history.recallOlder(input);
         currentInput = result.orElse(input);
         return result;
     }
 
-    private Optional<InputState> newer() {
-        Optional<InputState> result = history.newer(currentInput);
+    private Optional<InputState> recallNewer() {
+        Optional<InputState> result = history.recallNewer(currentInput);
         currentInput = result.orElse(currentInput);
         return result;
     }
