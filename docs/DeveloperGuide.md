@@ -276,18 +276,18 @@ The diagram omits JavaFX controls, inherited UI members, and private helper meth
 
 <puml src="diagrams/CommandHistoryClassDiagram.puml" width="700" alt="CommandBox owns one CommandHistory and separately references a CommandExecutor; history can retain one draft InputState" />
 
-The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `beforeCursor` holds older entries
-and `afterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
-their concatenation is the complete retained history. An empty `afterCursor` denotes the draft position.
-Up moves the last older entry to the front of `afterCursor`; Down moves its first entry back to the end
-of `beforeCursor`. Each arrow transition uses constant-time deque end operations.
+The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `commandsBeforeCursor` holds older entries
+and `commandsAfterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
+their concatenation is the complete retained history. An empty `commandsAfterCursor` denotes the draft position.
+Up moves the last older entry to the front of `commandsAfterCursor`; Down moves its first entry back to the end
+of `commandsBeforeCursor`. Each arrow transition uses constant-time deque end operations.
 
 #### Recalling an entry and restoring a draft
 
 The first actual Up transition captures an immutable `InputState` containing exact draft text, selection
 anchor and caret. Down past the newest entry returns that snapshot and clears it. Recalled entries place
 the caret at the end. Before moving in either direction, the helper saves the selected entry's edited text
-in `editedCommands`, keyed by its chronological index (`beforeCursor.size()`). These indices remain stable
+in `editedCommands`, keyed by its chronological index (`commandsBeforeCursor.size()`). These indices remain stable
 until submission. Using indices keeps separate occurrences of the same command independently editable.
 The map contains at most one temporary string per retained entry, including empty edits. Reverting an entry
 to its submitted text removes its temporary edit. Returning to the draft does not clear edits, so browsing
@@ -297,14 +297,15 @@ denotes a no-op; a present result always restores text/selection and explicitly 
 even when the replacement text is identical. Boundary no-ops preserve edits, selection and styling.
 
 For example, after submitting `list` and `help`, the user types an unsent draft and presses Up to recall
-`help`. Now `beforeCursor` contains `["list"]` and `afterCursor` contains `["help"]`, so the selected entry's
-index is 1. If the user edits the recalled text and presses Down, the helper stores the temporary edit under
+`help`. Now `commandsBeforeCursor` contains `["list"]` and `commandsAfterCursor` contains `["help"]`,
+so the selected entry's index is 1. If the user edits the recalled text and presses Down, the helper stores the temporary edit under
 that index and restores the draft's exact text and selection. The next Up restores the edit with the caret
 at the end, while the submitted string remains `help`. None of these navigation steps executes a command.
 
 #### Recording submissions and handling failures
 
-`record` ignores `String.isBlank()` input without changing any state and returns false to prevent execution.
+`record` ignores `String.isBlank()` input without changing any state. `CommandBox` separately checks
+`String.isBlank()` to decide whether to execute the submission.
 For every other submission it resets the cursor, clears all temporary edits and the saved draft, suppresses
 an exact consecutive duplicate, and otherwise appends the raw string. `MAX_HISTORY_SIZE` is 100 across both deques. At capacity,
 the oldest entry is removed before appending. Blank inputs and suppressed duplicates do not evict entries;
@@ -315,7 +316,7 @@ After a parser or command exception, `CommandBox` calls `selectLatestAfterFailur
 without replacing the field or its selection. The first Up therefore reaches the preceding entry, while
 Down can return to the failure. If no preceding entry exists, Up is a boundary no-op preserving error styling.
 This positioning leaves `draft` null, so there is no duplicate failed-input draft beyond the newest entry.
-Down is a boundary no-op when only the newest entry remains in `afterCursor` and there is no saved draft.
+Down is a boundary no-op when only the newest entry remains in `commandsAfterCursor` and there is no saved draft.
 Repeated Down presses preserve edits and selection; the next Up still recalls the preceding entry.
 Normal browsing captures and restores a real unsent draft as before. Temporary edits survive navigation.
 
