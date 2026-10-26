@@ -40,6 +40,7 @@ import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
+import seedu.address.model.person.Address;
 import seedu.address.model.person.Person;
 import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
@@ -83,6 +84,64 @@ public class LogicManagerTest {
     public void execute_validCommand_success() throws Exception {
         String listCommand = ListCommand.COMMAND_WORD;
         assertCommandSuccess(listCommand, ListCommand.MESSAGE_SUCCESS, model);
+    }
+
+    @Test
+    public void execute_unicodeBlankAddresses_preservesRecordsSearchStatusAndFiles() throws Exception {
+        Person target = new PersonBuilder().withEmail("target@u.nus.edu").withAddress("Kent Ridge").build();
+        Person hidden = new PersonBuilder().withEmail("hidden@u.nus.edu").build();
+        model.addPerson(target);
+        model.addPerson(hidden);
+        Predicate<Person> search = person -> person.getEmail().equals(target.getEmail());
+        model.updateFilteredPersonList(search);
+        model.setStatusFilter(StatusFilter.ACTIVE);
+        Path dataFile = temporaryFolder.resolve("nusocietydesk.json");
+
+        for (boolean hasSavedData : List.of(false, true)) {
+            if (hasSavedData) {
+                new JsonAddressBookStorage(dataFile).saveAddressBook(model.getAddressBook());
+            }
+            byte[] savedBefore = hasSavedData ? Files.readAllBytes(dataFile) : new byte[0];
+            for (String blank : List.of("\u3000", "\u2003", "\u00a0", " \t\u3000\u2003\u202f ")) {
+                for (String command : List.of("add e/new@u.nus.edu a/" + blank,
+                        "edit 1 a/" + blank, "edit 1 n/Changed Member a/" + blank)) {
+                    assertThrows(ParseException.class, Address.MESSAGE_CONSTRAINTS, () -> logic.execute(command));
+                    assertEquals(List.of(target, hidden), model.getAddressBook().getPersonList());
+                    assertEquals(List.of(target), model.getFilteredPersonList());
+                    assertSame(search, model.getFilteredPersonListPredicate());
+                    assertEquals(StatusFilter.ACTIVE, model.getStatusFilter());
+                    if (hasSavedData) {
+                        assertArrayEquals(savedBefore, Files.readAllBytes(dataFile));
+                    } else {
+                        assertFalse(Files.exists(dataFile));
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void execute_addressLineSeparators_preservesCommandFormatError() {
+        String expectedMessage = String.format(Messages.MESSAGE_INVALID_COMMAND_FORMAT, HelpCommand.MESSAGE_USAGE);
+        for (String separator : List.of("\u0085", "\u2028", "\u2029")) {
+            for (String command : List.of("add e/new@u.nus.edu a/" + separator, "edit 1 a/" + separator)) {
+                assertThrows(ParseException.class, expectedMessage, () -> logic.execute(command));
+            }
+        }
+        assertFalse(Files.exists(temporaryFolder.resolve("nusocietydesk.json")));
+    }
+
+    @Test
+    public void execute_nonblankUnicodeAddress_preservesValueThroughReload() throws Exception {
+        String address = "\u3000東京都\u3000新宿区\u2003";
+        assertEquals("New person added: Email: unicode@u.nus.edu; Address: " + address,
+                logic.execute("add e/unicode@u.nus.edu a/" + address).getFeedbackToUser());
+        assertEquals("Edited person: Email: unicode@u.nus.edu; Address: " + address,
+                logic.execute("edit 1 a/" + address).getFeedbackToUser());
+
+        ReadOnlyAddressBook reloaded = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
+                .readAddressBook().orElseThrow();
+        assertEquals(address, reloaded.getPersonList().getFirst().getAddress().orElseThrow().value);
     }
 
     @Test

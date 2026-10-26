@@ -186,6 +186,14 @@ three digits; addresses must be nonblank. An explicit blank value such as `n/`, 
 including a value containing only spaces. To omit a detail, leave out its prefix entirely. Each contact prefix
 can appear only once. Rejected commands leave the directory and current search results unchanged.
 
+For addresses, blank includes Unicode whitespace such as IDEOGRAPHIC SPACE (U+3000), EM SPACE (U+2003),
+and nonbreaking spaces, including mixtures of these characters. Supplying only such spaces after `a/` gives
+`Addresses must contain at least one non-whitespace character.` No member is added or edited, and the current
+search, status view, and saved data stay unchanged. Omit `a/` to leave the address unknown on add or preserve it
+on edit; a blank address cannot clear an existing value. Ordinary surrounding argument whitespace is still
+trimmed; Unicode spaces in an otherwise valid nonblank address are preserved by add/edit. Inputs containing
+line or paragraph separators can instead receive an invalid-command-format error.
+
 For an unnamed member, the card heading displays their email. Missing phone and address rows display
 `Phone: -` and `Address: -`. The add confirmation shows only supplied details, omitting missing contact fields
 and the tags section when there are no tags. For an email-only member:
@@ -305,6 +313,13 @@ Surrounding whitespace is removed from member fields before validation.
 
 Whitespace-only name, phone, and address cells count as absent. An empty tags cell means no tags; empty tags
 inside a list, such as `publicity;`, are invalid.
+
+Address cells containing only Unicode whitespace, including U+3000, U+2003, and nonbreaking spaces, also count
+as absent, whether quoted or unquoted. This differs from explicitly supplying a blank `a/` value to add/edit,
+which is rejected. Imported missing addresses display `Address: -` and save as JSON `null`.
+The existing CSV trimming rules still apply: surrounding Java whitespace is removed from unquoted cells,
+and ordinary surrounding whitespace is trimmed from all member fields. Quoting can therefore affect whether
+Unicode spaces surrounding a nonblank address are preserved.
 
 An email exceeding the local-part limit rejects only that record. For a 65-character local-part in record 3,
 the rejection detail is `CSV record 3: Email local-part must contain at most 64 characters; received 65.`
@@ -704,6 +719,12 @@ strings, and invalid supplied values are rejected. Email must always be present 
 records continue to load. An omitted or `null` status defaults to `active`; a supplied status must be exactly
 `active` or `archived`. Loading alone does not rewrite a file; the next successfully saved command writes the resolved status
 and absent optional fields as explicit `null` values.
+
+Address strings containing only Unicode whitespace are invalid even if an older release saved them.
+The app skips the affected member while loading other valid members and disables member changes and saving,
+as described below. It preserves the original file and does not automatically convert the address to missing.
+To repair it, close the app, back up the file, and replace the address with `null`, remove the address property,
+or enter a valid address, then restart.
 
 <box type="warning" seamless>
 

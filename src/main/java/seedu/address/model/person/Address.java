@@ -3,19 +3,24 @@ package seedu.address.model.person;
 import static java.util.Objects.requireNonNull;
 import static seedu.address.commons.util.AppUtil.checkArgument;
 
+import java.util.regex.Pattern;
+
 /**
  * Represents a Person's address in the address book.
  * Guarantees: immutable; is valid as declared in {@link #isValidAddress(String)}
  */
 public class Address {
 
-    public static final String MESSAGE_CONSTRAINTS = "Addresses can take any values, and should not be blank";
+    public static final String MESSAGE_CONSTRAINTS =
+            "Addresses must contain at least one non-whitespace character.";
 
     /*
      * The first character of the address must not be a whitespace,
      * otherwise " " (a blank string) becomes a valid input.
      */
     public static final String VALIDATION_REGEX = "[^\\s].*";
+
+    private static final Pattern BLANK_ADDRESS_PATTERN = Pattern.compile("\\p{IsWhite_Space}*");
 
     public final String value;
 
@@ -34,7 +39,15 @@ public class Address {
      * Returns true if a given string is a valid address.
      */
     public static boolean isValidAddress(String test) {
-        return test.matches(VALIDATION_REGEX);
+        return test.matches(VALIDATION_REGEX) && !isBlankAddress(test);
+    }
+
+    /**
+     * Returns true if {@code address} is empty or contains only Unicode White_Space characters.
+     */
+    public static boolean isBlankAddress(String address) {
+        requireNonNull(address);
+        return BLANK_ADDRESS_PATTERN.matcher(address).matches();
     }
 
     @Override

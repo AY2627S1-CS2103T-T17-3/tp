@@ -155,6 +155,29 @@ public class CsvMemberReaderTest {
     }
 
     @Test
+    public void read_unicodeBlankAddressCells_returnsAbsentAddress() throws Exception {
+        for (String blank : List.of("\u3000", "\u2003", "\u00a0", "\u2007", "\u202f", " \t\u3000\u2003\u00a0 ")) {
+            for (String cell : List.of(blank, "\"" + blank + "\"")) {
+                Path file = writeCsv(HEADER + ",,blank@u.nus.edu," + cell + ",,active\n");
+                Person member = reader.read(file).getFirst().getMember().orElseThrow();
+
+                assertTrue(member.getAddress().isEmpty());
+            }
+        }
+    }
+
+    @Test
+    public void read_nonblankUnicodeAddress_retainsExistingQuotedAndUnquotedTrimming() throws Exception {
+        String address = "\u3000Kent\u3000Ridge\u2003";
+        Path file = writeCsv(HEADER + ",,quoted@u.nus.edu,\"" + address + "\",,active\n"
+                + ",,unquoted@u.nus.edu," + address + ",,active\n");
+        List<CsvMemberRecord> records = reader.read(file);
+
+        assertEquals(address, records.get(0).getMember().orElseThrow().getAddress().orElseThrow().value);
+        assertEquals("Kent\u3000Ridge", records.get(1).getMember().orElseThrow().getAddress().orElseThrow().value);
+    }
+
+    @Test
     public void read_missingEmail_rejectsRecord() throws Exception {
         CsvMemberRecord record = reader.read(writeCsv(HEADER + ",,   ,,,active\n")).getFirst();
 

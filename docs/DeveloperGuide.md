@@ -434,6 +434,35 @@ The import regression checks supplied-field validation and that imported emails 
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
 
+### Rejecting Unicode blank addresses
+
+`Address.isBlankAddress` recognizes empty strings and strings consisting only of Unicode `White_Space`
+characters, including U+3000, U+2003, and nonbreaking spaces. It uses a separate `\p{IsWhite_Space}*` pattern.
+`Address.isValidAddress` retains its original `[^\s].*` condition and additionally rejects these blanks;
+the original expression's flags, leading-character restrictions, and line-terminator behavior are unchanged.
+The shared error is `Addresses must contain at least one non-whitespace character.`
+U+200B ZERO WIDTH SPACE and U+FEFF BOM are outside this blank classification.
+
+Add/edit reuse this model validation through `ParserUtil.parseAddress`, after the existing `trim()` calls.
+Invalid supplied addresses fail before execution or saving, preserving records, search, status view, and JSON.
+Omitted addresses retain their optional-field semantics. Nonblank address strings receive no new normalization.
+The top-level add/edit parser can reject U+0085, U+2028, and U+2029 as command-format errors before address
+validation; tokenization and error precedence remain unchanged.
+
+`CsvMemberReader` uses `Address.isBlankAddress` after its existing field trimming to map Unicode blank cells
+to absent addresses. Commons CSV still ignores surrounding Java whitespace in unquoted fields before the
+reader calls `trim()`; quoted Unicode spaces inside a cell can therefore reach the model unchanged.
+Tests include both quoted and unquoted blanks. Other fields retain their current rules.
+
+JSON strings use the shared validator without trimming. Legacy Unicode blank addresses follow the existing
+[protected recovery path](#storage-component): the affected member is skipped, valid members load, errors retain
+original record positions, and saving is disabled until repair and restart. Strict `readAddressBook` still throws
+`DataLoadingException` on any error. Missing or null addresses remain absent; no schema or migration is added.
+
+`AddressTest` covers all 25 whitespace code points, mixtures, classification boundaries, and existing restrictions.
+Add/edit parser and logic tests cover rejection, exact feedback, and state/file preservation. CSV reader and
+import integration tests cover absent-address persistence; `AddressBookRecoveryTest` covers protected JSON loading.
+
 ### Validating email length safely
 
 The local-part regular expression contains a repeated group. Matching a sufficiently long, punctuation-separated
@@ -1003,6 +1032,33 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
    Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.
 1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
    Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
+
+### Rejecting Unicode blank addresses in the command box
+
+Use a rebuilt JAR with Java 25 in a disposable folder containing `data/nusocietydesk.json` with `{"persons":[]}`.
+Run `add e/edit@u.nus.edu a/Kent Ridge`, select Active view, then run `find e/edit` and back up the saved JSON.
+
+1. On Windows, copy a command with one actual U+3000 character using PowerShell, then paste and submit it:
+
+   ```powershell
+   ('add e/blank@u.nus.edu a/' + [char]0x3000) | Set-Clipboard
+   ```
+
+   Expected: `Addresses must contain at least one non-whitespace character.` The command stays editable with
+   error styling. No member is added; the card, search, status view, and saved JSON remain unchanged.
+1. Repeat with `[char]0x2003` for EM SPACE, then repeat both characters with the command prefix
+   `edit 1 n/Changed Member a/`.<br>
+   Expected: the same error, with neither the name nor `Kent Ridge` changed. Close and reopen the app to confirm
+   that the original member and address remain saved.
+1. Import a valid CSV with a quoted address cell containing only these spaces.<br>
+   Expected: the member imports with `Address: -`, saves `"address": null`, and retains the missing address after restart.
+1. Close the app, back up the JSON, and replace one saved address with `"\u3000"`, then relaunch.<br>
+   Expected: a warning identifies the skipped member's original record position with the address error. Other
+   valid members load; changes and saving are disabled and the original file is preserved. Close the app, repair
+   the address to `null` or a valid value, and restart to restore normal saving.
+
+These command-box and restart checks require manual execution; the JUnit tests cover the shared validation,
+command-state preservation, CSV import, and protected storage behavior.
 
 ### Importing member directories
 

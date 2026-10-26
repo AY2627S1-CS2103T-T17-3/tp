@@ -60,6 +60,13 @@ public class AddCommandParserTest {
     }
 
     @Test
+    public void parse_unicodeBlankAddress_failure() {
+        for (String blank : List.of("\u3000", "\u2003", "\u00a0", "\u2007", "\u202f", " \t\u3000\u2003\u00a0 ")) {
+            assertParseFailure(parser, EMAIL_DESC_BOB + " a/" + blank, Address.MESSAGE_CONSTRAINTS);
+        }
+    }
+
+    @Test
     public void parse_allFieldsPresent_success() {
         Person expectedPerson = new PersonBuilder(BOB).withTags(VALID_TAG_FRIEND).build();
 

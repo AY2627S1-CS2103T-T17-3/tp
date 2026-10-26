@@ -24,6 +24,9 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.io.TempDirFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
+import seedu.address.commons.util.JsonUtil;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.ImportCommand;
 import seedu.address.logic.commands.exceptions.CommandException;
@@ -88,6 +91,24 @@ public class ImportIntegrationTest {
         assertEquals(Status.ARCHIVED, reloaded.getPersonList().get(2).getStatus());
         assertEquals(reloaded.getPersonList(), model.getFilteredPersonList());
         assertEquals(sourceBefore, Files.readString(file));
+    }
+
+    @Test
+    public void execute_unicodeBlankAddress_savesNullAndPreservesSource() throws Exception {
+        Path file = writeCsv(HEADER + ",,blank@u.nus.edu,\"\u3000\u2003\u00a0\",,active\n");
+        byte[] sourceBefore = Files.readAllBytes(file);
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file), result.getFeedbackToUser());
+        ReadOnlyAddressBook reloaded = storage.readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), reloaded);
+        assertEquals(2, reloaded.getPersonList().size());
+        assertEquals("blank@u.nus.edu", reloaded.getPersonList().get(1).getEmail().value);
+        assertTrue(reloaded.getPersonList().get(1).getAddress().isEmpty());
+        assertTrue(JsonUtil.fromJsonString(Files.readString(dataFile), JsonNode.class)
+                .get("persons").get(1).get("address").isNull());
+        assertArrayEquals(sourceBefore, Files.readAllBytes(file));
     }
 
     @Test

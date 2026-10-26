@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.model.AddressBook;
+import seedu.address.model.person.Address;
 
 public class AddressBookRecoveryTest {
     @TempDir
@@ -52,6 +53,34 @@ public class AddressBookRecoveryTest {
         assertFalse(storage.isSaveAllowed());
         assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
         assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook(), file));
+        assertArrayEquals(original, Files.readAllBytes(file));
+    }
+
+    @Test
+    public void loadAddressBook_unicodeBlankAddresses_recoversValidMembersAndProtectsFile() throws Exception {
+        Path file = temporaryFolder.resolve("members.json");
+        Files.writeString(file, """
+                {"persons":[
+                  {"email":"valid@u.nus.edu","address":"Kent Ridge"},
+                  {"email":"ideographic@u.nus.edu","address":"\u3000"},
+                  {"email":"emspace@u.nus.edu","address":"\\u2003"},
+                  {"email":"mixed@u.nus.edu","address":"\u00a0\u3000\u2003\u202f"}
+                ]}
+                """);
+        byte[] original = Files.readAllBytes(file);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(file);
+
+        AddressBookLoadResult result = storage.loadAddressBook();
+
+        assertEquals(AddressBookLoadResult.Status.PARTIAL, result.getStatus());
+        assertEquals(List.of("valid@u.nus.edu"), result.getAddressBook().getPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+        assertEquals(List.of("Record 2: " + Address.MESSAGE_CONSTRAINTS,
+                "Record 3: " + Address.MESSAGE_CONSTRAINTS,
+                "Record 4: " + Address.MESSAGE_CONSTRAINTS), result.getErrors());
+        assertFalse(storage.isSaveAllowed());
+        assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
+        assertThrows(DataLoadingException.class, storage::readAddressBook);
         assertArrayEquals(original, Files.readAllBytes(file));
     }
 
