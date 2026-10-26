@@ -551,9 +551,10 @@ The execution flow is:
    It collects validation errors and checks valid records against the copy's email identity rule, adding each accepted
    member to that copy. This also detects duplicates of earlier accepted CSV records; invalid records reserve no email.
 1. **Apply and save.** If at least one record is accepted, the command calls `Model.setAddressBook` and clears the
-   search while retaining the selected status view. It returns counts and rejection details to `LogicManager`,
-   which performs the shared [save/recovery flow](#saving-member-data-safely). The UI receives success only after
-   that save completes.
+   search while retaining the selected status view. It compares the accepted members with the resulting visible
+   list and adds their hidden count and a `view all` hint when needed. Existing members and rejected records do
+   not contribute to that count. It returns counts and rejection details to `LogicManager`, which performs the
+   shared [save/recovery flow](#saving-member-data-safely). The UI receives success only after that save completes.
 
 The sequence diagram below expands `ImportCommand.execute`. Source-path checks and the directory/filter snapshot
 have already completed in `LogicManager`. Incidental logging calls are omitted.
@@ -568,7 +569,8 @@ The `Persist changed directory` reference expands to the matching frame in the
 For example, with none of the sample emails already present, [members-partial.csv](samples/members-partial.csv)
 stages records 2 and 5, rejects record 3's invalid phone, and rejects record 4 as a duplicate of record 2.
 Both accepted members are applied together. Record numbers include the header as 1 and exclude empty lines;
-quoted multiline cells do not create extra record numbers.
+quoted multiline cells do not create extra record numbers. Feedback includes a header-numbering note whenever
+there are rejections, including when every member record is rejected.
 
 | Outcome | Effect |
 | --- | --- |
@@ -771,7 +773,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* *`    | secretary with incomplete information                                  | record a member using a NUS email and any other available details             | capture the contact immediately and complete it later                                         |
 | `* *`    | secretary who only has a member’s phone number                         | create an incomplete record using that unique phone number                   | save the contact immediately and complete the remaining details later                         |
 | `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                         | spend less time on repetitive maintenance                                                     |
-| `* *`    | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
+| g`* *`   | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
 | `* *`    | secretary who made an incorrect change                                 | reverse a recent data-changing operation                                     | prevent a typing mistake from permanently damaging the directory                              |
 | `* *`    | secretary reviewing a long list of results                             | order the results predictably                                                | scan them efficiently                                                                          |
 | `* *`    | frequent user                                                          | repeat or adapt recent commands                                              | complete recurring work with less typing                                                      |
@@ -1072,6 +1074,7 @@ directory, and confirm startup has not disabled saving. Run `list` to ensure the
 For independent cases below, restore that starting state. Keep the app's launch folder fixed so relative paths resolve
 to the prepared CSV files. Inspect the full feedback message for rejection details.
 CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.
+Select `view all` before the following cases unless another status view is specified.
 
 1. Test case: `import "member contacts.csv"`<br>
    Expected: Two members are appended after existing members, all members are displayed, and feedback states
@@ -1081,12 +1084,23 @@ CSV record numbers count the header as 1 and the first member as 2; empty lines 
 
 1. After the successful import above, run `find e/alex`, then import the same CSV again.<br>
    Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
-   Member records, search results, and saved JSON are unchanged.
+   It explains that record numbers include the header as record 1. There is no hidden-member hint.
+   Member records, search results, the status view, and saved JSON are unchanged.
+
+1. Restore the starting directory, run `find e/alex`, select `view archived`, then import the original
+   `member contacts.csv`.<br>
+   Expected: Both members are imported and saved, Archived remains selected, and Jamie is visible while Alex is hidden.
+   Feedback adds `1 imported member(s) are hidden by the current view. Use view all to see them.`
+   Run `view all`: both imported members appear, confirming that the previous search was cleared.
+1. Restore the starting directory and repeat the preceding case with `view active`.<br>
+   Expected: Alex is visible and Jamie is hidden. Feedback reports one hidden imported member and suggests
+   `view all`; existing members do not contribute to the hidden-import count.
 
 1. In a fresh copy of the CSV, change the second member's status to `former`. Run the import in a fresh disposable
    directory, or first remove the previously imported example members.<br>
    Expected: Alex is imported and Jamie is skipped. Feedback reports one import and one rejection, with a status
-   validation error for CSV record 3. Existing members and the source CSV are unchanged; all members are displayed.
+   validation error for CSV record 3 and a note that the header is record 1.
+   Existing members and the source CSV are unchanged; all members are displayed.
    Restart and confirm only Alex was added.
 
 1. In separate fresh copies of the original CSV, change Jamie's email to `jamie@gmail.com`, remove Jamie's status,
