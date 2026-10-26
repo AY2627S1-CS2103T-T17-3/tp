@@ -2,11 +2,15 @@ package seedu.address.logic;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -15,7 +19,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.AnnotatedElementContext;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.io.TempDirFactory;
 
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.ImportCommand;
@@ -40,7 +47,7 @@ public class ImportIntegrationTest {
     private static final String FIRST_ROW = "Alex Tan,91234567,Alex@U.NUS.EDU,\"NUS, Kent Ridge\","
             + "Publicity;PUBLICITY,active\n";
 
-    @TempDir
+    @TempDir(factory = BuildDirectoryTempDirFactory.class)
     public Path testFolder;
 
     private Model model;
@@ -80,6 +87,23 @@ public class ImportIntegrationTest {
         assertEquals(List.of(new Tag("publicity")), List.copyOf(reloaded.getPersonList().get(1).getTags()));
         assertEquals(Status.ARCHIVED, reloaded.getPersonList().get(2).getStatus());
         assertEquals(reloaded.getPersonList(), model.getFilteredPersonList());
+        assertEquals(sourceBefore, Files.readString(file));
+    }
+
+    @Test
+    public void execute_missingSaveFile_createsSaveFileAndPersistsImport() throws Exception {
+        Path file = writeCsv(HEADER + FIRST_ROW);
+        String sourceBefore = Files.readString(file);
+        Files.delete(dataFile);
+        assertFalse(Files.exists(dataFile));
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file), result.getFeedbackToUser());
+        assertEquals(model.getAddressBook(), storage.readAddressBook().orElseThrow());
+        assertEquals(2, model.getAddressBook().getPersonList().size());
+        assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().getLast().getEmail().value);
+        assertEquals(model.getAddressBook().getPersonList(), model.getFilteredPersonList());
         assertEquals(sourceBefore, Files.readString(file));
     }
 
@@ -332,12 +356,29 @@ public class ImportIntegrationTest {
     }
 
     @Test
-    public void execute_classDirectoryRun_rejectsSourceOutsideWorkingDirectory() throws Exception {
+    public void execute_classDirectoryRun_rejectsSourceOutsideWorkingDirectory(@TempDir Path outsideFolder)
+            throws Exception {
         logic = new LogicManager(model, new StorageManager(storage,
                 new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))));
-        Path source = writeCsv(HEADER + FIRST_ROW);
+        Path source = Files.writeString(outsideFolder.resolve("members.csv"), HEADER + FIRST_ROW);
 
         assertEquals(ImportCommand.MESSAGE_SOURCE_OUTSIDE_HOME, assertRejectedWithoutChanges(source).getMessage());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation") // Deliberately create a URL that cannot be converted to a URI.
+    public void execute_invalidApplicationLocation_rejectsWithoutChanges() throws Exception {
+        Path source = writeCsv(HEADER + FIRST_ROW);
+        logic = new LogicManager(model, new StorageManager(storage,
+                new JsonUserPrefsStorage(applicationHome.resolve("preferences.json"))),
+                new URL("file:/invalid application.jar"));
+
+        CommandException error = assertRejectedWithoutChanges(source);
+
+        assertEquals(String.format(ImportCommand.MESSAGE_FAILURE, source,
+                "Could not determine the application home folder."), error.getMessage());
+        IOException cause = assertInstanceOf(IOException.class, error.getCause());
+        assertInstanceOf(URISyntaxException.class, cause.getCause());
     }
 
     @Test
@@ -424,5 +465,18 @@ public class ImportIntegrationTest {
 
     private String importCommand(Path file) {
         return "import \"" + file + "\"";
+    }
+
+    /**
+     * Keeps fixtures on the working directory's drive so relative paths are valid on Windows.
+     * JUnit still creates and cleans up a separate directory for each test.
+     */
+    public static class BuildDirectoryTempDirFactory implements TempDirFactory {
+        @Override
+        public Path createTempDirectory(AnnotatedElementContext elementContext, ExtensionContext extensionContext)
+                throws IOException {
+            Path buildFolder = Files.createDirectories(Path.of("build").toAbsolutePath());
+            return Files.createTempDirectory(buildFolder, "import-test-");
+        }
     }
 }
