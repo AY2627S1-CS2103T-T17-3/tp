@@ -374,6 +374,8 @@ The button in `MainWindow.fxml` starts at `ALL`. `MainWindow.handleStatusFilterB
 `ALL → ACTIVE → ARCHIVED → ALL` through `Logic.setStatusFilter`. The `view all|active|archived` command sets
 the same state directly. `LogicManager` passes both paths to `ModelManager`, the source of truth for the selected
 view. `MainWindow` reads the state to update the button text and colour after either path changes it.
+After a button click, `MainWindow` replaces the previous result feedback using `ViewCommand.MESSAGE_SUCCESS`,
+matching the typed command's confirmation.
 This is an in-memory setting and starts at All on each launch.
 
 `ViewCommandParser` accepts exactly one status, ignoring case. `ViewCommand` is read-only so it works during
