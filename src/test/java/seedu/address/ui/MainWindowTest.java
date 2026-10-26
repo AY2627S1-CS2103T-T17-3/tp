@@ -269,6 +269,61 @@ public class MainWindowTest {
     }
 
     @Test
+    public void activityButton_afterSearch_replacesFeedbackAndPreservesSearch() throws Exception {
+        JavaFxTestUtil.initialize();
+        Person active = new PersonBuilder().withEmail("active@u.nus.edu").withTags("publicity").build();
+        Person archived = new PersonBuilder().withEmail("archived@u.nus.edu")
+                .withStatus(Status.ARCHIVED).withTags("publicity").build();
+        AddressBook addressBook = new AddressBook();
+        addressBook.addPerson(active);
+        addressBook.addPerson(archived);
+        ModelManager model = new ModelManager(addressBook, new UserPrefs());
+        Path dataFile = temporaryFolder.resolve("searchFeedback.json");
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("searchFeedbackPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                Button toggle = (Button) stage.getScene().lookup("#statusFilterButton");
+                @SuppressWarnings("unchecked")
+                ListView<Person> list = (ListView<Person>) stage.getScene().lookup("#personListView");
+
+                for (String searchCommand : List.of("find e/active", "findall e/active t/publicity",
+                        "findany e/active t/unmatched")) {
+                    input.setText(searchCommand);
+                    input.fireEvent(new ActionEvent());
+                    assertEquals("1 person(s) listed!", results.getText());
+                    assertEquals(List.of(active), list.getItems());
+
+                    toggle.fire();
+                    assertEquals("ACTIVE", toggle.getText());
+                    assertEquals("Switched to active view.", results.getText());
+                    assertEquals(List.of(active), list.getItems());
+
+                    toggle.fire();
+                    assertEquals("ARCHIVED", toggle.getText());
+                    assertEquals("Switched to archived view.", results.getText());
+                    assertEquals(List.of(), list.getItems());
+
+                    toggle.fire();
+                    assertEquals("ALL", toggle.getText());
+                    assertEquals("Switched to all view.", results.getText());
+                    assertEquals(List.of(active), list.getItems());
+                }
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
+    @Test
     public void indexedCommands_updateMemberAtDisplayedIndex() throws Exception {
         JavaFxTestUtil.initialize();
         Person activeFirst = new PersonBuilder().withEmail("active-first@u.nus.edu").build();
