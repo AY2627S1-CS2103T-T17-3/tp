@@ -30,6 +30,8 @@ import static seedu.address.testutil.TypicalIndexes.INDEX_FIRST_PERSON;
 import static seedu.address.testutil.TypicalIndexes.INDEX_SECOND_PERSON;
 import static seedu.address.testutil.TypicalIndexes.INDEX_THIRD_PERSON;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.address.commons.core.index.Index;
@@ -91,6 +93,13 @@ public class EditCommandParserTest {
         // multiple invalid values, but only the first invalid value is captured
         assertParseFailure(parser, "1" + INVALID_NAME_DESC + INVALID_EMAIL_DESC + VALID_ADDRESS_AMY + VALID_PHONE_AMY,
                 Name.MESSAGE_CONSTRAINTS);
+    }
+
+    @Test
+    public void parse_unicodeBlankAddress_failure() {
+        for (String blank : List.of("\u3000", "\u2003", "\u00a0", "\u2007", "\u202f", " \t\u3000\u2003\u00a0 ")) {
+            assertParseFailure(parser, "1" + NAME_DESC_AMY + " a/" + blank, Address.MESSAGE_CONSTRAINTS);
+        }
     }
 
     @Test
