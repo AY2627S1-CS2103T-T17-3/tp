@@ -581,9 +581,11 @@ and record outcomes; `ImportIntegrationTest` checks persistence, source protecti
 
 ### Saving member data safely
 
-Saving protects both the in-memory directory and the existing JSON file. A command's success is returned to the UI
-only after persistence succeeds. In a normal writable session, parsing and pre-execution guards run first.
-`LogicManager` then follows this sequence:
+Saving protects both the in-memory directory and the existing JSON file. Commands that change member records return
+success to the UI only after persistence succeeds. Read-only commands (`find`, `findall`, `findany`, `list`, `view`,
+`help`, and `exit`) return `false` from `requiresSave()` and execute without attempting to save. They remain available
+when a previously loaded data file becomes unwritable. In a normal writable session, parsing and pre-execution guards
+run first. For commands that require saving, `LogicManager` then follows this sequence:
 
 1. **Snapshot.** Copy the directory and capture `Model.getFilteredPersonListPredicate()` before executing the command.
 1. **Execute.** Run `command.execute(model)`. A parser or command exception exits before saving; the save-failure
@@ -598,8 +600,8 @@ only after persistence succeeds. In a normal writable session, parsing and pre-e
    then throw a `CommandException` explaining the failure. The selected status view stays unchanged. The success
    result is not returned.
 
-The diagram below shows the writable-session flow, including failures during temporary-file writing or atomic
-replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
+The diagram below shows the flow for commands that require saving, including failures during temporary-file writing
+or atomic replacement. The `saveAddressBook` call is forwarded through `StorageManager`; that delegation is collapsed into
 one arrow. Command-specific model interactions and logging calls are omitted.
 As in the import diagram, activation bars redrawn at alternative-branch boundaries continue the pending calls.
 
@@ -1411,14 +1413,15 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
    1. Relaunch the app.<br>
       Expected: The card displays only `exco` and `publicity`.
 
-   1. Execute `list` and inspect the saved record.<br>
+   1. Execute `tag INDEX t/Exco` for Tag Test's displayed index and inspect the saved record.<br>
       Expected: It contains exactly two tag names, `exco` and `publicity`, regardless of their order in the file.
 
 ### Saving data
 
 1. Dealing with invalid data files
 
-   1. In a disposable test directory, run `list` to create `data/nusocietydesk.json`, close the app, and back it up.
+   1. In a disposable test directory, run `add n/Alex Tan e/alex@u.nus.edu` to create `data/nusocietydesk.json`,
+      close the app, and back it up.
    1. Give two saved records the emails `Alex@U.NUS.EDU` and `alex@u.nus.edu`, then relaunch.<br>
       Expected: the first valid occurrence and other valid members load. A warning shows the file path,
       recovered-member count, and original positions of the duplicate records. The file remains unchanged.
@@ -1431,6 +1434,29 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
       Expected: malformed JSON produces a protected empty view. A null record or invalid email is skipped while
       other valid records load. Warnings identify errors, and commands cannot overwrite any of these files.
       A missing file still starts with sample members; a valid empty file stays empty and allows normal saving.
+
+1. Keep read-only commands available when saving fails (issue #140).
+
+   1. Use a rebuilt JAR with Java 25 in a disposable folder. Run `clear`,
+      `add n/Alex Tan e/alex@u.nus.edu`, `add n/Bob Lee e/bob@u.nus.edu`, then `find e/alex`.
+   1. Keep the app open and set `data/nusocietydesk.json` to read-only using Windows file properties.
+      Leave the enclosing folder writable.
+   1. Run `find e/bob`, `findall e/bob`, and `findany e/bob`, restoring `find e/alex` before each.<br>
+      Expected: each Bob search succeeds, shows Bob instead of Alex, and leaves the data file unchanged.
+   1. Run `list`, `view active`, `view archived`, and `view all`.<br>
+      Expected: listing clears the search within the selected status view. View changes work without saving.
+   1. Run `help`, close Help, and press F1 while the command box has focus.<br>
+      Expected: both routes open the same Help window.
+   1. Run `add e/blocked@u.nus.edu`.<br>
+      Expected: a saving error appears. Records, the previous search filter, status view, and saved data are preserved.
+      Searching and listing still work after the failed change.
+   1. Run `exit` with Help open.<br>
+      Expected: the main and Help windows close without a saving error.
+   1. Remove the read-only attribute and relaunch. Add a member, restart, and confirm the member persists.
+   1. Repeat with a nonempty directory obstacle: while the app is open, rename the JSON file to
+      `nusocietydesk.saved.json`, create a directory named `nusocietydesk.json`, and put `keep.txt` inside it.<br>
+      Expected: the same read-only commands work and member changes roll back on save failure. The backup and
+      `keep.txt` remain unchanged. Restore the original JSON path before restarting.
 
 ### Email domain validation
 
