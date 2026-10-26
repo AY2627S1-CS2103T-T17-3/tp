@@ -17,6 +17,11 @@ public class ExitCommand extends Command {
     }
 
     @Override
+    public boolean requiresSave() {
+        return false;
+    }
+
+    @Override
     public CommandResult execute(Model model) {
         return new CommandResult(MESSAGE_EXIT_ACKNOWLEDGEMENT, false, true);
     }

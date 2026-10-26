@@ -95,6 +95,8 @@ public class MainAppTest {
         assertNull(app.getDataLoadingWarning());
         assertTrue(app.storage.isAddressBookSaveAllowed());
         app.logic.execute("list");
+        assertFalse(Files.exists(file));
+        app.logic.execute("add e/new@u.nus.edu");
         assertEquals(app.model.getAddressBook(), app.storage.readAddressBook().orElseThrow());
     }
 

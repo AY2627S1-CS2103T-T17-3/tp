@@ -104,9 +104,24 @@ public class PersistenceIntegrationTest {
     }
 
     @Test
-    public void execute_failedReadOnlyCommand_restoresPreviousSearch() throws Exception {
-        assertSaveFailure("list", failingWriter(false));
-        assertSaveFailure("find e/hidden", failingWriter(false));
+    public void execute_readOnlyCommandsWithReplacementFailure_applySearchWithoutSaving() throws Exception {
+        byte[] savedBefore = Files.readAllBytes(dataFile);
+        LogicManager logic = createLogic(new JsonAddressBookStorage(dataFile, failingWriter(false)));
+
+        logic.execute("list");
+        assertEquals(List.of(visibleMember, hiddenMember), model.getFilteredPersonList());
+        for (String command : List.of("find e/hidden", "findall e/hidden", "findany e/hidden")) {
+            resetModel();
+            logic = createLogic(new JsonAddressBookStorage(dataFile, failingWriter(false)));
+            logic.execute(command);
+            assertEquals(List.of(hiddenMember), model.getFilteredPersonList());
+        }
+        assertTrue(logic.execute("exit").isExit());
+        assertEquals(original, model.getAddressBook());
+        assertArrayEquals(savedBefore, Files.readAllBytes(dataFile));
+        try (var files = Files.list(temporaryFolder)) {
+            assertEquals(List.of(dataFile), files.toList());
+        }
     }
 
     @Test

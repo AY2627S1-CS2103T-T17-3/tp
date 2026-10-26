@@ -681,8 +681,10 @@ Format: `exit`
 
 ### Saving the data
 
-AddressBook automatically saves data after successful commands other than `view`. You do not need to save manually.
-`view` changes only the current window's status filter and does not write the data file.
+NUSocietyDesk automatically saves data after successful commands that change member records, such as `add`, `edit`,
+`delete`, `clear`, `tag`, `untag`, `archive`, `activate`, and `import`. You do not need to save manually.
+`find`, `findall`, `findany`, `list`, `view`, `help`, and `exit` do not save member data. They remain available even if
+the data file cannot be written, so you can search and list loaded members, open Help, or exit while saving is unavailable.
 
 If saving fails, the command's changes are reverted: the previous member records, search filter, and data file
 are preserved. The result shows a saving error instead of a success confirmation. For example, an `add` whose save

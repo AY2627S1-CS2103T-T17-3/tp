@@ -260,14 +260,13 @@ public class LogicManagerTest {
         model.addPerson(matchingPerson);
         model.addPerson(otherPerson);
 
+        Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
         CommandResult result = logic.execute("find e/ALICE");
 
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
         assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());
         assertEquals(List.of(matchingPerson, otherPerson), model.getAddressBook().getPersonList());
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
-                .readAddressBook().orElseThrow();
-        assertEquals(model.getAddressBook(), savedAddressBook);
+        assertFalse(Files.exists(savedFile));
     }
 
     @Test
@@ -285,9 +284,7 @@ public class LogicManagerTest {
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 2), result.getFeedbackToUser());
         assertEquals(List.of(alice, bob), logic.getFilteredPersonList());
         assertEquals(List.of(alice, bob), model.getAddressBook().getPersonList());
-        ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
-                .readAddressBook().orElseThrow();
-        assertEquals(model.getAddressBook(), savedAddressBook);
+        assertFalse(Files.exists(temporaryFolder.resolve("nusocietydesk.json")));
     }
 
     @Test
@@ -296,6 +293,8 @@ public class LogicManagerTest {
         Person bob = new PersonBuilder().withName("Bob Lee").withEmail("bob@u.nus.edu").build();
         model.addPerson(alice);
         model.addPerson(bob);
+        new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
+                .saveAddressBook(model.getAddressBook());
         logic.execute("find n/Alice");
         assertEquals(List.of(alice), logic.getFilteredPersonList());
         Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
@@ -317,6 +316,8 @@ public class LogicManagerTest {
         Person otherPerson = new PersonBuilder().withEmail("bob@u.nus.edu").withTags("exco").build();
         model.addPerson(matchingPerson);
         model.addPerson(otherPerson);
+        new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
+                .saveAddressBook(model.getAddressBook());
         CommandResult result = logic.execute("find t/PUBLICITY");
         assertEquals(String.format(Messages.MESSAGE_PERSONS_LISTED_OVERVIEW, 1), result.getFeedbackToUser());
         assertEquals(List.of(matchingPerson), logic.getFilteredPersonList());

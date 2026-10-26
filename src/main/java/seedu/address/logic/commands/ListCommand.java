@@ -21,6 +21,11 @@ public class ListCommand extends Command {
     }
 
     @Override
+    public boolean requiresSave() {
+        return false;
+    }
+
+    @Override
     public CommandResult execute(Model model) {
         requireNonNull(model);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
