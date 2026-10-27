@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
@@ -19,21 +19,21 @@
         <Insets top="5" right="5" bottom="5" left="15" />
       </padding>
       <HBox spacing="0.5" alignment="CENTER_LEFT">
-        <Label fx:id="id" styleClass="cell_big_label">
+        <TextField fx:id="id" styleClass="cell_big_label">
           <minWidth>
-            <!-- Ensures that the label text is never truncated -->
+            <!-- Ensures that the index is never truncated -->
             <Region fx:constant="USE_PREF_SIZE" />
           </minWidth>
-        </Label>
-        <Label fx:id="name" text="\$first" styleClass="cell_big_label" />
+        </TextField>
+        <TextField fx:id="name" text="\$first" styleClass="cell_big_label" />
       </HBox>
       <HBox alignment="CENTER_LEFT" spacing="7">
         <FlowPane fx:id="tags" />
-        <Label fx:id="status" styleClass="member_status" />
+        <TextField fx:id="status" styleClass="member_status" />
       </HBox>
-      <Label fx:id="phone" styleClass="cell_small_label" text="\$phone" />
-      <Label fx:id="address" styleClass="cell_small_label" text="\$address" />
-      <Label fx:id="email" styleClass="cell_small_label" text="\$email" />
+      <TextField fx:id="phone" styleClass="cell_small_label" text="\$phone" />
+      <TextField fx:id="address" styleClass="cell_small_label" text="\$address" />
+      <TextField fx:id="email" styleClass="cell_small_label" text="\$email" />
     </VBox>
   </GridPane>
 </HBox>
