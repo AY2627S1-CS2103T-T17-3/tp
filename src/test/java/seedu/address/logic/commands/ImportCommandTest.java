@@ -33,6 +33,8 @@ import seedu.address.testutil.PersonBuilder;
 public class ImportCommandTest {
     private static final String HEADER = "name,phone,email,address,tags,status\n";
     private static final String FIRST_ROW = "Alex Tan,91234567,alex@u.nus.edu,Kent Ridge,Publicity,active\n";
+    private static final String EXPECTED_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
 
     @TempDir
     public Path testFolder;
@@ -77,7 +79,7 @@ public class ImportCommandTest {
 
         String feedback = result.getFeedbackToUser();
         assertTrue(feedback.startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 3, 2, file)));
-        assertTrue(feedback.contains("Record numbers include the header as record 1."));
+        assertTrue(feedback.contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(feedback.contains("CSV record 5: email \"existing@u.nus.edu\" duplicates"));
         assertTrue(feedback.contains("CSV record 6: Phone numbers"));
         assertTrue(feedback.endsWith("2 imported member(s) are hidden by the current view. Use view all to see them."));
@@ -122,7 +124,7 @@ public class ImportCommandTest {
         CommandResult result = new ImportCommand(file).execute(model);
 
         assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
-        assertTrue(result.getFeedbackToUser().contains("Record numbers include the header as record 1."));
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 3: email \"existing@u.nus.edu\" duplicates"));
         assertEquals(2, model.getAddressBook().getPersonList().size());
         assertEquals(archivedMember, model.getAddressBook().getPersonList().getFirst());
@@ -193,7 +195,7 @@ public class ImportCommandTest {
         CommandResult result = new ImportCommand(file).execute(model);
 
         assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
-        assertTrue(result.getFeedbackToUser().contains("Record numbers include the header as record 1."));
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 2: Phone numbers"));
         assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().get(1).getEmail().value);
     }
@@ -206,6 +208,7 @@ public class ImportCommandTest {
 
         CommandResult result = new ImportCommand(file).execute(model);
 
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 3: Addresses"));
         assertTrue(result.getFeedbackToUser().contains("CSV record 4: email \"alex@u.nus.edu\" duplicates"));
         assertEquals(2, model.getAddressBook().getPersonList().size());
@@ -218,7 +221,7 @@ public class ImportCommandTest {
                 + ",12,invalid@u.nus.edu,,,active\n");
 
         assertRejectedWithoutChanges(file, String.format(ImportCommand.MESSAGE_SUCCESS, 0, 2, file)
-                + "\nRecord numbers include the header as record 1.");
+                + "\n" + EXPECTED_RECORD_NUMBERING);
     }
 
     @Test

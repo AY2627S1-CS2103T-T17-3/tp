@@ -569,7 +569,7 @@ The `Persist changed directory` reference expands to the matching frame in the
 For example, with none of the sample emails already present, [members-partial.csv](samples/members-partial.csv)
 stages records 2 and 5, rejects record 3's invalid phone, and rejects record 4 as a duplicate of record 2.
 Both accepted members are applied together. Record numbers include the header as 1 and exclude empty lines;
-quoted multiline cells do not create extra record numbers. Feedback includes a header-numbering note whenever
+quoted multiline cells do not create extra record numbers. Feedback explains all three numbering rules whenever
 there are rejections, including when every member record is rejected.
 
 | Outcome | Effect |
@@ -773,7 +773,7 @@ Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could
 | `* *`    | secretary with incomplete information                                  | record a member using a NUS email and any other available details             | capture the contact immediately and complete it later                                         |
 | `* *`    | secretary who only has a member’s phone number                         | create an incomplete record using that unique phone number                   | save the contact immediately and complete the remaining details later                         |
 | `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                         | spend less time on repetitive maintenance                                                     |
-| g`* *`   | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
+| `* *`    | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
 | `* *`    | secretary who made an incorrect change                                 | reverse a recent data-changing operation                                     | prevent a typing mistake from permanently damaging the directory                              |
 | `* *`    | secretary reviewing a long list of results                             | order the results predictably                                                | scan them efficiently                                                                          |
 | `* *`    | frequent user                                                          | repeat or adapt recent commands                                              | complete recurring work with less typing                                                      |
@@ -1084,7 +1084,8 @@ Select `view all` before the following cases unless another status view is speci
 
 1. After the successful import above, run `find e/alex`, then import the same CSV again.<br>
    Expected: Feedback reports zero imports, two rejections, and a duplicate-email reason for records 2 and 3.
-   It explains that record numbers include the header as record 1. There is no hidden-member hint.
+   It explains that record numbers include the header as record 1, blank lines are skipped, and a quoted multiline
+   cell counts as one record. There is no hidden-member hint.
    Member records, search results, the status view, and saved JSON are unchanged.
 
 1. Restore the starting directory, run `find e/alex`, select `view archived`, then import the original
@@ -1099,7 +1100,8 @@ Select `view all` before the following cases unless another status view is speci
 1. In a fresh copy of the CSV, change the second member's status to `former`. Run the import in a fresh disposable
    directory, or first remove the previously imported example members.<br>
    Expected: Alex is imported and Jamie is skipped. Feedback reports one import and one rejection, with a status
-   validation error for CSV record 3 and a note that the header is record 1.
+   validation error for CSV record 3 and a note explaining how the header, blank lines, and quoted multiline cells
+   are counted.
    Existing members and the source CSV are unchanged; all members are displayed.
    Restart and confirm only Alex was added.
 

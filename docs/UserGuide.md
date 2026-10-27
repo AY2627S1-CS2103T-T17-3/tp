@@ -338,9 +338,9 @@ A UTF-8 byte order mark and empty lines are accepted. Empty files and header-onl
 If at least one member is accepted, the app appends accepted members in CSV order, clears the search,
 keeps the selected status view, and saves it as JSON. Feedback shows the imported and rejected counts, followed by
 each rejection's record number and first reason. Whenever records are rejected, feedback explains that record
-numbers include the header as record 1; the first member is record 2. Empty lines do not count.
-A quoted cell spanning several lines still belongs to one record. This numbering note also appears when every
-member record is rejected.
+numbers include the header as record 1; the first member is record 2. It also explains that blank lines are skipped
+and a quoted multiline cell counts as one record. This numbering note also appears when every member record is
+rejected.
 
 If the selected status view hides any newly imported members, feedback reports how many are hidden and suggests
 `view all`. For example, importing one active member while Archived is selected adds:
@@ -361,7 +361,7 @@ Alex and the email-only member are accepted; Jamie's phone is invalid, and Dupli
 
 ```text
 Imported 2 member(s); rejected 2 record(s) from members-partial.csv.
-Record numbers include the header as record 1.
+Record numbers include the header as record 1. Blank lines are skipped, and a quoted multiline cell counts as one record.
 Rejected records:
 CSV record 3: Phone numbers should only contain digits, and should be at least 3 digits long
 CSV record 4: email "alex@u.nus.edu" duplicates an existing member or an earlier accepted CSV record.

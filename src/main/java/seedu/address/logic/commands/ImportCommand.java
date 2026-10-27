@@ -31,7 +31,8 @@ public class ImportCommand extends Command {
             + "CSV header: " + CsvMemberReader.HEADER + "\n"
             + "Example: " + COMMAND_WORD + " \"members.csv\"";
     public static final String MESSAGE_SUCCESS = "Imported %1$d member(s); rejected %2$d record(s) from %3$s.";
-    public static final String MESSAGE_RECORD_NUMBERING = "Record numbers include the header as record 1.";
+    public static final String MESSAGE_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
     public static final String MESSAGE_HIDDEN_MEMBERS = "%1$d imported member(s) are hidden by the current view. "
             + "Use view all to see them.";
     public static final String MESSAGE_FAILURE = "Could not import %1$s: %2$s\nNo members were imported.";

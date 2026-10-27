@@ -50,6 +50,8 @@ public class ImportIntegrationTest {
     private static final String HEADER = "name,phone,email,address,tags,status\n";
     private static final String FIRST_ROW = "Alex Tan,91234567,Alex@U.NUS.EDU,\"NUS, Kent Ridge\","
             + "Publicity;PUBLICITY,active\n";
+    private static final String EXPECTED_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
 
     @TempDir(factory = BuildDirectoryTempDirFactory.class)
     public Path testFolder;
@@ -219,7 +221,7 @@ public class ImportIntegrationTest {
         String rejection = "CSV record 3: Email local-part must contain at most 64 characters; received 65.";
 
         assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)
-                + "\nRecord numbers include the header as record 1.\nRejected records:\n" + rejection,
+                + "\n" + EXPECTED_RECORD_NUMBERING + "\nRejected records:\n" + rejection,
                 logic.execute(importCommand(file)).getFeedbackToUser());
         assertEquals(boundaryEmail, storage.readAddressBook().orElseThrow().getPersonList().getLast().getEmail().value);
         assertEquals(originalSource, Files.readString(file));
@@ -239,7 +241,7 @@ public class ImportIntegrationTest {
         String command = importCommand(file);
         CommandException error = assertThrows(CommandException.class, () -> logic.execute(command));
         assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 0, 1, file)
-                + "\nRecord numbers include the header as record 1."
+                + "\n" + EXPECTED_RECORD_NUMBERING
                 + "\nRejected records:\nCSV record 2: Email local-part must contain at most 64 characters; received 65."
                 + "\nNo members were imported.", error.getMessage());
         assertEquals(originalRecords, model.getAddressBook());
