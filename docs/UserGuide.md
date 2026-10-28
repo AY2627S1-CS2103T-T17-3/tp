@@ -210,10 +210,18 @@ on edit; a blank address cannot clear an existing value. Ordinary surrounding ar
 trimmed; Unicode spaces in an otherwise valid nonblank address are preserved by add/edit. Inputs containing
 line or paragraph separators can instead receive an invalid-command-format error.
 
-For an unnamed member, the card heading displays their email. Missing phone and address rows display
-`Phone: -` and `Address: -`. The add confirmation shows only supplied details, omitting missing contact fields
-and the tags section when there are no tags. Addresses wrap within the card. Long contact labels and tags can
-show an ellipsis at narrower widths; hover over them to read the full value in a tooltip. For an email-only member:
+For an unnamed member, the card heading displays their email and the separate email row is hidden.
+After a name is supplied, the heading displays the name and the email appears in its own `Email: VALUE` row.
+Phone and address rows always include their labels, for example `Phone: 91234567` and `Address: Kent Ridge`.
+Missing values display `Phone: -` and `Address: -`. These rules apply to both active and archived members,
+including imported and previously saved records. Cards share a minimum height and align their contents from
+the top, keeping headings and shared fields in the same positions when the email row is hidden. Longer
+addresses and tags can make a card taller so their contents remain readable.
+
+The add confirmation shows only supplied details, omitting missing contact fields and the tags section when
+there are no tags. Addresses wrap within the card. Long headings, contact labels and tags can show an ellipsis
+at narrower widths; hover over them to read the full text in a tooltip. For an email-only member,
+the add confirmation is:
 
 ```text
 New person added: Email: alex@u.nus.edu

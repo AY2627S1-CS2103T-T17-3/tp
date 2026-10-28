@@ -415,11 +415,23 @@ commands clear the search and show members in the selected status view.
 
 Add, edit, tag and delete commands use `Messages.formatProvidedDetails` to omit absent contact fields and empty tags from their success messages.
 The formatter label a supplied name as `Name: <person name>` consistently across command confirmations.
-Unnamed duplicate errors identify the existing
-member by email only. `PersonCard` uses the canonical email as its heading when the name is absent and displays
-`Phone: -` or `Address: -` in the existing rows. No new card row, membership state or badge
-is introduced. Once supplied, contact values use the existing display style. Name and phone predicates return
-false for absent fields. Email search remains available, and display placeholders are never model values.
+Unnamed duplicate errors identify the existing member by email only.
+`PersonCard` uses the canonical email as its heading when the name is absent. Its separate email label is then
+both invisible and unmanaged, so it contributes no layout space. When a name is present, the heading uses that
+name and the email row is visible and managed. Phone, address and email rows always include `Phone: `,
+`Address: ` and `Email: ` respectively; missing phone and address values use `-` after their labels.
+Full-text tooltips include these prefixes. The content `VBox` in `PersonListCard.fxml` uses `TOP_LEFT`
+alignment, five pixels of top padding and a shared 105-pixel minimum height. Headings and shared fields
+therefore keep the same offsets from the top of each card when the last email row is hidden. Unused space
+stays below the content. Cards with short details share the same height; wrapped addresses and tags can make
+cards taller, so their height is not fixed.
+
+These display rules apply to active and archived members regardless of whether they were added, imported or
+loaded from JSON. `PersonListPanel` constructs a new card when a member is replaced, so supplying a name through
+`edit` restores the email row through the existing list refresh. No new model state or storage field is needed.
+Name and phone predicates return false for absent fields. Email search remains available, and display
+placeholders are never model values. A supplied address of `-` remains valid and looks the same as a missing
+address; this display change does not alter validation.
 
 `JsonAdaptedPerson` maps between optional model values and nullable saved strings. An email-only record can be
 represented as `{"name":null,"phone":null,"email":"alex@u.nus.edu","address":null,"status":"active","tags":[]}`.
@@ -435,6 +447,12 @@ incremental completion across reloads, filtered edits, unnamed duplicates, email
 The import regression checks supplied-field validation and that imported emails conflict with existing
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
+`PersonCardTest` checks all eight optional-contact combinations, exact labels and tooltips, conditional email
+visibility and layout participation, and narrow named and unnamed cards containing maximum-length emails.
+It also compares card heights and shared field positions at narrow and wide widths, and checks that wrapped
+addresses and tags can expand a card without shifting its heading or overflowing vertically.
+`MainWindowTest` checks that editing an unnamed member's email updates the heading and supplying a name restores
+the email row through the command submission and list refresh path.
 
 ### Rejecting Unicode blank addresses
 
@@ -1083,14 +1101,20 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
 `{"persons":[]}`. A missing file would load sample members instead.
 
 1. Run `add e/Alex@U.NUS.EDU`.<br>
-   Expected: One active member is added with heading `alex@u.nus.edu`, missing phone/address placeholders,
-   and feedback `New person added: Email: alex@u.nus.edu`.
+   Expected: One active member is added with heading `alex@u.nus.edu`, rows `Phone: -` and `Address: -`,
+   no separate email row, and feedback `New person added: Email: alex@u.nus.edu`.
 1. Close and reopen the app before filling any details.<br>
-   Expected: The same incomplete member loads; saved name, phone and address values are null.
+   Expected: The same incomplete member loads with its email row still hidden; saved name, phone and address
+   values are null.
+1. Run `edit 1 e/alex.updated@u.nus.edu`, then `edit 1 e/alex@u.nus.edu`.<br>
+   Expected: The heading changes to the updated email, then back to `alex@u.nus.edu`. No separate email row
+   appears while the name is absent.
 1. Run `find e/alex`, then `edit 1 n/Alex Tan`. Close and reopen again.<br>
-   Expected: Alex Tan is the heading; phone and address remain absent.
+   Expected: Alex Tan is the heading and `Email: alex@u.nus.edu` appears below the address row immediately after
+   the edit and after restarting. Phone and address remain `Phone: -` and `Address: -`.
 1. Run `edit 1 p/91234567`, then `edit 1 a/Kent Ridge`, and restart.<br>
-   Expected: Exactly one complete member remains with all supplied values.
+   Expected: Exactly one complete member remains with rows `Phone: 91234567`, `Address: Kent Ridge` and
+   `Email: alex@u.nus.edu`, in that order.
 1. Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
    Expected: Only the intended member changes. Each successful edit clears the search and shows members in the
    selected status view.
@@ -1100,6 +1124,10 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
    Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.
 1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
    Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
+   Named and unnamed cards with short details have the same height and top spacing. Hiding the duplicate email
+   row does not shift the heading, status, phone or address rows. Cards with wrapped details grow as needed.
+   Addresses wrap, long headings and contact rows expose their complete text in tooltips, and tags and status
+   badges remain readable.
 
 ### Rejecting Unicode blank addresses in the command box
 
