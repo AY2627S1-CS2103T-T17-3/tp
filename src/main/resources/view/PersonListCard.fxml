@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
@@ -19,23 +20,23 @@
         <Insets top="5" right="5" bottom="5" left="15" />
       </padding>
       <HBox spacing="0.5" alignment="CENTER_LEFT">
-        <Label fx:id="id" styleClass="cell_big_label">
+        <TextField fx:id="id" styleClass="cell_big_label">
           <minWidth>
-            <!-- Ensures that the label text is never truncated -->
+            <!-- Ensures that the index is never truncated -->
             <Region fx:constant="USE_PREF_SIZE" />
           </minWidth>
-        </Label>
-        <Label fx:id="name" text="\$first" styleClass="cell_big_label" minWidth="0"
-               maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+        </TextField>
+        <TextField fx:id="name" text="\$first" styleClass="cell_big_label" minWidth="0"
+                   maxWidth="Infinity" HBox.hgrow="ALWAYS" />
       </HBox>
       <HBox alignment="CENTER_LEFT" spacing="7">
         <FlowPane fx:id="tags" minWidth="0" prefWidth="0" HBox.hgrow="ALWAYS" />
-        <Label fx:id="status" styleClass="member_status" minWidth="-Infinity" />
+        <TextField fx:id="status" styleClass="member_status" minWidth="-Infinity" />
       </HBox>
-      <Label fx:id="phone" styleClass="cell_small_label" text="\$phone" minWidth="0" maxWidth="Infinity" />
-      <Label fx:id="address" styleClass="cell_small_label" text="\$address" minWidth="0"
-             maxWidth="Infinity" wrapText="true" />
-      <Label fx:id="email" styleClass="cell_small_label" text="\$email" minWidth="0" maxWidth="Infinity" />
+      <TextField fx:id="phone" styleClass="cell_small_label" text="\$phone" minWidth="0" maxWidth="Infinity" />
+      <TextArea fx:id="address" styleClass="cell_small_label" text="\$address" minWidth="0"
+                maxWidth="Infinity" wrapText="true" prefRowCount="3" />
+      <TextField fx:id="email" styleClass="cell_small_label" text="\$email" minWidth="0" maxWidth="Infinity" />
     </VBox>
   </GridPane>
 </HBox>
