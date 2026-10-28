@@ -577,7 +577,8 @@ Formats:
   Use `findany e/alex e/david` to match either substring.
 * Include `e/` to search email addresses: `find alex@u.nus.edu` searches names,
   while `find e/alex@u.nus.edu` searches emails.
-* `find e/@u.nus.edu` returns every member because all stored email addresses use that domain.
+* `find e/@u.nus.edu` returns every member in the selected status view because all stored email addresses use
+  that domain. Use `view all` to include both active and archived members.
 
 **Tag searches**
 
