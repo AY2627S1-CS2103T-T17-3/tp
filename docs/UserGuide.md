@@ -181,22 +181,39 @@ Only email is required. Name, phone number, and address are independently option
 and omit the other prefixes. For example, `add e/alex@u.nus.edu p/91234567` records an email and phone number.
 An incomplete record is a normal active member and supports the existing edit, search, tag, and delete commands.
 
-Supplied values must still be valid. Names contain alphanumeric characters and spaces; phones contain at least
-three digits; addresses must be nonblank. An explicit blank value such as `n/`, `p/`, or `a/` is rejected,
+Supplied values must still be valid:
+
+| Field | Accepted values |
+| --- | --- |
+| Name | 1 to 127 characters; alphanumeric characters and spaces; must not be blank. |
+| Phone | 3 to 15 digits; no spaces or other characters within the number. |
+| Address | Nonblank text, up to 200 characters, including spaces and punctuation. |
+| Each tag | 1 to 30 alphanumeric characters. |
+
+The phone maximum follows the E.164 international numbering limit, and the name maximum follows NUS's
+under-128-character full-name requirement. The address limit accommodates Singapore residential addresses,
+including campus accommodation, with formatting space; the tag limit keeps member categories concise.
+See the [length-limit rationale](DeveloperGuide.md#bounding-contact-and-tag-lengths) for sources and calculations.
+
+The limits apply after ordinary surrounding command whitespace is trimmed. Overlong values are rejected with
+the field's constraints message; values are never shortened automatically. Correct the retained command and
+submit it again. An explicit blank value such as `n/`, `p/`, or `a/` is rejected,
 including a value containing only spaces. To omit a detail, leave out its prefix entirely. Each contact prefix
 can appear only once. Rejected commands leave the directory and current search results unchanged.
 
 For addresses, blank includes Unicode whitespace such as IDEOGRAPHIC SPACE (U+3000), EM SPACE (U+2003),
 and nonbreaking spaces, including mixtures of these characters. Supplying only such spaces after `a/` gives
-`Addresses must contain at least one non-whitespace character.` No member is added or edited, and the current
-search, status view, and saved data stay unchanged. Omit `a/` to leave the address unknown on add or preserve it
+`Addresses must contain at least one non-whitespace character and be at most 200 characters long.`
+No member is added or edited, and the current search, status view, and saved data stay unchanged.
+Omit `a/` to leave the address unknown on add or preserve it
 on edit; a blank address cannot clear an existing value. Ordinary surrounding argument whitespace is still
 trimmed; Unicode spaces in an otherwise valid nonblank address are preserved by add/edit. Inputs containing
 line or paragraph separators can instead receive an invalid-command-format error.
 
 For an unnamed member, the card heading displays their email. Missing phone and address rows display
 `Phone: -` and `Address: -`. The add confirmation shows only supplied details, omitting missing contact fields
-and the tags section when there are no tags. For an email-only member:
+and the tags section when there are no tags. Addresses wrap within the card. Long contact labels and tags can
+show an ellipsis at narrower widths; hover over them to read the full value in a tooltip. For an email-only member:
 
 ```text
 New person added: Email: alex@u.nus.edu
@@ -260,7 +277,7 @@ Adding the same email again never fills or overwrites the existing record. Use `
 **Tip:** A person can have any number of tags, including zero.
 </box>
 
-Tag names are alphanumeric and case-insensitive. They are stored and displayed in lowercase.
+Tag names contain 1 to 30 alphanumeric characters and are case-insensitive. They are stored and displayed in lowercase.
 For example, adding a member with `t/Publicity t/publicity` gives that member one tag, `publicity`.
 Loading saved records applies the same rule within each member's tag set.
 
@@ -305,10 +322,10 @@ Surrounding whitespace is removed from member fields before validation.
 | Column | Accepted values |
 | --- | --- |
 | `name` | Optional. Leave blank if unknown; supplied names follow the `add` rules. |
-| `phone` | Optional. Leave blank if unknown; supplied numbers contain at least three digits and no other characters. |
+| `phone` | Optional. Leave blank if unknown; supplied numbers contain 3 to 15 digits and no other characters. |
 | `email` | Required. A valid email ending with exactly `@u.nus.edu`, with 1 to 64 characters before `@`; stored in lowercase. |
 | `address` | Optional. Leave blank if unknown; supplied addresses follow the `add` rules. |
-| `tags` | Optional. Separate alphanumeric tags with semicolons, e.g., `Publicity;Exco`. Case variants become one lowercase tag per member. |
+| `tags` | Optional. Separate tags of 1 to 30 alphanumeric characters with semicolons, e.g., `Publicity;Exco`. Case variants become one lowercase tag per member. |
 | `status` | Required. Exactly `active` or `archived`. |
 
 Whitespace-only name, phone, and address cells count as absent. An empty tags cell means no tags; empty tags
@@ -325,6 +342,9 @@ An email exceeding the local-part limit rejects only that record. For a 65-chara
 the rejection detail is `CSV record 3: Email local-part must contain at most 64 characters; received 65.`
 Other valid records continue importing. If every record is rejected, no members are imported and records,
 search results, and saved data remain unchanged.
+
+The name, phone, address, and per-tag limits above also apply to CSV imports. An overlong value rejects that
+record with its CSV record number and the field's constraints message; other valid records can still import.
 
 The imported status is preserved;
   `archived` members display the `ARCHIVED` badge. Status is separate from tags.
@@ -363,7 +383,7 @@ Alex and the email-only member are accepted; Jamie's phone is invalid, and Dupli
 Imported 2 member(s); rejected 2 record(s) from members-partial.csv.
 Record numbers include the header as record 1. Blank lines are skipped, and a quoted multiline cell counts as one record.
 Rejected records:
-CSV record 3: Phone numbers should only contain digits, and should be at least 3 digits long
+CSV record 3: Phone numbers should only contain digits, and should be between 3 and 15 digits long
 CSV record 4: email "alex@u.nus.edu" duplicates an existing member or an earlier accepted CSV record.
 ```
 
@@ -434,6 +454,8 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`
 * Existing values will be updated to the input values.
 * Missing contact details can be filled in one at a time. Omitting a field preserves its current value or absence.
   Supplied blank values are rejected; this command cannot clear a name, phone, address, or email.
+* Supplied names, phones, and addresses follow the same length limits as `add`: 127 characters, 3 to 15 digits,
+  and 200 characters, respectively. A rejected edit preserves the member, search, status view, and saved data.
 * Successful edits clear the search and display members in the selected status view. Recheck the displayed index
   before the next edit.
 * The confirmation shows the member's current supplied details, including retained values, and omits missing
@@ -462,7 +484,8 @@ Format: `tag INDEX t/TAG`
 
 * `INDEX` must be a positive integer referring to a member in the currently displayed list, including search results.
 * Exactly one index and one `t/` argument are required. Empty tags, multiple tags, and extra arguments are rejected.
-* Tag names must be alphanumeric. Matching is case-insensitive; tags are stored and displayed in lowercase.
+* Tag names must contain 1 to 30 alphanumeric characters. Matching is case-insensitive;
+  tags are stored and displayed in lowercase. Overlong tags are rejected without changing the member or saved data.
 * Adding a tag the member already has succeeds with the normal completion message and leaves their tags unchanged.
 * After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
@@ -562,7 +585,7 @@ Formats:
   For example, `find t/publicity` and `find t/PUBLICITY` return the same members.
 * Partial names do not match: `find t/pub` matches only the tag `pub`, not `publicity`.
 * A member matches if any of their assigned tags equals the requested tag. Members with no tags do not match.
-* Supply one alphanumeric tag. Spaces and punctuation are not allowed within a tag name.
+* Supply one tag of 1 to 30 alphanumeric characters. Spaces and punctuation are not allowed within a tag name.
 * Commands such as `find t/publicity exco` are rejected, including values separated by tabs or line breaks.
   The error is: "Tag searches accept only one tag. Example: find t/publicity."
 * Tag searches include active and archived members, as well as members with incomplete contact details.
@@ -734,8 +757,9 @@ Missing names, phones, and addresses are saved as JSON `null`, for example:
 
 For these three optional fields, an omitted property also loads as missing. Empty strings, whitespace-only
 strings, and invalid supplied values are rejected. Email must always be present and valid. Older complete
-records continue to load. An omitted or `null` status defaults to `active`; a supplied status must be exactly
-`active` or `archived`. Loading alone does not rewrite a file; the next successfully saved command writes the resolved status
+records within the current validation limits continue to load. An omitted or `null` status defaults to `active`;
+a supplied status must be exactly `active` or `archived`. Loading alone does not rewrite a file;
+the next successfully saved command writes the resolved status
 and absent optional fields as explicit `null` values.
 
 Address strings containing only Unicode whitespace are invalid even if an older release saved them.
@@ -743,6 +767,11 @@ The app skips the affected member while loading other valid members and disables
 as described below. It preserves the original file and does not automatically convert the address to missing.
 To repair it, close the app, back up the file, and replace the address with `null`, remove the address property,
 or enter a valid address, then restart.
+
+The same protected recovery applies to names longer than 127 characters, phones longer than 15 digits,
+addresses longer than 200 characters, and tags longer than 30 characters, even when an older release saved
+them. The warning identifies the record and field constraints. Close the app, back up the original file,
+correct the affected values, and restart. No value is automatically truncated and the original file is preserved.
 
 <box type="warning" seamless>
 

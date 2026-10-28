@@ -44,6 +44,32 @@ public class JsonAdaptedPersonTest {
     }
 
     @Test
+    public void toModelType_maximumLengths_preservesValues() throws Exception {
+        JsonAdaptedPerson adapted = new JsonAdaptedPerson("A".repeat(127), "9".repeat(15), VALID_EMAIL,
+                "A".repeat(200), List.of(new JsonAdaptedTag("T".repeat(30))));
+        Person person = adapted.toModelType();
+        assertEquals(new Name("A".repeat(127)), person.getName().orElseThrow());
+        assertEquals(new Phone("9".repeat(15)), person.getPhone().orElseThrow());
+        assertEquals(new Address("A".repeat(200)), person.getAddress().orElseThrow());
+        assertEquals(Set.of(new Tag("t".repeat(30))), person.getTags());
+    }
+
+    @Test
+    public void toModelType_overlongFields_throwsIllegalValueException() {
+        List<JsonAdaptedPerson> people = List.of(
+                new JsonAdaptedPerson("A".repeat(128), VALID_PHONE, VALID_EMAIL, VALID_ADDRESS, VALID_TAGS),
+                new JsonAdaptedPerson(VALID_NAME, "9".repeat(16), VALID_EMAIL, VALID_ADDRESS, VALID_TAGS),
+                new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, "A".repeat(201), VALID_TAGS),
+                new JsonAdaptedPerson(VALID_NAME, VALID_PHONE, VALID_EMAIL, VALID_ADDRESS,
+                        List.of(new JsonAdaptedTag("t".repeat(31)))));
+        List<String> errors = List.of(Name.MESSAGE_CONSTRAINTS, Phone.MESSAGE_CONSTRAINTS,
+                Address.MESSAGE_CONSTRAINTS, Tag.MESSAGE_CONSTRAINTS);
+        for (int i = 0; i < people.size(); i++) {
+            assertThrows(IllegalValueException.class, errors.get(i), people.get(i)::toModelType);
+        }
+    }
+
+    @Test
     public void toModelType_missingStatus_defaultsToActive() throws Exception {
         JsonAdaptedPerson person = new JsonAdaptedPerson(
                 VALID_NAME, VALID_PHONE, VALID_EMAIL, VALID_ADDRESS, VALID_TAGS);

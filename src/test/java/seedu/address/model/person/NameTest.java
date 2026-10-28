@@ -1,5 +1,6 @@
 package seedu.address.model.person;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
@@ -36,6 +37,26 @@ public class NameTest {
         assertTrue(Name.isValidName("peter the 2nd")); // alphanumeric characters
         assertTrue(Name.isValidName("Capital Tan")); // with capital letters
         assertTrue(Name.isValidName("David Roger Jackson Ray Jr 2nd")); // long names
+    }
+
+    @Test
+    public void validation_lengthBoundaries_acceptsAtMost127Characters() {
+        for (int length : new int[] {1, 126, 127}) {
+            String value = "A".repeat(length);
+            assertTrue(Name.isValidName(value));
+            assertEquals(value, new Name(value).fullName);
+        }
+        for (int length : new int[] {128, 10000}) {
+            String value = "A".repeat(length);
+            assertFalse(Name.isValidName(value));
+            assertThrows(IllegalArgumentException.class, Name.MESSAGE_CONSTRAINTS, () -> new Name(value));
+        }
+    }
+
+    @Test
+    public void validation_lengthIncludesInternalSpaces() {
+        assertTrue(Name.isValidName("A " + "B".repeat(125)));
+        assertFalse(Name.isValidName("A " + "B".repeat(126)));
     }
 
     @Test
