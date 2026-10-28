@@ -57,6 +57,7 @@
         "filtering-the-member-list-by-status": "Filtering the member list by status",
         "recording-a-member-with-incomplete-contact-details": "Recording a member with incomplete contact details",
         "rejecting-unicode-blank-addresses": "Rejecting Unicode blank addresses",
+        "bounding-contact-and-tag-lengths": "Bounding contact and tag lengths",
         "validating-email-length-safely": "Validating email length safely",
         "finding-members-by-contact-details-or-tag": "Finding members by contact details or tag",
         "importing-member-directories-from-csv": "Importing member directories from CSV",
@@ -87,6 +88,7 @@
         "deleting-a-person": "Deleting a person",
         "tag-identity-and-editing": "Tag identity and editing",
         "saving-data": "Saving data",
+        "contact-and-tag-length-validation": "Contact and tag length validation",
         "email-domain-validation": "Email domain validation",
         "email-local-part-length-validation": "Email local-part length validation",
         "email-identity": "Email identity"
