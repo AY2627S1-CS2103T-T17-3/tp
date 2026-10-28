@@ -1466,7 +1466,7 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
       Expected: Only `exco` and `volunteer` remain.
 
    1. Repeat `untag INDEX t/publicity`.<br>
-      Expected: Success with the same two tags.
+      Expected: The command is rejected with an error indicating the member does not have the tag. The member's tags remain unchanged.
 
    1. Close and reopen the app.<br>
       Expected: The member still has only `exco` and `volunteer`.

@@ -28,6 +28,7 @@ public class TagRemoveCommand extends Command {
             + "Parameters: INDEX (must be a positive integer) " + PREFIX_TAG + "TAG\n"
             + "Example: " + COMMAND_WORD + " 1 " + PREFIX_TAG + "Volunteer";
     public static final String MESSAGE_SUCCESS = "Tag removed: %1$s; %2$s";
+    public static final String MESSAGE_TAG_NOT_FOUND = "This member does not have the tag: %1$s";
 
     private final Index targetIndex;
     private final Tag tag;
@@ -50,6 +51,10 @@ public class TagRemoveCommand extends Command {
         }
 
         Person personToEdit = lastShownList.get(targetIndex.getZeroBased());
+        if (!personToEdit.getTags().contains(tag)) {
+            throw new CommandException(String.format(MESSAGE_TAG_NOT_FOUND, tag));
+        }
+
         Set<Tag> updatedTags = new HashSet<>(personToEdit.getTags());
         updatedTags.remove(tag);
         Person editedPerson = new Person(personToEdit.getName(), personToEdit.getPhone(), personToEdit.getEmail(),

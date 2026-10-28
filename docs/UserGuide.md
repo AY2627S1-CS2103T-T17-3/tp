@@ -500,7 +500,7 @@ Format: `untag INDEX t/TAG`
 
 * The same index, single-tag, and tag-name rules as `tag` apply.
 * Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
-* Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
+* Removing a tag the member does not have produces an error message and leaves their tags unchanged.
 * Removing the last tag is allowed and leaves the member with no tags.
 * After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 

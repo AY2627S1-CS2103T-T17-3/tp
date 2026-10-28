@@ -51,9 +51,11 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_noExistingTags_succeedsWithoutChangingTags() {
+    public void execute_noExistingTags_throwsCommandException() {
         Person person = setTags(INDEX_FIRST_PERSON);
-        assertTagRemoved(INDEX_FIRST_PERSON, "Volunteer", person, person);
+        Tag tag = new Tag("Volunteer");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
@@ -88,10 +90,12 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_absentTagInFilteredList_showsAllPersons() {
-        Person person = setTags(INDEX_SECOND_PERSON, "Exco");
+    public void execute_absentTagInFilteredList_throwsCommandException() {
+        setTags(INDEX_SECOND_PERSON, "Exco");
         showPersonAtIndex(model, INDEX_SECOND_PERSON);
-        assertTagRemoved(INDEX_FIRST_PERSON, "VOLUNTEER", person, person);
+        Tag tag = new Tag("VOLUNTEER");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
@@ -110,9 +114,11 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_archivedMemberWithUnchangedTags_preservesStatus() {
-        Person person = setArchivedPerson();
-        assertTagRemoved(INDEX_FIRST_PERSON, "Volunteer", person, person);
+    public void execute_archivedMemberAbsentTag_throwsCommandException() {
+        setArchivedPerson();
+        Tag tag = new Tag("Volunteer");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
