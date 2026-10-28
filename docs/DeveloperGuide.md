@@ -260,6 +260,29 @@ files, a failing save implementation, and startup recovery. `MainWindowTest` che
 reference placement below the guide link, wrapping, popup reuse, and F1/menu access with an unsent draft.
 It also checks that rejected help arguments retain editable input with error styling and do not open a popup.
 
+### Confirming a directory clear
+
+`AddressBookParser` delegates `clear` arguments to `ClearCommandParser`. Only empty trimmed arguments are
+accepted. Extra arguments produce `MESSAGE_INVALID_COMMAND_FORMAT` with `ClearCommand.MESSAGE_USAGE` before
+confirmation or execution.
+
+`MainWindow` calls `Logic.execute(commandText, clearConfirmation)` with a callback that opens a JavaFX confirmation
+dialog. After parsing and checking startup recovery protection, `LogicManager` invokes this callback only for
+`ClearCommand`, before taking a snapshot, executing the command, or saving. The single-argument `execute` method
+supplies no approval and therefore cancels a valid `clear`. The logic layer has no JavaFX dialog dependency.
+
+The dialog describes deletion of all members, including archived, hidden, existing, and imported members, and
+suggests `delete INDEX` for one member. Cancel is the default and initially focused button. Escape, closing the
+dialog, and Cancel return false, producing `Clear cancelled.` without changing records, search, status view, or
+the saved file. Cancellation is a completed submission: the command box clears and the submission remains in history.
+Only **Delete all members** returns true. `ClearCommand` then empties the entire directory through the existing
+save-and-rollback flow. The status view is retained. Even an empty directory requires confirmation.
+
+`ClearCommandParserTest` and `AddressBookParserTest` cover strict syntax and surrounding whitespace.
+`ClearCommandIntegrationTest` checks confirmation timing, cancellation without saving, persisted deletion of hidden
+and archived members, save-failure restoration, and startup recovery protection. `MainWindowTest` exercises the
+actual dialog, safe defaults, keyboard cancellation, window closure, and confirmed clearing.
+
 ### Recalling submitted commands
 
 #### UI ownership and history state
@@ -672,7 +695,7 @@ Saving protects both the in-memory directory and the existing JSON file. Command
 success to the UI only after persistence succeeds. Read-only commands (`find`, `findall`, `findany`, `list`, `view`,
 `help`, and `exit`) return `false` from `requiresSave()` and execute without attempting to save. They remain available
 when a previously loaded data file becomes unwritable. In a normal writable session, parsing and pre-execution guards
-run first. For commands that require saving, `LogicManager` then follows this sequence:
+run first, including confirmation for `clear`. For commands that require saving, `LogicManager` then follows this sequence:
 
 1. **Snapshot.** Copy the directory and capture `Model.getFilteredPersonListPredicate()` before executing the command.
 1. **Execute.** Run `command.execute(model)`. A parser or command exception exits before saving; the save-failure
@@ -1475,6 +1498,37 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
 
    1. Test case: `find n/David`, followed by `find e/ALEX`<br>
       Expected: The email search displays Alex Yeoh even though he was absent from the preceding results.
+
+### Clearing the entire directory
+
+Use a disposable application folder. Any setup step elsewhere in this guide that runs `clear` also requires
+choosing **Delete all members** in its confirmation dialog.
+
+1. Prepare an active member and an archived member with different emails, then search for the active member
+   and select Active view. Keep a copy of `data/nusocietydesk.json` for comparison.
+1. Submit `clear 1`, `clear all`, `clear member`, and `clear extra_text`.<br>
+   Expected: each shows `Invalid command format!` followed by the `clear` usage. No dialog opens, input remains
+   editable with error styling, and records, search, view, and the file are unchanged.
+1. Submit `clear`.<br>
+   Expected: a confirmation explains that all members, including archived members and those outside the search,
+   will be permanently deleted. It also warns that existing and imported members will both be deleted and
+   suggests `delete INDEX`. Buttons are **Cancel** and **Delete all members**, with Cancel initially focused
+   and the default. Records and the file remain unchanged while the dialog is open.
+1. Cancel using each of the following, submitting `clear` again between attempts: click Cancel, press Enter
+   without moving focus, press Escape, and close the dialog with its window close button.<br>
+   Expected: `Clear cancelled.` appears, the command box clears, and records, search, view, and the file are
+   unchanged. The prior `clear` submission can still be recalled with the Up arrow.
+1. Submit `clear` and use Tab to focus **Delete all members**, then activate it with the keyboard.<br>
+   Expected: `Member directory has been cleared!` appears. Both active and archived members are deleted,
+   even though only one was displayed. The selected view remains Active and the saved directory is empty.
+1. Restart the app.<br>
+   Expected: the directory stays empty; sample members are not loaded from a valid empty data file.
+1. Submit `clear` with the directory already empty.<br>
+   Expected: confirmation is still required. Cancel leaves the directory empty.
+1. Add a disposable member and make saving fail using the obstacle described in
+   [Recovering from a failed save](#recovering-from-a-failed-save). Submit `clear` and confirm deletion.<br>
+   Expected: a saving error replaces success feedback. The records, search, view, and original saved data are
+   preserved. A retry requires confirmation again.
 
 ### Deleting a person
 

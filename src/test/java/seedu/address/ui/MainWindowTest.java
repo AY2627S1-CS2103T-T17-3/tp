@@ -1,20 +1,29 @@
 package seedu.address.ui;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
@@ -28,9 +37,11 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import seedu.address.logic.Logic;
 import seedu.address.logic.LogicManager;
+import seedu.address.logic.commands.ClearCommand;
 import seedu.address.logic.commands.HelpCommand;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ModelManager;
+import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Address;
 import seedu.address.model.person.Name;
@@ -49,6 +60,199 @@ public class MainWindowTest {
 
     @TempDir
     public Path temporaryFolder;
+
+    @Test
+    public void submit_invalidClear_showsFormatErrorWithoutDialogOrDataChanges() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("invalidClear.json");
+        ModelManager model = new ModelManager();
+        model.addPerson(new PersonBuilder().withEmail("existing@u.nus.edu").build());
+        new JsonAddressBookStorage(dataFile).saveAddressBook(model.getAddressBook());
+        String savedBefore = Files.readString(dataFile);
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("clearPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                List<Window> visibleWindows = List.copyOf(Window.getWindows());
+
+                for (String command : List.of("clear 1", "clear all", "clear member", "clear extra_text")) {
+                    input.setText(command);
+                    input.fireEvent(new ActionEvent());
+                    assertEquals("Invalid command format!\n" + ClearCommand.MESSAGE_USAGE, results.getText());
+                    assertEquals(command, input.getText());
+                    assertTrue(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                    assertEquals(visibleWindows, Window.getWindows());
+                    assertEquals(1, model.getAddressBook().getPersonList().size());
+                    assertEquals(savedBefore, Files.readString(dataFile));
+                }
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void submit_clearCancellation_preservesRecordsSearchViewAndFile() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("cancelledClear.json");
+        ModelManager model = new ModelManager();
+        Person active = new PersonBuilder().withEmail("active@u.nus.edu").build();
+        Person archived = new PersonBuilder().withEmail("archived@u.nus.edu").withStatus(Status.ARCHIVED).build();
+        model.addPerson(active);
+        model.addPerson(archived);
+        model.updateFilteredPersonList(person -> person.getEmail().equals(active.getEmail()));
+        model.setStatusFilter(StatusFilter.ACTIVE);
+        new JsonAddressBookStorage(dataFile).saveAddressBook(model.getAddressBook());
+        String savedBefore = Files.readString(dataFile);
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("clearPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+
+                for (String action : List.of("cancel", "enter", "escape", "close")) {
+                    submitClear(input, pane -> {
+                        Button cancel = (Button) pane.lookupButton(ButtonType.CANCEL);
+                        Button deleteAll = (Button) pane.lookupButton(pane.getButtonTypes().getLast());
+                        assertEquals("Delete all members?", pane.getHeaderText());
+                        assertTrue(pane.getContentText().contains("archived members"));
+                        assertTrue(pane.getContentText().contains("outside your current search"));
+                        assertTrue(pane.getContentText().contains("Existing members and imported members"));
+                        assertTrue(pane.getContentText().contains("delete INDEX"));
+                        pane.applyCss();
+                        pane.layout();
+                        Label explanation = (Label) pane.lookup(".content");
+                        assertTrue(explanation.isWrapText());
+                        assertTrue(explanation.getHeight() >= explanation.prefHeight(explanation.getWidth()) - 1,
+                                "The full warning must be visible without truncation.");
+                        assertEquals("Delete all members", deleteAll.getText());
+                        assertTrue(cancel.isDefaultButton());
+                        assertTrue(cancel.isCancelButton());
+                        assertFalse(deleteAll.isDefaultButton());
+                        assertSame(cancel, pane.getScene().getFocusOwner());
+                        Window dialogWindow = pane.getScene().getWindow();
+                        assertEquals(stage, ((Stage) dialogWindow).getOwner());
+                        assertEquals(List.of(active, archived), model.getAddressBook().getPersonList());
+                        assertEquals(savedBefore, assertDoesNotThrow(() -> Files.readString(dataFile)));
+                        switch (action) {
+                            case "cancel" -> cancel.fire();
+                            case "enter" -> fireKey(pane, KeyCode.ENTER);
+                            case "escape" -> fireKey(pane, KeyCode.ESCAPE);
+                            default -> ((Stage) dialogWindow).close();
+                        }
+                        assertFalse(dialogWindow.isShowing());
+                    });
+                    assertEquals(ClearCommand.MESSAGE_CANCELLED, results.getText());
+                    assertEquals("", input.getText());
+                    assertFalse(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                    assertEquals(List.of(active, archived), model.getAddressBook().getPersonList());
+                    assertEquals(List.of(active), model.getFilteredPersonList());
+                    assertEquals(StatusFilter.ACTIVE, model.getStatusFilter());
+                    assertEquals("ACTIVE", ((Button) stage.getScene().lookup("#statusFilterButton")).getText());
+                    assertEquals(savedBefore, Files.readString(dataFile));
+                }
+                input.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.UP,
+                        false, false, false, false));
+                assertEquals("clear", input.getText());
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void submit_confirmedClear_deletesAllMembersAndPersistsEmptyDirectory() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("confirmedClear.json");
+        ModelManager model = new ModelManager();
+        model.addPerson(new PersonBuilder().withEmail("active@u.nus.edu").build());
+        model.addPerson(new PersonBuilder().withEmail("archived@u.nus.edu").withStatus(Status.ARCHIVED).build());
+        model.setStatusFilter(StatusFilter.ARCHIVED);
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("clearPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+
+                submitClear(input, pane -> {
+                    Button deleteAll = (Button) pane.lookupButton(pane.getButtonTypes().getLast());
+                    Window dialogWindow = pane.getScene().getWindow();
+                    fireKey(pane, KeyCode.TAB);
+                    assertSame(deleteAll, pane.getScene().getFocusOwner());
+                    fireKey(pane, KeyCode.SPACE);
+                    assertFalse(dialogWindow.isShowing());
+                });
+
+                assertEquals(ClearCommand.MESSAGE_SUCCESS, results.getText());
+                assertEquals("", input.getText());
+                assertEquals(List.of(), model.getAddressBook().getPersonList());
+                assertEquals(List.of(), model.getFilteredPersonList());
+                assertEquals(StatusFilter.ARCHIVED, model.getStatusFilter());
+                assertEquals(new AddressBook(), new JsonAddressBookStorage(dataFile).readAddressBook().orElseThrow());
+
+                submitClear(input, pane -> ((Button) pane.lookupButton(ButtonType.CANCEL)).fire());
+                assertEquals(ClearCommand.MESSAGE_CANCELLED, results.getText());
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
+    private void submitClear(TextField input, Consumer<DialogPane> response) {
+        AtomicBoolean wasShown = new AtomicBoolean();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Platform.runLater(() -> {
+            Stage dialogStage = null;
+            try {
+                dialogStage = Window.getWindows().stream().filter(candidate -> candidate instanceof Stage)
+                        .map(candidate -> (Stage) candidate)
+                        .filter(candidate -> candidate.getTitle().equals("Confirm clear")).findFirst().orElseThrow();
+                wasShown.set(true);
+                response.accept((DialogPane) dialogStage.getScene().getRoot());
+            } catch (Throwable error) {
+                failure.set(error);
+            } finally {
+                if (dialogStage != null && dialogStage.isShowing()) {
+                    dialogStage.close();
+                }
+            }
+        });
+        input.setText("clear");
+        input.fireEvent(new ActionEvent());
+        assertTrue(wasShown.get(), "Clear must show a confirmation dialog.");
+        if (failure.get() != null) {
+            throw new AssertionError("Confirmation dialog response failed.", failure.get());
+        }
+    }
+
+    private void fireKey(DialogPane pane, KeyCode key) {
+        Node target = pane.getScene().getFocusOwner();
+        assertNotNull(target);
+        target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", key, false, false, false, false));
+        target.fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, "", "", key, false, false, false, false));
+    }
 
     @Test
     public void submit_editUnnamedMember_refreshesHeadingAndEmailRow() throws Exception {
@@ -153,8 +357,7 @@ public class MainWindowTest {
                 stage.show();
                 TextField input = (TextField) stage.getScene().lookup("#commandTextField");
                 TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
-                input.setText("clear");
-                input.fireEvent(new ActionEvent());
+                submitClear(input, pane -> ((Button) pane.lookupButton(pane.getButtonTypes().getLast())).fire());
                 assertEquals("Member directory has been cleared!", results.getText());
                 String savedBefore = Files.readString(dataFile);
                 String command = "add e/" + "a.".repeat(2000) + "a@u.nus.edu";

@@ -1,17 +1,21 @@
 package seedu.address.logic;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 import javafx.collections.ObservableList;
 import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
+import seedu.address.logic.commands.ClearCommand;
 import seedu.address.logic.commands.Command;
 import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.ImportCommand;
@@ -65,6 +69,13 @@ public class LogicManager implements Logic {
 
     @Override
     public CommandResult execute(String commandText) throws CommandException, ParseException {
+        return execute(commandText, () -> false);
+    }
+
+    @Override
+    public CommandResult execute(String commandText, BooleanSupplier clearConfirmation)
+            throws CommandException, ParseException {
+        requireNonNull(clearConfirmation);
         CommandResult commandResult;
         Command command = addressBookParser.parseCommand(commandText);
         logger.info("Executing " + command.getClass().getSimpleName());
@@ -73,6 +84,9 @@ public class LogicManager implements Logic {
                 throw new CommandException(JsonAddressBookStorage.MESSAGE_SAVE_DISABLED);
             }
             return command.execute(model);
+        }
+        if (command instanceof ClearCommand && !clearConfirmation.getAsBoolean()) {
+            return new CommandResult(ClearCommand.MESSAGE_CANCELLED);
         }
         if (!command.requiresSave()) {
             return command.execute(model);

@@ -31,6 +31,7 @@ public class HelpCommandTest {
 
             clear - Permanently delete every member, including archived and hidden members.
             Usage: clear
+            Requires confirmation. Cancel is the default. Extra arguments are rejected.
             Example: clear
 
             delete - Permanently delete one member from the currently displayed list.

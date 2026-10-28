@@ -76,8 +76,8 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 * Parameters can be in any order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
-* Extraneous parameters for `list`, `exit`, and `clear` are ignored.<br>
-  For example, `list 123` is interpreted as `list`. The `help` command rejects extra arguments.
+* Extraneous parameters for `list` and `exit` are ignored.<br>
+  For example, `list 123` is interpreted as `list`. The `help` and `clear` commands reject extra arguments.
 
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </box>
@@ -719,9 +719,23 @@ it reads `Deleted person: Email: bobby@u.nus.edu`.
 
 ### Clearing all entries: `clear`
 
-Clears all entries from the address book.
+Permanently deletes every member after confirmation, including archived members and members outside the
+current search or selected status view.
 
 Format: `clear`
+
+* Takes no parameters. Inputs such as `clear 1`, `clear all`, and `clear member` show an invalid-command-format
+  error without opening the confirmation dialog. Surrounding whitespace is allowed.
+* The confirmation dialog has **Cancel** and **Delete all members** buttons. **Cancel** is selected by default;
+  pressing Enter without moving focus, pressing Escape, or closing the dialog cancels the command.
+* Cancelling shows `Clear cancelled.` and leaves member records, the current search, the selected status view,
+  and the saved data file unchanged.
+* Choosing **Delete all members** clears and saves the entire directory. This cannot be undone in the app.
+  If saving fails, the previous records and search are restored as described below.
+* To remove one member, use `delete INDEX` instead.
+
+You can use `clear` to start over after importing an unwanted CSV file. It removes members that existed before
+the import as well as imported members; it does not selectively reverse an import.
 
 ### Exiting the program: `exit`
 

@@ -88,8 +88,17 @@ public class AddressBookParserTest {
 
     @Test
     public void parseCommand_clear() throws Exception {
-        assertTrue(parser.parseCommand(ClearCommand.COMMAND_WORD) instanceof ClearCommand);
-        assertTrue(parser.parseCommand(ClearCommand.COMMAND_WORD + " 3") instanceof ClearCommand);
+        for (String input : List.of("clear", " clear ", "\tclear\t", "\r\nclear\r\n")) {
+            assertTrue(parser.parseCommand(input) instanceof ClearCommand);
+        }
+    }
+
+    @Test
+    public void parseCommand_clearWithArguments_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, ClearCommand.MESSAGE_USAGE);
+        for (String input : List.of("clear 1", "clear all", "clear member", "clear extra_text", "clear\t1")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(input));
+        }
     }
 
     @Test
