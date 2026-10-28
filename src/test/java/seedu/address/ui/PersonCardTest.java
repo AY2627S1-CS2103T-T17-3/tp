@@ -1,21 +1,15 @@
 package seedu.address.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.TypicalPersons.ALICE;
-
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputControl;
-import javafx.scene.input.Clipboard;
+import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -51,15 +45,15 @@ public class PersonCardTest {
                 assertTrue(value.localToScene(value.getBoundsInLocal()).getMaxX() <= scene.getWidth(), field);
             }
             for (String field : new String[] {"name", "phone", "address", "email"}) {
-                TextInputControl value = (TextInputControl) card.lookup("#" + field);
+                Label value = (Label) card.lookup("#" + field);
                 assertEquals(value.getText(), value.getTooltip().getText());
             }
-            assertTrue(((TextArea) card.lookup("#address")).isWrapText());
+            assertTrue(((Label) card.lookup("#address")).isWrapText());
             FlowPane tags = (FlowPane) card.lookup("#tags");
             for (Node child : tags.getChildren()) {
-                TextField tag = (TextField) child;
-                assertTrue(tag.getBoundsInParent().getMaxX() <= tags.getWidth());
-                assertEquals(tag.getText(), tag.getTooltip().getText());
+                Label label = (Label) child;
+                assertTrue(label.getBoundsInParent().getMaxX() <= tags.getWidth());
+                assertEquals(label.getText(), label.getTooltip().getText());
             }
             return null;
         });
@@ -74,39 +68,10 @@ public class PersonCardTest {
         assertEquals("ARCHIVED", displayedStatus(archived));
     }
 
-    @Test
-    public void constructor_allDisplayedDetailsCanBeSelectedAndCopied() throws Exception {
-        JavaFxTestUtil.runAndWait(() -> {
-            PersonCard card = new PersonCard(ALICE, 1);
-            FlowPane tags = (FlowPane) card.getRoot().lookup("#tags");
-            List<TextInputControl> details = List.of(
-                    (TextField) card.getRoot().lookup("#id"),
-                    (TextField) card.getRoot().lookup("#name"),
-                    (TextField) card.getRoot().lookup("#phone"),
-                    (TextArea) card.getRoot().lookup("#address"),
-                    (TextField) card.getRoot().lookup("#email"),
-                    (TextField) card.getRoot().lookup("#status"),
-                    (TextField) tags.getChildren().getFirst());
-
-            for (TextInputControl detail : details) {
-                assertFalse(detail.isEditable());
-                detail.selectAll();
-                detail.copy();
-                assertEquals(detail.getText(), Clipboard.getSystemClipboard().getString());
-            }
-
-            TextField name = (TextField) card.getRoot().lookup("#name");
-            name.selectRange(0, 5);
-            name.copy();
-            assertEquals("Alice", Clipboard.getSystemClipboard().getString());
-            return null;
-        });
-    }
-
     private String displayedStatus(Person person) throws Exception {
         return JavaFxTestUtil.runAndWait(() -> {
             PersonCard card = new PersonCard(person, 1);
-            TextField status = (TextField) card.getRoot().lookup("#status");
+            Label status = (Label) card.getRoot().lookup("#status");
             return status.getText();
         });
     }
