@@ -51,6 +51,44 @@ public class MainWindowTest {
     public Path temporaryFolder;
 
     @Test
+    public void submit_editUnnamedMember_refreshesHeadingAndEmailRow() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("memberCard.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("memberCardPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+
+                input.setText("add e/Alex@U.NUS.EDU");
+                input.fireEvent(new ActionEvent());
+                assertEquals("New person added: Email: alex@u.nus.edu", results.getText());
+                assertDisplayedCard(stage, "alex@u.nus.edu", "alex@u.nus.edu", false);
+
+                input.setText("edit 1 e/alex.new@u.nus.edu");
+                input.fireEvent(new ActionEvent());
+                assertEquals("Edited person: Email: alex.new@u.nus.edu", results.getText());
+                assertDisplayedCard(stage, "alex.new@u.nus.edu", "alex.new@u.nus.edu", false);
+
+                input.setText("edit 1 n/Alex Tan");
+                input.fireEvent(new ActionEvent());
+                assertEquals("Edited person: Name: Alex Tan; Email: alex.new@u.nus.edu", results.getText());
+                assertDisplayedCard(stage, "Alex Tan", "alex.new@u.nus.edu", true);
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
+    @Test
     public void submit_overlongFields_showsConstraintsAndAllowsRetry() throws Exception {
         JavaFxTestUtil.initialize();
         Path dataFile = temporaryFolder.resolve("longFields.json");
@@ -511,6 +549,20 @@ public class MainWindowTest {
             }
             return null;
         });
+    }
+
+    private static void assertDisplayedCard(Stage stage, String expectedHeading, String expectedEmail,
+            boolean hasName) {
+        stage.getScene().getRoot().applyCss();
+        stage.getScene().getRoot().layout();
+        Label heading = (Label) stage.getScene().lookup("#name");
+        Label email = (Label) stage.getScene().lookup("#email");
+        assertNotNull(heading);
+        assertNotNull(email);
+        assertEquals(expectedHeading, heading.getText());
+        assertEquals("Email: " + expectedEmail, email.getText());
+        assertEquals(hasName, email.isVisible());
+        assertEquals(hasName, email.isManaged());
     }
 
     private static void assertButtonColors(Button button, String background, Color text) {
