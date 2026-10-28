@@ -569,7 +569,7 @@ predicates; other field predicates and parsing helpers are omitted.
 <puml src="diagrams/SearchClassDiagram.puml" alt="Partial search class diagram showing shared command execution and predicate composition" />
 
 `AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
-arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
+arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes ASCII whitespace
 before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
 
 `FindCommandParser` accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
@@ -577,9 +577,14 @@ its restrictions against repeated prefixes, multiple fields and multiple values 
 
 `FindAllCommandParser` and `FindAnyCommandParser` use `SearchParserUtil.parseConditions` to require at least
 one explicitly prefixed condition. It reads every occurrence with `ArgumentMultimap.getAllValues`, rejects
-unprefixed text and empty values, and validates the entire input before returning predicates.
+unprefixed text and blank values, and validates the entire input before returning predicates.
 `AllConditionsPredicate` combines these with AND; `AnyConditionsPredicate` combines them with OR.
 Invalid conditions therefore reject even an OR search that could otherwise match a member.
+
+`FindCommandParser` and `SearchParserUtil.parseConditions` reject empty or Java-whitespace-only values using
+`String.isBlank()` before constructing field predicates, reporting the command's invalid-format message.
+This includes EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000), which `trim()` leaves intact. Non-breaking
+spaces such as U+00A0 are not blank under these rules. Trimming and splitting retain the `trim()` and `\s+` rules.
 
 All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
@@ -594,7 +599,8 @@ the visible count, including zero for an empty result. It remains read-only for
 recovery mode and requires no changes to member data or the storage schema.
 
 Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
-invalid conditions, incomplete and archived members, and searches after an earlier filter.
+invalid conditions, incomplete and archived members, and searches after an earlier filter. Parser regression
+tests cover Unicode whitespace-only values in every search field, alone and alongside valid combined conditions.
 Rejected searches preserve the previous results, member records and saved data.
 
 ### Importing member directories from CSV
@@ -1289,6 +1295,28 @@ Run these searches in order; later searches must check the complete directory de
 
 Run `find n/Alice`, then try `findall John t/exco`, `findall n/John Tan` and `findany n/John p/abc`.
 Each must report an error and leave Alice Tan displayed, with member records and saved JSON unchanged.
+
+### Rejecting blank search values
+
+Use a nonempty directory and run `list`. Note the displayed members, then paste each command below separately.
+Each line contains an actual EM SPACE (U+2003):
+
+```text
+find n/ 
+find  
+find e/ 
+findall n/  e/@u.nus.edu
+findany e/@u.nus.edu n/ 
+```
+
+Expected: Each command reports "Invalid command format!" with its usage guidance and preserves the previous
+results, member records and saved JSON. The combined searches must be rejected even though the email condition
+matches existing members.
+
+Repeat using IDEOGRAPHIC SPACE (U+3000), copying the character between these brackets: `[　]`.
+Also try ordinary spaces and a mixture of ordinary and Unicode spaces as the complete value.
+Finally, run `find e/@u.nus.edu`, `findall e/@u.nus.edu` and `findany e/@u.nus.edu`.
+Expected: All three valid searches display every member in the selected status view.
 
 ### Finding members by name
 

@@ -156,6 +156,16 @@ public class FindCommandParserTest {
     }
 
     @Test
+    public void parse_unicodeWhitespaceOnlyValue_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        for (String value : List.of("\u2002", "\u2003", "\u3000", " \t\u2003 \n\u3000 ")) {
+            for (String prefix : List.of("", "n/", "p/", "e/", "t/")) {
+                assertParseFailure(parser, prefix + value, expectedMessage);
+            }
+        }
+    }
+
+    @Test
     public void parse_validArgs_returnsFindCommand() {
         // no leading and trailing whitespaces
         FindCommand expectedFindCommand =
