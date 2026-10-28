@@ -60,6 +60,33 @@ public class PersonCardTest {
     }
 
     @Test
+    public void constructor_manyTags_noLargeGapBeforePhone() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            Person person = new PersonBuilder(ALICE).withTags("exco", "1221212123213", "volunteer",
+                    "ay2728", "ay2627", "moretagsgobrrrrr", "testing123", "organisingcommittee",
+                    "publicity", "president").build();
+            Region card = new PersonCard(person, 1).getRoot();
+            StackPane container = new StackPane(card);
+            Scene scene = new Scene(container, 400, 600);
+            FlowPane tags = (FlowPane) card.lookup("#tags");
+            Label phone = (Label) card.lookup("#phone");
+            scene.getStylesheets().add(getClass().getResource("/view/DarkTheme.css").toExternalForm());
+            card.applyCss();
+            container.applyCss();
+            container.layout();
+            card.applyCss();
+            card.layout();
+            container.layout();
+
+            Node tagsRow = tags.getParent();
+            double tagsBottom = tagsRow.getBoundsInParent().getMaxY();
+            double phoneTop = phone.getBoundsInParent().getMinY();
+            assertEquals(tagsBottom, phoneTop, 1.0);
+            return null;
+        });
+    }
+
+    @Test
     public void constructor_displaysStatusBadge() throws Exception {
         Person archived = new Person(ALICE.getName(), ALICE.getPhone(), ALICE.getEmail(), ALICE.getAddress(),
                 Status.ARCHIVED, ALICE.getTags());

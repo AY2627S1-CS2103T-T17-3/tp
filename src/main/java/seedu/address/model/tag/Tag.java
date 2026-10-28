@@ -10,7 +10,7 @@ import java.util.Locale;
  * Guarantees: immutable; name is lowercase and valid as declared in {@link #isValidTagName(String)}.
  * Tag identity is case-insensitive.
  */
-public class Tag {
+public class Tag implements Comparable<Tag> {
 
     public static final int MAX_LENGTH = 30;
 
@@ -55,6 +55,11 @@ public class Tag {
     @Override
     public int hashCode() {
         return tagName.hashCode();
+    }
+
+    @Override
+    public int compareTo(Tag other) {
+        return tagName.compareTo(other.tagName);
     }
 
     /**

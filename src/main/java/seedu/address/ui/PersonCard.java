@@ -66,6 +66,11 @@ public class PersonCard extends UiPart<Region> {
         if (person.getStatus() == Status.ARCHIVED) {
             status.getStyleClass().add("archived");
         }
+        tags.widthProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() > 0) {
+                tags.setPrefWrapLength(newVal.doubleValue());
+            }
+        });
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))
                 .forEach(tag -> {

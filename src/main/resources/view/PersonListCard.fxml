@@ -29,7 +29,7 @@
                maxWidth="Infinity" HBox.hgrow="ALWAYS" />
       </HBox>
       <HBox alignment="CENTER_LEFT" spacing="7">
-        <FlowPane fx:id="tags" minWidth="0" prefWidth="0" HBox.hgrow="ALWAYS" />
+        <FlowPane fx:id="tags" minWidth="0" prefWrapLength="250" HBox.hgrow="ALWAYS" />
         <Label fx:id="status" styleClass="member_status" minWidth="-Infinity" />
       </HBox>
       <Label fx:id="phone" styleClass="cell_small_label" text="\$phone" minWidth="0" maxWidth="Infinity" />

@@ -513,6 +513,52 @@ public class MainWindowTest {
         });
     }
 
+    @Test
+    public void submit_tagCommandsWithManyTags_wrapsResultAndOrdersTagsAlphabetically() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("manyTags.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        Person person = new PersonBuilder().withName("John Tan").withEmail("john@u.nus.edu")
+                .withTags("exco", "1221212123213", "volunteer", "ay2728", "ay2627",
+                        "moretagsgobrrrrr", "testing123", "organisingcommittee", "publicity", "president")
+                .build();
+        model.addPerson(person);
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("manyTagsPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+
+                assertTrue(results.isWrapText());
+
+                input.setText("tag 1 t/testing");
+                input.fireEvent(new ActionEvent());
+
+                assertTrue(results.isWrapText());
+                String expectedAddedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
+                        + "[organisingcommittee][president][publicity][testing][testing123][volunteer]";
+                assertTrue(results.getText().contains(expectedAddedTags));
+
+                input.setText("untag 1 t/testing");
+                input.fireEvent(new ActionEvent());
+
+                assertTrue(results.isWrapText());
+                String expectedRemovedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
+                        + "[organisingcommittee][president][publicity][testing123][volunteer]";
+                assertTrue(results.getText().contains(expectedRemovedTags));
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
+
     private static void assertButtonColors(Button button, String background, Color text) {
         button.applyCss();
         assertEquals(Color.web(background), button.getBackground().getFills().get(0).getFill());

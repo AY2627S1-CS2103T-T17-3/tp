@@ -63,7 +63,10 @@ public class Messages {
         details.add(EMAIL_PREFIX + person.getEmail());
         person.getAddress().ifPresent(address -> details.add(ADDRESS_PREFIX + address.value));
         if (!person.getTags().isEmpty()) {
-            details.add(TAGS_PREFIX + person.getTags().stream().map(Object::toString).collect(Collectors.joining()));
+            details.add(TAGS_PREFIX + person.getTags().stream()
+                    .sorted()
+                    .map(Object::toString)
+                    .collect(Collectors.joining()));
         }
         return details.toString();
     }
