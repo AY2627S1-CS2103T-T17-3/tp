@@ -54,11 +54,11 @@ public class PersonCard extends UiPart<Region> {
         this.person = person;
         id.setText(displayedIndex + ". ");
         name.setText(person.getName().map(memberName -> memberName.fullName).orElse(person.getEmail().value));
-        phone.setText(person.getPhone().map(memberPhone -> memberPhone.value)
-                .orElse("Phone: -"));
-        address.setText(person.getAddress().map(memberAddress -> memberAddress.value)
-                .orElse("Address: -"));
-        email.setText(person.getEmail().value);
+        phone.setText("Phone: " + person.getPhone().map(memberPhone -> memberPhone.value).orElse("-"));
+        address.setText("Address: " + person.getAddress().map(memberAddress -> memberAddress.value).orElse("-"));
+        email.setText("Email: " + person.getEmail().value);
+        email.setVisible(person.getName().isPresent());
+        email.setManaged(person.getName().isPresent());
         for (Label field : List.of(name, phone, address, email)) {
             field.setTooltip(new Tooltip(field.getText()));
         }
