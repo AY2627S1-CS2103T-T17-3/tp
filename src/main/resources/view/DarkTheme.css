@@ -150,6 +150,15 @@
     -fx-background-insets: 0;
 }
 
+.card-copy-field .content {
+    -fx-padding: 0;
+}
+
+.card-copy-field .scroll-pane {
+    -fx-hbar-policy: never;
+    -fx-vbar-policy: never;
+}
+
 .stack-pane {
      -fx-background-color: derive(#1d1d1d, 20%);
 }

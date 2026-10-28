@@ -33,8 +33,8 @@
       </HBox>
       <FlowPane fx:id="tags" minWidth="0" prefWidth="0" />
       <TextField fx:id="phone" styleClass="cell_small_label" text="\$phone" minWidth="0" maxWidth="Infinity" />
-      <TextArea fx:id="address" styleClass="cell_small_label" text="\$address" minWidth="0"
-                maxWidth="Infinity" wrapText="true" prefRowCount="3" />
+      <TextArea fx:id="address" styleClass="cell_small_label" text="\$address" minWidth="0" minHeight="0"
+                maxWidth="Infinity" wrapText="true" />
       <TextField fx:id="email" styleClass="cell_small_label" text="\$email" minWidth="0" maxWidth="Infinity" />
     </VBox>
   </GridPane>

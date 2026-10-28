@@ -22,6 +22,8 @@ import seedu.address.model.person.Status;
 public class PersonCard extends UiPart<Region> {
 
     private static final String FXML = "PersonListCard.fxml";
+    private static final int ADDRESS_TEXT_MARGIN = 8;
+    private static final int MAX_ADDRESS_LINES = 3;
 
     /**
      * Note: Certain keywords such as "location" and "resources" are reserved keywords in JavaFX.
@@ -62,6 +64,7 @@ public class PersonCard extends UiPart<Region> {
                 .orElse("Phone: -"));
         setCopyableText(address, person.getAddress().map(memberAddress -> memberAddress.value)
                 .orElse("Address: -"));
+        sizeAddressToContent();
         setCopyableText(email, person.getEmail().value);
         String statusText = "Status: " + person.getStatus().badgeName;
         statusStrip.setAccessibleRole(AccessibleRole.TEXT);
@@ -100,5 +103,20 @@ public class PersonCard extends UiPart<Region> {
                         + textField.getInsets().getLeft() + textField.getInsets().getRight() + 2;
             }, measuredText.layoutBoundsProperty(), textField.paddingProperty()));
         }
+    }
+
+    /** Keeps short addresses to one line and lets longer ones use up to three lines. */
+    private void sizeAddressToContent() {
+        Text measuredText = new Text();
+        measuredText.textProperty().bind(address.textProperty());
+        measuredText.fontProperty().bind(address.fontProperty());
+        Text oneLine = new Text("Ag");
+        oneLine.fontProperty().bind(address.fontProperty());
+        address.prefHeightProperty().bind(Bindings.createDoubleBinding(() -> {
+            measuredText.setWrappingWidth(Math.max(1, address.getWidth() - address.getInsets().getLeft()
+                    - address.getInsets().getRight() - ADDRESS_TEXT_MARGIN));
+            return Math.ceil(Math.min(measuredText.getLayoutBounds().getHeight(),
+                    MAX_ADDRESS_LINES * oneLine.getLayoutBounds().getHeight())) + ADDRESS_TEXT_MARGIN;
+        }, address.widthProperty(), address.paddingProperty(), address.textProperty(), address.fontProperty()));
     }
 }

@@ -12,8 +12,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javafx.collections.FXCollections;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -134,6 +139,66 @@ public class PersonCardTest {
                 Region region = (Region) address.lookup(selector);
                 assertEquals(Color.TRANSPARENT, region.getBackground().getFills().getFirst().getFill(),
                         selector + " should not paint a box behind the address");
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void listCell_cardFitsViewportAndAddressHeightMatchesContent() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            String longEmail = "a".repeat(64) + "@u.nus.edu";
+            String longAddress = "Block 123, Long Road, near the society office, ".repeat(4);
+            for (int width : new int[] {340, 900}) {
+                for (String addressText : new String[] {"Short address", longAddress}) {
+                    Person named = new PersonBuilder(ALICE).withEmail(longEmail).withAddress(addressText).build();
+                    Person unnamed = new Person(Optional.empty(), named.getPhone(), named.getEmail(),
+                            named.getAddress(), Status.ACTIVE, named.getTags());
+                    Region panel = new PersonListPanel(FXCollections.observableArrayList(unnamed)).getRoot();
+                    StackPane container = new StackPane(panel);
+                    Scene scene = new Scene(container, width, 600);
+                    scene.getStylesheets().add(getClass().getResource("/view/DarkTheme.css").toExternalForm());
+                    container.applyCss();
+                    container.layout();
+                    container.layout();
+
+                    ListView<?> list = (ListView<?>) panel.lookup("#personListView");
+                    ListCell<?> cell = list.lookupAll(".list-cell").stream()
+                            .map(node -> (ListCell<?>) node)
+                            .filter(candidate -> candidate.getItem() != null)
+                            .findFirst().orElseThrow();
+                    Region card = (Region) cell.getGraphic();
+                    TextArea address = (TextArea) card.lookup("#address");
+                    TextField phone = (TextField) card.lookup("#phone");
+                    Node addressTextNode = address.lookup(".text");
+                    Node phoneText = phone.lookup(".text");
+                    double addressTextX = addressTextNode.localToScene(addressTextNode.getBoundsInLocal()).getMinX();
+                    double phoneTextX = phoneText.localToScene(phoneText.getBoundsInLocal()).getMinX();
+                    assertEquals(phoneTextX, addressTextX, 2,
+                            "Address text should align with the phone and email");
+                    assertTrue(address.lookupAll(".scroll-bar").stream()
+                            .map(node -> (ScrollBar) node)
+                            .filter(bar -> bar.getOrientation() == Orientation.VERTICAL)
+                            .noneMatch(Node::isVisible), "Address should not show a scrollbar thumb");
+                    assertTrue(card.getWidth() <= cell.getWidth(),
+                            "Card width " + card.getWidth() + " exceeds cell width " + cell.getWidth());
+                    assertTrue(card.getWidth() <= 600, "Card width " + card.getWidth() + " exceeds the content cap");
+                    assertTrue(list.lookupAll(".scroll-bar").stream()
+                            .map(node -> (ScrollBar) node)
+                            .filter(bar -> bar.getOrientation() == Orientation.HORIZONTAL)
+                            .noneMatch(Node::isVisible), "Card should not create a horizontal scrollbar");
+                    assertEquals(addressText, address.getTooltip().getText());
+                    if (addressText.equals("Short address")) {
+                        assertTrue(address.getHeight() < 30,
+                                "Short address field height is " + address.getHeight());
+                    } else {
+                        assertTrue(address.getHeight() <= 60, "Long address field height is " + address.getHeight());
+                        if (width == 340) {
+                            assertTrue(address.getHeight() > 30,
+                                    "Long address should wrap in a narrow card");
+                        }
+                    }
+                }
             }
             return null;
         });
