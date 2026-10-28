@@ -4,6 +4,7 @@ import java.util.Comparator;
 
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -45,7 +46,7 @@ public class PersonCard extends UiPart<Region> {
     @FXML
     private TextField email;
     @FXML
-    private TextField status;
+    private Region statusStrip;
     @FXML
     private FlowPane tags;
 
@@ -62,9 +63,12 @@ public class PersonCard extends UiPart<Region> {
         setCopyableText(address, person.getAddress().map(memberAddress -> memberAddress.value)
                 .orElse("Address: -"));
         setCopyableText(email, person.getEmail().value);
-        setCopyableText(status, person.getStatus().badgeName);
+        String statusText = "Status: " + person.getStatus().badgeName;
+        statusStrip.setAccessibleRole(AccessibleRole.TEXT);
+        statusStrip.setAccessibleText(statusText);
+        Tooltip.install(cardPane, new Tooltip(statusText));
         if (person.getStatus() == Status.ARCHIVED) {
-            status.getStyleClass().add("archived");
+            statusStrip.getStyleClass().add("archived");
         }
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))

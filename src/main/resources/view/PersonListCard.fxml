@@ -11,6 +11,8 @@
 <?import javafx.scene.layout.VBox?>
 
 <HBox id="cardPane" fx:id="cardPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+  <Region fx:id="statusStrip" styleClass="status-strip" minWidth="4" prefWidth="4" maxWidth="4"
+          minHeight="0" prefHeight="0" maxHeight="Infinity" />
   <GridPane HBox.hgrow="ALWAYS">
     <columnConstraints>
       <ColumnConstraints hgrow="SOMETIMES" minWidth="10" percentWidth="100" />
@@ -29,10 +31,7 @@
         <TextField fx:id="name" text="\$first" styleClass="cell_big_label" minWidth="0"
                    maxWidth="Infinity" HBox.hgrow="ALWAYS" />
       </HBox>
-      <HBox alignment="CENTER_LEFT" spacing="7">
-        <FlowPane fx:id="tags" minWidth="0" prefWidth="0" HBox.hgrow="ALWAYS" />
-        <TextField fx:id="status" styleClass="member_status" minWidth="-Infinity" />
-      </HBox>
+      <FlowPane fx:id="tags" minWidth="0" prefWidth="0" />
       <TextField fx:id="phone" styleClass="cell_small_label" text="\$phone" minWidth="0" maxWidth="Infinity" />
       <TextArea fx:id="address" styleClass="cell_small_label" text="\$address" minWidth="0"
                 maxWidth="Infinity" wrapText="true" prefRowCount="3" />

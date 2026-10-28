@@ -2,7 +2,7 @@ package seedu.address.model.person;
 
 /**
  * Represents a Person's membership status in the address book.
- * The stored value is lowercase, while the badge text is displayed on the person's card.
+ * The stored value is lowercase, while the display name describes the person's status.
  */
 public enum Status {
     ACTIVE("active", "ACTIVE"),
@@ -13,11 +13,11 @@ public enum Status {
     /** Lowercase value used when storing the status. */
     public final String value;
 
-    /** Text displayed in the status badge. */
+    /** Human-readable name for the status. */
     public final String badgeName;
 
     /**
-     * Constructs a {@code Status} with its stored value and badge text.
+     * Constructs a {@code Status} with its stored value and display name.
      */
     Status(String value, String badgeName) {
         this.value = value;
