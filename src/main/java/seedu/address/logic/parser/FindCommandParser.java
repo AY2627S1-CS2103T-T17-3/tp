@@ -29,7 +29,7 @@ public class FindCommandParser implements Parser<FindCommand> {
      * Parses name keywords, a {@code p/} phone substring, an {@code e/} email substring or a {@code t/} tag
      * into a FindCommand.
      *
-     * @throws ParseException if the user input does not conform to the expected format.
+     * @throws ParseException if the search value is blank or the user input does not conform to the expected format.
      */
     public FindCommand parse(String args) throws ParseException {
         String trimmedArgs = args.trim();
@@ -52,6 +52,7 @@ public class FindCommandParser implements Parser<FindCommand> {
             trimmedArgs = argMultimap.getValue(searchPrefix).get();
         }
 
+        // trim() leaves Unicode whitespace such as EM SPACE intact.
         if (trimmedArgs.isBlank()) {
             throw new ParseException(
                     String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));

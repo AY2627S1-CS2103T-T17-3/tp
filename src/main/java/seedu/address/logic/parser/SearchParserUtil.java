@@ -61,7 +61,7 @@ final class SearchParserUtil {
      * @param usage The command's usage guidance.
      * @param multipleValuesMessage The error format for multiple values, with a placeholder for the prefix.
      * @param invalidPhoneMessage The error for a phone value containing non-digits.
-     * @throws ParseException if there are no conditions, unprefixed text or an invalid condition.
+     * @throws ParseException if there are no conditions, unprefixed text or a blank or otherwise invalid condition.
      */
     static List<Predicate<Person>> parseConditions(String args, String usage, String multipleValuesMessage,
             String invalidPhoneMessage) throws ParseException {
@@ -74,6 +74,7 @@ final class SearchParserUtil {
         List<Predicate<Person>> predicates = new ArrayList<>();
         for (Prefix prefix : SEARCH_PREFIXES) {
             for (String value : argMultimap.getAllValues(prefix)) {
+                // trim() leaves Unicode whitespace such as EM SPACE intact.
                 if (value.isBlank()) {
                     throw new ParseException(invalidFormatMessage);
                 }
@@ -88,10 +89,10 @@ final class SearchParserUtil {
     }
 
     /**
-     * Validates a nonempty field value and returns its search predicate.
+     * Validates field-specific rules for a nonblank value and returns its search predicate.
      *
      * @param prefix The supported field prefix.
-     * @param value The trimmed, nonempty condition value.
+     * @param value The trimmed, nonblank condition value.
      * @param multipleValuesMessage The command's guidance for multiple values in one condition.
      * @param invalidPhoneMessage The command's guidance for a phone value containing non-digits.
      * @throws ParseException if the value does not satisfy its field's search rules.

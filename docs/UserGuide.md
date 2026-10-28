@@ -543,7 +543,7 @@ Formats:
 **Name searches**
 
 * Use `find n/Alice` or `find Alice` to search for one name keyword; both return the same results.
-* The `n/` prefix accepts exactly one nonempty keyword. Commands such as `find n/Alice Bob` and
+* The `n/` prefix accepts exactly one nonblank keyword. Commands such as `find n/Alice Bob` and
   `find n/Alice Alice` are rejected, including keywords separated by tabs or line breaks.
   The error is: "Prefixed name searches accept only one keyword. Use find Alice Bob to match names containing
   Alice OR Bob."
@@ -618,7 +618,9 @@ Formats:
   remain literal search values.
 * Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
   `find e/alice e/bob` and `find t/publicity t/exco` are rejected.
-* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
+* Provide a nonblank search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
+  Empty or whitespace-only values report "Invalid command format!". Blank uses Java whitespace rules, including
+  EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000); non-breaking spaces such as U+00A0 are not classified as blank.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
@@ -654,7 +656,7 @@ findany PREFIX/VALUE [PREFIX/VALUE]...
 ```
 
 * Supply at least one condition. Every condition needs a lowercase `n/`, `p/`, `e/` or `t/` prefix
-  and one nonempty value. Field validation and matching follow `find` above.
+  and one nonblank value. The same Java whitespace rules and field validation as `find` apply to every condition.
 * Repeat a prefix to add another condition: use `n/John n/Tan`, not `n/John Tan`.
 * Every condition must be valid. For example, `findany n/Alice p/abc` is rejected even if Alice exists.
   Rejected searches preserve the previous results, member records and saved data.
