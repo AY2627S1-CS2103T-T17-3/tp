@@ -135,6 +135,14 @@ public class AddressBookParserTest {
     }
 
     @Test
+    public void parseCommand_findWithUnicodeWhitespaceOnly_throwsInvalidFormat() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE);
+        for (String input : List.of("find\u2003", "find \u2003", "find n/\u2003", "find e/\u00a0")) {
+            assertThrows(ParseException.class, expectedMessage, () -> parser.parseCommand(input));
+        }
+    }
+
+    @Test
     public void parseCommand_findAllWithWhitespace_returnsFindCommand() throws Exception {
         FindCommand expectedCommand = new FindCommand(new AllConditionsPredicate(List.of(
                 new NameContainsKeywordsPredicate(List.of("John")), new TagMatchesPredicate(new Tag("exco")))));

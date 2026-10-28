@@ -28,8 +28,16 @@ final class SearchParserUtil {
     static final List<Prefix> SEARCH_PREFIXES = List.of(PREFIX_NAME, PREFIX_PHONE, PREFIX_EMAIL, PREFIX_TAG);
 
     private static final Pattern SEARCH_PREFIX = Pattern.compile("(?:^|\\s)([^\\s/]+/)");
+    private static final Pattern BLANK_SEARCH_VALUE = Pattern.compile("\\p{IsWhite_Space}*");
 
     private SearchParserUtil() {
+    }
+
+    /**
+     * Returns whether a search value has no characters other than Unicode whitespace.
+     */
+    static boolean isBlankValue(String value) {
+        return BLANK_SEARCH_VALUE.matcher(value).matches();
     }
 
     /**
@@ -74,7 +82,7 @@ final class SearchParserUtil {
         List<Predicate<Person>> predicates = new ArrayList<>();
         for (Prefix prefix : SEARCH_PREFIXES) {
             for (String value : argMultimap.getAllValues(prefix)) {
-                if (value.isEmpty()) {
+                if (isBlankValue(value)) {
                     throw new ParseException(invalidFormatMessage);
                 }
                 predicates.add(parseCondition(prefix, value, String.format(multipleValuesMessage, prefix),

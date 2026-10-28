@@ -610,6 +610,7 @@ Formats:
 * Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
   `find e/alice e/bob` and `find t/publicity t/exco` are rejected.
 * Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
+  A value containing only Unicode whitespace, such as EM SPACE (U+2003), is also rejected.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.

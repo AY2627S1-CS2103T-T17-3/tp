@@ -52,7 +52,7 @@ public class FindCommandParser implements Parser<FindCommand> {
             trimmedArgs = argMultimap.getValue(searchPrefix).get();
         }
 
-        if (trimmedArgs.isEmpty()) {
+        if (SearchParserUtil.isBlankValue(trimmedArgs)) {
             throw new ParseException(
                     String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
         }

@@ -33,7 +33,8 @@ public class AddressBookParser {
     /**
      * Used for initial separation of command word and args.
      */
-    private static final Pattern BASIC_COMMAND_FORMAT = Pattern.compile("(?<commandWord>\\S+)(?<arguments>.*)");
+    private static final Pattern BASIC_COMMAND_FORMAT = Pattern.compile(
+            "(?<commandWord>\\S+)(?<arguments>.*)", Pattern.UNICODE_CHARACTER_CLASS);
     // Let search commands validate line-separated conditions without changing other commands' input handling.
     private static final Pattern MULTILINE_FIND_COMMAND_FORMAT = Pattern.compile(
             "(?<commandWord>" + FindCommand.COMMAND_WORD + "|" + FindCommand.COMMAND_WORD_ALL
