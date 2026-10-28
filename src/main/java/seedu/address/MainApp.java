@@ -1,6 +1,7 @@
 package seedu.address;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -51,7 +52,10 @@ public class MainApp extends Application {
 
         JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(USER_PREFS_FILE_PATH);
         UserPrefs userPrefs = initPrefs(userPrefsStorage);
-        JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(ADDRESS_BOOK_FILE_PATH);
+        Path applicationLocation = Paths.get(MainApp.class.getProtectionDomain().getCodeSource()
+                .getLocation().toURI());
+        JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(
+                resolveAddressBookFilePath(applicationLocation));
         storage = new StorageManager(addressBookStorage, userPrefsStorage);
 
         model = initModelManager(storage, userPrefs);
@@ -59,6 +63,17 @@ public class MainApp extends Application {
         logic = new LogicManager(model, storage);
 
         ui = new UiManager(logic, storage.getAddressBookFilePath(), dataLoadingWarning);
+    }
+
+    /**
+     * Locates member data beside the packaged JAR. During development, the code source is a directory,
+     * so the data file remains relative to the working directory.
+     */
+    static Path resolveAddressBookFilePath(Path applicationLocation) {
+        if (Files.isRegularFile(applicationLocation)) {
+            return applicationLocation.toAbsolutePath().getParent().resolve(ADDRESS_BOOK_FILE_PATH);
+        }
+        return ADDRESS_BOOK_FILE_PATH;
     }
 
     /**

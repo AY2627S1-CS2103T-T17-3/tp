@@ -30,6 +30,21 @@ public class MainAppTest {
     public Path temporaryFolder;
 
     @Test
+    public void resolveAddressBookFilePath_packagedJar_usesJarDirectory() throws Exception {
+        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
+        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+
+        assertEquals(appFolder.resolve("data/nusocietydesk.json"),
+                MainApp.resolveAddressBookFilePath(jarFile));
+    }
+
+    @Test
+    public void resolveAddressBookFilePath_developmentDirectory_usesWorkingDirectory() {
+        assertEquals(Path.of("data", "nusocietydesk.json"),
+                MainApp.resolveAddressBookFilePath(temporaryFolder));
+    }
+
+    @Test
     public void recovery_partialLoad_preservesFileAndRecordsThroughCommandsAndShutdown() throws Exception {
         Path file = temporaryFolder.resolve("members.json");
         Files.writeString(file, """
