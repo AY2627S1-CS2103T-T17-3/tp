@@ -1,9 +1,11 @@
 package seedu.address.ui;
 
 import java.util.Comparator;
+import java.util.List;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -57,12 +59,21 @@ public class PersonCard extends UiPart<Region> {
         address.setText(person.getAddress().map(memberAddress -> memberAddress.value)
                 .orElse("Address: -"));
         email.setText(person.getEmail().value);
+        for (Label field : List.of(name, phone, address, email)) {
+            field.setTooltip(new Tooltip(field.getText()));
+        }
         status.setText(person.getStatus().badgeName);
         if (person.getStatus() == Status.ARCHIVED) {
             status.getStyleClass().add("archived");
         }
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))
-                .forEach(tag -> tags.getChildren().add(new Label(tag.tagName)));
+                .forEach(tag -> {
+                    Label label = new Label(tag.tagName);
+                    label.setMinWidth(0);
+                    label.maxWidthProperty().bind(tags.widthProperty());
+                    label.setTooltip(new Tooltip(tag.tagName));
+                    tags.getChildren().add(label);
+                });
     }
 }

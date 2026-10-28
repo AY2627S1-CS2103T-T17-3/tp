@@ -40,6 +40,20 @@ public class TagTest {
     }
 
     @Test
+    public void validation_lengthBoundaries_acceptsAtMost30Characters() {
+        for (int length : new int[] {1, 29, 30}) {
+            String value = "A".repeat(length);
+            assertTrue(Tag.isValidTagName(value));
+            assertEquals("a".repeat(length), new Tag(value).tagName);
+        }
+        for (int length : new int[] {31, 10000}) {
+            String value = "A".repeat(length);
+            assertFalse(Tag.isValidTagName(value));
+            assertThrows(IllegalArgumentException.class, Tag.MESSAGE_CONSTRAINTS, () -> new Tag(value));
+        }
+    }
+
+    @Test
     public void constructor_mixedCase_storesLowercaseName() {
         Tag tag = new Tag("PuBliCiTy2026");
         assertEquals("publicity2026", tag.tagName);

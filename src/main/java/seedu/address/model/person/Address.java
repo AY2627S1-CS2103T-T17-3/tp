@@ -11,8 +11,11 @@ import java.util.regex.Pattern;
  */
 public class Address {
 
+    public static final int MAX_LENGTH = 200;
+
     public static final String MESSAGE_CONSTRAINTS =
-            "Addresses must contain at least one non-whitespace character.";
+            "Addresses must contain at least one non-whitespace character and be at most "
+            + MAX_LENGTH + " characters long.";
 
     /*
      * The first character of the address must not be a whitespace,
@@ -39,7 +42,7 @@ public class Address {
      * Returns true if a given string is a valid address.
      */
     public static boolean isValidAddress(String test) {
-        return test.matches(VALIDATION_REGEX) && !isBlankAddress(test);
+        return test.length() <= MAX_LENGTH && test.matches(VALIDATION_REGEX) && !isBlankAddress(test);
     }
 
     /**

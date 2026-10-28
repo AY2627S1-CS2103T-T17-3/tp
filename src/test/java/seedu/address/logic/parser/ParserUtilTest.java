@@ -36,6 +36,33 @@ public class ParserUtilTest {
     private static final String WHITESPACE = " \t\r\n";
 
     @Test
+    public void parseFields_maximumLengthWithWhitespace_returnsTrimmedValues() throws Exception {
+        assertEquals(new Name("A".repeat(127)), ParserUtil.parseName(" \t" + "A".repeat(127) + " \t"));
+        assertEquals(new Phone("9".repeat(15)), ParserUtil.parsePhone(" \t" + "9".repeat(15) + " \t"));
+        assertEquals(new Address("A".repeat(200)), ParserUtil.parseAddress(" \t" + "A".repeat(200) + " \t"));
+        assertEquals(new Tag("a".repeat(30)), ParserUtil.parseTag(" \t" + "A".repeat(30) + " \t"));
+    }
+
+    @Test
+    public void parseFields_overlongValues_reportsLengthConstraints() {
+        assertThrows(ParseException.class,
+                "Names should only contain alphanumeric characters and spaces, should not be blank, "
+                        + "and should be at most 127 characters long", ()
+                -> ParserUtil.parseName("A".repeat(128)));
+        assertThrows(ParseException.class,
+                "Phone numbers should only contain digits, and should be between 3 and 15 digits long", ()
+                -> ParserUtil.parsePhone("9".repeat(16)));
+        assertThrows(ParseException.class,
+                "Addresses must contain at least one non-whitespace character and be at most 200 characters long.", ()
+                -> ParserUtil.parseAddress("A".repeat(201)));
+        assertThrows(ParseException.class,
+                "Tag names should be alphanumeric and between 1 and 30 characters long", ()
+                -> ParserUtil.parseTag("A".repeat(31)));
+        assertThrows(ParseException.class, Tag.MESSAGE_CONSTRAINTS, ()
+                -> ParserUtil.parseTags(List.of("valid", "A".repeat(31))));
+    }
+
+    @Test
     public void parseIndex_invalidInput_throwsParseException() {
         assertThrows(ParseException.class, () -> ParserUtil.parseIndex("10 a"));
     }

@@ -97,6 +97,40 @@ public class CsvMemberReaderTest {
     }
 
     @Test
+    public void read_lengthBoundaries_acceptsValuesAtOrBelowEachMaximum() throws Exception {
+        for (int offset : new int[] {-1, 0}) {
+            String row = String.join(",", "A".repeat(127 + offset), "9".repeat(15 + offset),
+                    "boundary@u.nus.edu", "A".repeat(200 + offset), "T".repeat(30 + offset), "active");
+            Person member = reader.read(writeCsv(HEADER + row)).getFirst().getMember().orElseThrow();
+            assertEquals(new Name("A".repeat(127 + offset)), member.getName().orElseThrow());
+            assertEquals(new Phone("9".repeat(15 + offset)), member.getPhone().orElseThrow());
+            assertEquals(new Address("A".repeat(200 + offset)), member.getAddress().orElseThrow());
+            assertEquals(Set.of(new Tag("t".repeat(30 + offset))), member.getTags());
+        }
+    }
+
+    @Test
+    public void read_overlongFields_rejectsOnlyAffectedRecordAndPreservesSource() throws Exception {
+        String[][] invalidFields = {
+            {"A".repeat(128), "9".repeat(16), "A".repeat(201), "t".repeat(31)},
+            {Name.MESSAGE_CONSTRAINTS, Phone.MESSAGE_CONSTRAINTS, Address.MESSAGE_CONSTRAINTS, Tag.MESSAGE_CONSTRAINTS}
+        };
+        int[] columns = {0, 1, 3, 4};
+        for (int i = 0; i < columns.length; i++) {
+            String[] fields = {"Alex", "91234567", "rejected@u.nus.edu", "Kent Ridge", "exco", "active"};
+            fields[columns[i]] = invalidFields[0][i];
+            Path file = writeCsv(HEADER + ACTIVE_ROW + String.join(",", fields) + "\n" + ACTIVE_ROW);
+            String original = Files.readString(file);
+            List<CsvMemberRecord> records = reader.read(file);
+            assertTrue(records.getFirst().getMember().isPresent());
+            assertTrue(records.get(1).getMember().isEmpty());
+            assertEquals("CSV record 3: " + invalidFields[1][i], records.get(1).getRejectionReason());
+            assertTrue(records.getLast().getMember().isPresent());
+            assertEquals(original, Files.readString(file));
+        }
+    }
+
+    @Test
     public void read_invalidMemberField_usesExistingConstraints() throws Exception {
         String[][] invalidFields = {
             {"Alex!", Name.MESSAGE_CONSTRAINTS},

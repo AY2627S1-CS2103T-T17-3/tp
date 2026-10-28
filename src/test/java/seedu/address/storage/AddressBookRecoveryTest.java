@@ -17,6 +17,9 @@ import org.junit.jupiter.api.io.TempDir;
 import seedu.address.commons.exceptions.DataLoadingException;
 import seedu.address.model.AddressBook;
 import seedu.address.model.person.Address;
+import seedu.address.model.person.Name;
+import seedu.address.model.person.Phone;
+import seedu.address.model.tag.Tag;
 
 public class AddressBookRecoveryTest {
     @TempDir
@@ -78,6 +81,36 @@ public class AddressBookRecoveryTest {
         assertEquals(List.of("Record 2: " + Address.MESSAGE_CONSTRAINTS,
                 "Record 3: " + Address.MESSAGE_CONSTRAINTS,
                 "Record 4: " + Address.MESSAGE_CONSTRAINTS), result.getErrors());
+        assertFalse(storage.isSaveAllowed());
+        assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
+        assertThrows(DataLoadingException.class, storage::readAddressBook);
+        assertArrayEquals(original, Files.readAllBytes(file));
+    }
+
+    @Test
+    public void loadAddressBook_overlongFields_recoversBoundaryMemberAndProtectsFile() throws Exception {
+        Path file = temporaryFolder.resolve("overlong.json");
+        Files.writeString(file, """
+                {"persons":[
+                  {"email":"valid@u.nus.edu","name":"%s","phone":"%s","address":"%s","tags":["%s"]},
+                  {"email":"name@u.nus.edu","name":"%s"},
+                  {"email":"phone@u.nus.edu","phone":"%s"},
+                  {"email":"address@u.nus.edu","address":"%s"},
+                  {"email":"tag@u.nus.edu","tags":["%s"]}
+                ]}
+                """.formatted("A".repeat(127), "9".repeat(15), "A".repeat(200), "t".repeat(30),
+                        "A".repeat(128), "9".repeat(16), "A".repeat(201), "t".repeat(31)));
+        byte[] original = Files.readAllBytes(file);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(file);
+
+        AddressBookLoadResult result = storage.loadAddressBook();
+
+        assertEquals(AddressBookLoadResult.Status.PARTIAL, result.getStatus());
+        assertEquals(List.of("valid@u.nus.edu"), result.getAddressBook().getPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+        assertEquals(List.of("Record 2: " + Name.MESSAGE_CONSTRAINTS,
+                "Record 3: " + Phone.MESSAGE_CONSTRAINTS, "Record 4: " + Address.MESSAGE_CONSTRAINTS,
+                "Record 5: " + Tag.MESSAGE_CONSTRAINTS), result.getErrors());
         assertFalse(storage.isSaveAllowed());
         assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
         assertThrows(DataLoadingException.class, storage::readAddressBook);

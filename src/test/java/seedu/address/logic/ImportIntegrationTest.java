@@ -36,7 +36,10 @@ import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
 import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
+import seedu.address.model.person.Address;
+import seedu.address.model.person.Name;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Phone;
 import seedu.address.model.person.Status;
 import seedu.address.model.tag.Tag;
 import seedu.address.storage.JsonAddressBookStorage;
@@ -209,6 +212,46 @@ public class ImportIntegrationTest {
 
         assertRejectedWithoutChanges(file);
 
+        assertEquals(0, saveAttempts.get());
+    }
+
+    @Test
+    public void execute_fieldLengthLimits_importsBoundaryMemberAndRejectsOverlongRecords() throws Exception {
+        String boundaryRow = String.join(",", "A".repeat(127), "9".repeat(15), "boundary@u.nus.edu",
+                "A".repeat(200), "T".repeat(30), "active") + "\n";
+        String rejectedRows = String.join("\n",
+                "A".repeat(128) + ",,name@u.nus.edu,,,active",
+                "," + "9".repeat(16) + ",phone@u.nus.edu,,,active",
+                ",,address@u.nus.edu," + "A".repeat(201) + ",,active",
+                ",,tag@u.nus.edu,," + "t".repeat(31) + ",active") + "\n";
+        Path file = writeCsv(HEADER + boundaryRow + rejectedRows);
+        String originalSource = Files.readString(file);
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 4, file)
+                + "\n" + EXPECTED_RECORD_NUMBERING + "\nRejected records:\n"
+                + "CSV record 3: " + Name.MESSAGE_CONSTRAINTS + "\n"
+                + "CSV record 4: " + Phone.MESSAGE_CONSTRAINTS + "\n"
+                + "CSV record 5: " + Address.MESSAGE_CONSTRAINTS + "\n"
+                + "CSV record 6: " + Tag.MESSAGE_CONSTRAINTS,
+                logic.execute(importCommand(file)).getFeedbackToUser());
+        assertEquals(model.getAddressBook(), storage.readAddressBook().orElseThrow());
+        Person boundaryMember = storage.readAddressBook().orElseThrow().getPersonList().getLast();
+        assertEquals(new Name("A".repeat(127)), boundaryMember.getName().orElseThrow());
+        assertEquals(new Phone("9".repeat(15)), boundaryMember.getPhone().orElseThrow());
+        assertEquals(new Address("A".repeat(200)), boundaryMember.getAddress().orElseThrow());
+        assertEquals(List.of(new Tag("t".repeat(30))), List.copyOf(boundaryMember.getTags()));
+        assertEquals(originalSource, Files.readString(file));
+
+        logic.execute("find Existing");
+        file = writeCsv(HEADER + rejectedRows);
+        AtomicInteger saveAttempts = new AtomicInteger();
+        logic = createLogic(new JsonAddressBookStorage(dataFile) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) {
+                saveAttempts.incrementAndGet();
+            }
+        });
+        assertRejectedWithoutChanges(file);
         assertEquals(0, saveAttempts.get());
     }
 

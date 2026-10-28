@@ -442,7 +442,8 @@ incomplete members. `PersonBuilder` supports absent fields and preserves status 
 characters, including U+3000, U+2003, and nonbreaking spaces. It uses a separate `\p{IsWhite_Space}*` pattern.
 `Address.isValidAddress` retains its original `[^\s].*` condition and additionally rejects these blanks;
 the original expression's flags, leading-character restrictions, and line-terminator behavior are unchanged.
-The shared error is `Addresses must contain at least one non-whitespace character.`
+The shared error is
+`Addresses must contain at least one non-whitespace character and be at most 200 characters long.`
 U+200B ZERO WIDTH SPACE and U+FEFF BOM are outside this blank classification.
 
 Add/edit reuse this model validation through `ParserUtil.parseAddress`, after the existing `trim()` calls.
@@ -464,6 +465,64 @@ original record positions, and saving is disabled until repair and restart. Stri
 `AddressTest` covers all 25 whitespace code points, mixtures, classification boundaries, and existing restrictions.
 Add/edit parser and logic tests cover rejection, exact feedback, and state/file preservation. CSV reader and
 import integration tests cover absent-address persistence; `AddressBookRecoveryTest` covers protected JSON loading.
+
+### Bounding contact and tag lengths
+
+`Name`, `Phone`, `Address`, and `Tag` each define a `MAX_LENGTH` constant and enforce it in their existing
+`isValid...` method before matching a regular expression. Constructors reuse these validators.
+The existing character restrictions, optional contact fields, address blank classification, and lowercase tag
+identity remain unchanged. `Phone.VALIDATION_REGEX` also expresses its 3-to-15-digit range.
+
+| Field | Inclusive length range | Basis for the maximum |
+| --- | --- | --- |
+| Name | 1 to 127 | NUS's documented full-name requirement is fewer than 128 characters. |
+| Phone | 3 to 15 digits | The international E.164 numbering limit is 15 digits; the existing minimum of 3 is an application rule. |
+| Address | 1 to 200, with nonblank text | The published Myinfo Singapore address components fit into 174 characters in the representation below, leaving 26 for additional formatting or accommodation details. |
+| Each tag | 1 to 30 | An application policy for concise member categories; `internationalstudentambassadors` fits at exactly 30 characters. |
+
+The name maximum follows the [NUS Canvas name data standard](https://nus.atlassian.net/wiki/spaces/canvasinstructor/pages/270172201),
+which says a full name must be less than 128 characters. We adopt its length bound; this change does not expand
+the existing name character rules. This is a local product choice, not a universal maximum for human names.
+
+The phone upper bound follows [ITU-T Recommendation E.164](https://www.itu.int/rec/T-REC-E.164/en).
+The app continues accepting digits only and does not validate country-code allocation, number ownership, or
+whether a number is in service. Its 3-digit minimum also allows short numbers already accepted by the app.
+Using the E.164 upper bound does not make this a complete E.164 validator.
+
+We size addresses for NUS students' current Singapore residences, including campus rooms and rented apartments.
+The published [Myinfo v4 `AddressSG` schema](https://public.cloud.myinfo.gov.sg/myinfo/api/myinfo-kyc-v4.0.html)
+allows block/house number 10, street name 66, building name 65, floor 3, unit 5, and postal code 6 characters.
+Together with the 9 letters in `Singapore`, these components total 164 characters. In the representation
+`[block] [street], #[floor]-[unit], [building], Singapore [postal]`, spaces and punctuation add 10, giving 174.
+The 200-character cap adds 26 characters of headroom. This is a calculated bound for that schema and formatting,
+not a claim that Singapore has an officially longest address or a nationwide 200-character maximum.
+The address remains free text; geographical or postal-code existence checks are not introduced.
+
+Tags describe member categories such as `exco`, `publicity`, and `volunteer`. The 30-character cap allows longer
+descriptive categories while limiting oversized labels and feedback. It is our product policy, not an external
+tagging standard, and it does not limit the number of distinct tags a member can have.
+
+Lengths use `String.length()` (UTF-16 code units), including spaces and punctuation where permitted. Add/edit
+and tag commands apply their existing `trim()` before validation. CSV import retains its current trimming and
+missing-field rules. JSON loading validates saved values without trimming. Every path uses the model limits:
+command failures become `ParseException`, CSV failures identify and reject the affected record, and JSON
+failures follow the protected recovery path with changes and saving disabled until repair and restart.
+Legacy overlong values are never silently shortened. Updated constraints messages state the relevant maximum.
+
+Name and phone search values retain their independent keyword/substring rules; for example, a one-digit phone
+substring remains valid. Exact tag searches in `find`, `findall`, and `findany` use `ParserUtil.parseTag` and
+therefore enforce the same 30-character tag maximum. `edit` continues rejecting every `t/` argument.
+
+The member card constrains its content to the allocated width. Addresses wrap; other contact labels and tags
+can use ellipses, with the full text available in tooltips. Tags continue flowing over multiple rows and the
+result display continues wrapping feedback. Length limits bound stored values; display constraints accommodate
+valid long values and narrower windows.
+
+Model and parser tests cover maximum-minus-one, maximum, maximum-plus-one, large inputs, and surrounding
+argument whitespace. `FieldLengthValidationIntegrationTest` covers command rejection without state or file
+changes, no save attempts, successful boundary persistence and edits, and independent search rules.
+CSV and JSON tests cover shared limits and protected recovery; JavaFX tests cover command feedback, retry,
+and narrow-card layout with maximum-length values and full-text tooltips.
 
 ### Validating email length safely
 
@@ -1050,8 +1109,9 @@ Run `add e/edit@u.nus.edu a/Kent Ridge`, select Active view, then run `find e/ed
    ('add e/blank@u.nus.edu a/' + [char]0x3000) | Set-Clipboard
    ```
 
-   Expected: `Addresses must contain at least one non-whitespace character.` The command stays editable with
-   error styling. No member is added; the card, search, status view, and saved JSON remain unchanged.
+   Expected: `Addresses must contain at least one non-whitespace character and be at most 200 characters long.`
+   The command stays editable with error styling. No member is added;
+   the card, search, status view, and saved JSON remain unchanged.
 1. Repeat with `[char]0x2003` for EM SPACE, then repeat both characters with the command prefix
    `edit 1 n/Changed Member a/`.<br>
    Expected: the same error, with neither the name nor `Kent Ridge` changed. Close and reopen the app to confirm
@@ -1475,6 +1535,48 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
       `nusocietydesk.saved.json`, create a directory named `nusocietydesk.json`, and put `keep.txt` inside it.<br>
       Expected: the same read-only commands work and member changes roll back on save failure. The backup and
       `keep.txt` remain unchanged. Restore the original JSON path before restarting.
+
+### Contact and tag length validation
+
+Use Java 25 and a rebuilt app in a disposable writable folder with normal saving enabled. The limits are
+inclusive: name 127 characters, phone 15 digits, address 200 characters, and each tag 30 characters.
+Manual execution status for this change: **not run**. Automated JavaFX tests cover submission feedback,
+editable failed input, retry, and narrow-card layout; the steps below also check the visible rendering and tooltips.
+
+1. On Windows, copy a command containing maximum-length values with PowerShell, then paste and submit it:
+
+   ```powershell
+   ('add e/length.test@u.nus.edu n/' + ('W' * 127) + ' p/' + ('9' * 15) +
+       ' a/' + ('W' * 200) + ' t/' + ('W' * 30)) | Set-Clipboard
+   ```
+
+   Expected: success. Resize the window to its minimum width and a wider width. The name and tags stay within
+   the card, with ellipses where needed; hover to read their full values. The address wraps within the card,
+   other members remain reachable, the status badge is visible, and result text wraps within its pane.
+   Restart and confirm all values persist without being shortened; the tag is stored in lowercase.
+1. Select Active view and search for this member using `find e/length.test`. Back up the JSON file.
+   Try each field one character over its maximum in otherwise valid `add` and `edit INDEX` commands:
+
+   | Field | Rejected length | Expected feedback |
+   | --- | --- | --- |
+   | `n/` | 128 | Names should only contain alphanumeric characters and spaces, should not be blank, and should be at most 127 characters long |
+   | `p/` | 16 | Phone numbers should only contain digits, and should be between 3 and 15 digits long |
+   | `a/` | 201 | Addresses must contain at least one non-whitespace character and be at most 200 characters long. |
+   | `t/` | 31 | Tag names should be alphanumeric and between 1 and 30 characters long |
+
+   Use `tag INDEX t/TAG` and `untag INDEX t/TAG` for the tag checks; `edit` rejects every tag argument separately.
+   Expected: the field's constraints replace the previous result; the command remains editable with error styling.
+   Member records, search results, status view, and saved JSON remain unchanged. Correct each command to its
+   maximum length and retry; it succeeds. Repeat the rejected cases with 10,000 characters to check graceful failure.
+1. Search using `find p/9`, `findall p/99`, and `findany t/` followed by the valid 30-character tag.<br>
+   Expected: the member matches. Tag searches over 30 characters are rejected with the tag constraints.
+1. Import a CSV with a boundary-length member and four other records, each exceeding one field's maximum.<br>
+   Expected: the boundary member imports and persists; each rejected record has its original CSV record number
+   and field constraints in the feedback. With only rejected records, no saving or state changes occur.
+1. Close the app and, in the disposable JSON file, give one member an overlong field or tag. Relaunch.<br>
+   Expected: valid members load and the warning identifies the rejected member's original record position and
+   constraints. The original file is preserved; changes and saving are disabled. Repair the value and restart
+   to restore normal saving. Repeat for each of the four fields.
 
 ### Email domain validation
 
