@@ -78,6 +78,18 @@ public class FindAllCommandParserTest {
     }
 
     @Test
+    public void parse_unicodeWhitespaceOnlyCondition_throwsParseException() {
+        String expectedMessage = String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE_ALL);
+        for (String value : List.of("\u2002", "\u2003", "\u3000", " \t\u2003 \n\u3000 ")) {
+            for (String prefix : List.of("n/", "p/", "e/", "t/")) {
+                assertParseFailure(parser, prefix + value, expectedMessage);
+                assertParseFailure(parser, "n/John " + prefix + value, expectedMessage);
+                assertParseFailure(parser, prefix + value + " n/John", expectedMessage);
+            }
+        }
+    }
+
+    @Test
     public void parse_multipleValuesInOneCondition_throwsParseException() {
         for (String prefix : List.of("n/", "p/", "e/", "t/")) {
             String expectedMessage = "Each " + prefix + " condition accepts only one value. "

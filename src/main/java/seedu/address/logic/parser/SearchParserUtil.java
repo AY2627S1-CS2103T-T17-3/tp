@@ -74,7 +74,7 @@ final class SearchParserUtil {
         List<Predicate<Person>> predicates = new ArrayList<>();
         for (Prefix prefix : SEARCH_PREFIXES) {
             for (String value : argMultimap.getAllValues(prefix)) {
-                if (value.isEmpty()) {
+                if (value.isBlank()) {
                     throw new ParseException(invalidFormatMessage);
                 }
                 predicates.add(parseCondition(prefix, value, String.format(multipleValuesMessage, prefix),
