@@ -24,6 +24,7 @@ import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
+import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
 import seedu.address.model.person.Status;
@@ -32,6 +33,8 @@ import seedu.address.testutil.PersonBuilder;
 public class ImportCommandTest {
     private static final String HEADER = "name,phone,email,address,tags,status\n";
     private static final String FIRST_ROW = "Alex Tan,91234567,alex@u.nus.edu,Kent Ridge,Publicity,active\n";
+    private static final String EXPECTED_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
 
     @TempDir
     public Path testFolder;
@@ -63,6 +66,55 @@ public class ImportCommandTest {
     }
 
     @Test
+    public void execute_mixedStatusesInActiveView_countsOnlyAcceptedHiddenMembers() throws Exception {
+        model.setPerson(existingMember, existingMember.withStatus(Status.ARCHIVED));
+        model.setStatusFilter(StatusFilter.ACTIVE);
+        Path file = writeCsv(HEADER + FIRST_ROW
+                + ",,hidden@u.nus.edu,,,archived\n"
+                + ",,another.hidden@u.nus.edu,,,archived\n"
+                + ",,EXISTING@U.NUS.EDU,,,archived\n"
+                + ",12,invalid@u.nus.edu,,,archived\n");
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        String feedback = result.getFeedbackToUser();
+        assertTrue(feedback.startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 3, 2, file)));
+        assertTrue(feedback.contains(EXPECTED_RECORD_NUMBERING));
+        assertTrue(feedback.contains("CSV record 5: email \"existing@u.nus.edu\" duplicates"));
+        assertTrue(feedback.contains("CSV record 6: Phone numbers"));
+        assertTrue(feedback.endsWith("2 imported member(s) are hidden by the current view. Use view all to see them."));
+        assertEquals(StatusFilter.ACTIVE, model.getStatusFilter());
+        assertEquals(4, model.getAddressBook().getPersonList().size());
+        assertEquals(List.of("alex@u.nus.edu"), model.getFilteredPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+    }
+
+    @Test
+    public void execute_activeMemberInActiveView_omitsHiddenMemberHint() throws Exception {
+        model.setStatusFilter(StatusFilter.ACTIVE);
+        Path file = writeCsv(HEADER + FIRST_ROW);
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file), result.getFeedbackToUser());
+        assertEquals(StatusFilter.ACTIVE, model.getStatusFilter());
+        assertEquals(model.getAddressBook().getPersonList(), model.getFilteredPersonList());
+    }
+
+    @Test
+    public void execute_archivedMemberInArchivedView_omitsHiddenMemberHint() throws Exception {
+        model.setStatusFilter(StatusFilter.ARCHIVED);
+        Path file = writeCsv(HEADER + ",,archived@u.nus.edu,,,archived\n");
+
+        CommandResult result = new ImportCommand(file).execute(model);
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file), result.getFeedbackToUser());
+        assertEquals(StatusFilter.ARCHIVED, model.getStatusFilter());
+        assertEquals(List.of("archived@u.nus.edu"), model.getFilteredPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+    }
+
+    @Test
     public void execute_duplicateExistingArchivedMemberOutsideFilter_skipsDuplicate() throws Exception {
         Person archivedMember = new Person(existingMember.getName(), existingMember.getPhone(),
                 existingMember.getEmail(), existingMember.getAddress(), Status.ARCHIVED, existingMember.getTags());
@@ -72,6 +124,7 @@ public class ImportCommandTest {
         CommandResult result = new ImportCommand(file).execute(model);
 
         assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 3: email \"existing@u.nus.edu\" duplicates"));
         assertEquals(2, model.getAddressBook().getPersonList().size());
         assertEquals(archivedMember, model.getAddressBook().getPersonList().getFirst());
@@ -142,6 +195,7 @@ public class ImportCommandTest {
         CommandResult result = new ImportCommand(file).execute(model);
 
         assertTrue(result.getFeedbackToUser().startsWith(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)));
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 2: Phone numbers"));
         assertEquals("alex@u.nus.edu", model.getAddressBook().getPersonList().get(1).getEmail().value);
     }
@@ -154,6 +208,7 @@ public class ImportCommandTest {
 
         CommandResult result = new ImportCommand(file).execute(model);
 
+        assertTrue(result.getFeedbackToUser().contains(EXPECTED_RECORD_NUMBERING));
         assertTrue(result.getFeedbackToUser().contains("CSV record 3: Addresses"));
         assertTrue(result.getFeedbackToUser().contains("CSV record 4: email \"alex@u.nus.edu\" duplicates"));
         assertEquals(2, model.getAddressBook().getPersonList().size());
@@ -161,10 +216,12 @@ public class ImportCommandTest {
 
     @Test
     public void execute_allRejected_reportsCountsAndPreservesRecordsAndFilter() throws Exception {
+        model.setStatusFilter(StatusFilter.ARCHIVED);
         Path file = writeCsv(HEADER + ",,existing@u.nus.edu,,,active\n"
                 + ",12,invalid@u.nus.edu,,,active\n");
 
-        assertRejectedWithoutChanges(file, String.format(ImportCommand.MESSAGE_SUCCESS, 0, 2, file));
+        assertRejectedWithoutChanges(file, String.format(ImportCommand.MESSAGE_SUCCESS, 0, 2, file)
+                + "\n" + EXPECTED_RECORD_NUMBERING);
     }
 
     @Test
@@ -220,11 +277,14 @@ public class ImportCommandTest {
     private void assertRejectedWithoutChanges(Path file, String expectedReason) throws Exception {
         AddressBook before = new AddressBook(model.getAddressBook());
         List<Person> filteredBefore = List.copyOf(model.getFilteredPersonList());
+        StatusFilter statusFilterBefore = model.getStatusFilter();
         String sourceBefore = Files.readString(file);
         CommandException error = assertThrows(CommandException.class, () -> new ImportCommand(file).execute(model));
         assertTrue(error.getMessage().contains(expectedReason), error.getMessage());
+        assertFalse(error.getMessage().contains("Use view all"));
         assertEquals(before, model.getAddressBook());
         assertEquals(filteredBefore, model.getFilteredPersonList());
+        assertEquals(statusFilterBefore, model.getStatusFilter());
         assertEquals(sourceBefore, Files.readString(file));
     }
 

@@ -4,7 +4,10 @@ import java.util.Comparator;
 
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -38,7 +41,7 @@ public class PersonCard extends UiPart<Region> {
     @FXML
     private TextField phone;
     @FXML
-    private TextField address;
+    private TextArea address;
     @FXML
     private TextField email;
     @FXML
@@ -68,6 +71,8 @@ public class PersonCard extends UiPart<Region> {
                 .forEach(tag -> {
                     TextField tagField = new TextField();
                     tagField.getStyleClass().add("copyable-tag");
+                    tagField.setMinWidth(0);
+                    tagField.maxWidthProperty().bind(tags.widthProperty());
                     setCopyableText(tagField, tag.tagName);
                     tags.getChildren().add(tagField);
                 });
@@ -75,19 +80,21 @@ public class PersonCard extends UiPart<Region> {
 
     /**
      * Makes card text selectable without giving its field the usual input appearance.
-     * The preferred width follows the rendered text, as a Label's width would.
      */
-    private static void setCopyableText(TextField field, String value) {
+    private static void setCopyableText(TextInputControl field, String value) {
         field.setText(value);
         field.setEditable(false);
         field.getStyleClass().add("card-copy-field");
+        field.setTooltip(new Tooltip(value));
 
-        Text measuredText = new Text();
-        measuredText.textProperty().bind(field.textProperty());
-        measuredText.fontProperty().bind(field.fontProperty());
-        field.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
-            return Math.ceil(measuredText.getLayoutBounds().getWidth())
-                    + field.getInsets().getLeft() + field.getInsets().getRight() + 2;
-        }, measuredText.layoutBoundsProperty(), field.paddingProperty()));
+        if (field instanceof TextField textField) {
+            Text measuredText = new Text();
+            measuredText.textProperty().bind(textField.textProperty());
+            measuredText.fontProperty().bind(textField.fontProperty());
+            textField.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
+                return Math.ceil(measuredText.getLayoutBounds().getWidth())
+                        + textField.getInsets().getLeft() + textField.getInsets().getRight() + 2;
+            }, measuredText.layoutBoundsProperty(), textField.paddingProperty()));
+        }
     }
 }

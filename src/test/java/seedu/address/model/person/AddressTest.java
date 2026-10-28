@@ -79,7 +79,30 @@ public class AddressTest {
         for (String value : List.of(" Kent Ridge", "\tKent Ridge", "Kent\nRidge", "Kent\u2028Ridge")) {
             assertFalse(Address.isValidAddress(value));
         }
-        assertEquals("Addresses must contain at least one non-whitespace character.", Address.MESSAGE_CONSTRAINTS);
+        assertEquals("Addresses must contain at least one non-whitespace character and be at most 200 characters long.",
+                Address.MESSAGE_CONSTRAINTS);
+    }
+
+    @Test
+    public void validation_lengthBoundaries_acceptsAtMost200Characters() {
+        for (int length : new int[] {1, 199, 200}) {
+            String value = "A".repeat(length);
+            assertTrue(Address.isValidAddress(value));
+            assertEquals(value, new Address(value).value);
+        }
+        for (int length : new int[] {201, 10000}) {
+            String value = "A".repeat(length);
+            assertFalse(Address.isValidAddress(value));
+            assertThrows(IllegalArgumentException.class, Address.MESSAGE_CONSTRAINTS, () -> new Address(value));
+        }
+    }
+
+    @Test
+    public void validation_lengthIncludesSpacesAndUtf16Units() {
+        assertTrue(Address.isValidAddress("A" + " ".repeat(199)));
+        assertFalse(Address.isValidAddress("A" + " ".repeat(200)));
+        assertTrue(Address.isValidAddress("A".repeat(198) + "\ud83d\ude00"));
+        assertFalse(Address.isValidAddress("A".repeat(199) + "\ud83d\ude00"));
     }
 
     @Test

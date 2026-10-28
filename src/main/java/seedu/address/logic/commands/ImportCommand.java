@@ -6,7 +6,9 @@ import static seedu.address.model.Model.PREDICATE_SHOW_ALL_PERSONS;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import seedu.address.commons.core.LogsCenter;
@@ -29,6 +31,10 @@ public class ImportCommand extends Command {
             + "CSV header: " + CsvMemberReader.HEADER + "\n"
             + "Example: " + COMMAND_WORD + " \"members.csv\"";
     public static final String MESSAGE_SUCCESS = "Imported %1$d member(s); rejected %2$d record(s) from %3$s.";
+    public static final String MESSAGE_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
+    public static final String MESSAGE_HIDDEN_MEMBERS = "%1$d imported member(s) are hidden by the current view. "
+            + "Use view all to see them.";
     public static final String MESSAGE_FAILURE = "Could not import %1$s: %2$s\nNo members were imported.";
     public static final String MESSAGE_DUPLICATE = "CSV record %1$d: email \"%2$s\" duplicates an existing member "
             + "or an earlier accepted CSV record.";
@@ -66,7 +72,7 @@ public class ImportCommand extends Command {
 
         AddressBook combinedDirectory = new AddressBook(model.getAddressBook());
         List<String> rejections = new ArrayList<>();
-        int importedCount = 0;
+        Set<Person> importedMembers = new HashSet<>();
         for (CsvMemberRecord record : records) {
             if (record.getMember().isEmpty()) {
                 rejections.add(record.getRejectionReason());
@@ -78,14 +84,15 @@ public class ImportCommand extends Command {
                 continue;
             }
             combinedDirectory.addPerson(member);
-            importedCount++;
+            importedMembers.add(member);
         }
 
+        int importedCount = importedMembers.size();
         assert importedCount + rejections.size() == records.size() : "Every CSV record has an import outcome";
         logger.info("Prepared CSV import: " + importedCount + " accepted, " + rejections.size() + " rejected.");
         String feedback = String.format(MESSAGE_SUCCESS, importedCount, rejections.size(), filePath);
         if (!rejections.isEmpty()) {
-            feedback += "\nRejected records:\n" + String.join("\n", rejections);
+            feedback += "\n" + MESSAGE_RECORD_NUMBERING + "\nRejected records:\n" + String.join("\n", rejections);
         }
         if (importedCount == 0) {
             throw new CommandException(feedback + "\nNo members were imported.");
@@ -93,6 +100,11 @@ public class ImportCommand extends Command {
 
         model.setAddressBook(combinedDirectory);
         model.updateFilteredPersonList(PREDICATE_SHOW_ALL_PERSONS);
+        long visibleImportedCount = model.getFilteredPersonList().stream().filter(importedMembers::contains).count();
+        long hiddenImportedCount = importedCount - visibleImportedCount;
+        if (hiddenImportedCount > 0) {
+            feedback += "\n" + String.format(MESSAGE_HIDDEN_MEMBERS, hiddenImportedCount);
+        }
         return new CommandResult(feedback);
     }
 

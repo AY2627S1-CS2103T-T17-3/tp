@@ -32,8 +32,12 @@ import seedu.address.logic.commands.HelpCommand;
 import seedu.address.model.AddressBook;
 import seedu.address.model.ModelManager;
 import seedu.address.model.UserPrefs;
+import seedu.address.model.person.Address;
+import seedu.address.model.person.Name;
 import seedu.address.model.person.Person;
+import seedu.address.model.person.Phone;
 import seedu.address.model.person.Status;
+import seedu.address.model.tag.Tag;
 import seedu.address.storage.JsonAddressBookStorage;
 import seedu.address.storage.JsonUserPrefsStorage;
 import seedu.address.storage.StorageManager;
@@ -45,6 +49,55 @@ public class MainWindowTest {
 
     @TempDir
     public Path temporaryFolder;
+
+    @Test
+    public void submit_overlongFields_showsConstraintsAndAllowsRetry() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("longFields.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("fieldPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                stage.setWidth(450);
+                stage.setHeight(600);
+                stage.show();
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                input.setText("add n/Alex e/alex@u.nus.edu");
+                input.fireEvent(new ActionEvent());
+                String savedBefore = Files.readString(dataFile);
+                String[][] cases = {
+                    {"add e/rejected@u.nus.edu n/" + "A".repeat(128), Name.MESSAGE_CONSTRAINTS},
+                    {"edit 1 p/" + "9".repeat(16), Phone.MESSAGE_CONSTRAINTS},
+                    {"edit 1 a/" + "A".repeat(201), Address.MESSAGE_CONSTRAINTS},
+                    {"tag 1 t/" + "a".repeat(31), Tag.MESSAGE_CONSTRAINTS}
+                };
+                for (String[] invalid : cases) {
+                    input.setText(invalid[0]);
+                    input.fireEvent(new ActionEvent());
+                    assertEquals(invalid[1], results.getText());
+                    assertEquals(invalid[0], input.getText());
+                    assertTrue(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                    assertEquals(1, model.getAddressBook().getPersonList().size());
+                    assertEquals(savedBefore, Files.readString(dataFile));
+                }
+                input.setText("tag 1 t/" + "w".repeat(30));
+                input.fireEvent(new ActionEvent());
+                assertEquals("", input.getText());
+                assertFalse(input.getStyleClass().contains(CommandBox.ERROR_STYLE_CLASS));
+                assertTrue(results.getText().contains("w".repeat(30)));
+                assertTrue(results.isWrapText());
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
 
     @Test
     public void submit_overlongEmail_showsValidationAndAllowsRetry() throws Exception {

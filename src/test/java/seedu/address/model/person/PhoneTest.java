@@ -1,5 +1,6 @@
 package seedu.address.model.person;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.Assert.assertThrows;
@@ -36,6 +37,20 @@ public class PhoneTest {
         assertTrue(Phone.isValidPhone("911")); // exactly 3 numbers
         assertTrue(Phone.isValidPhone("93121534"));
         assertTrue(Phone.isValidPhone("124293842033123")); // long phone numbers
+    }
+
+    @Test
+    public void validation_lengthBoundaries_acceptsThreeTo15Digits() {
+        for (int length : new int[] {3, 14, 15}) {
+            String value = "9".repeat(length);
+            assertTrue(Phone.isValidPhone(value));
+            assertEquals(value, new Phone(value).value);
+        }
+        for (int length : new int[] {2, 16, 10000}) {
+            String value = "9".repeat(length);
+            assertFalse(Phone.isValidPhone(value));
+            assertThrows(IllegalArgumentException.class, Phone.MESSAGE_CONSTRAINTS, () -> new Phone(value));
+        }
     }
 
     @Test

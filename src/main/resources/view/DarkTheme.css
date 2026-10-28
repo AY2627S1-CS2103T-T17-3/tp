@@ -143,6 +143,12 @@
     -fx-highlight-text-fill: white;
 }
 
+.card-copy-field .scroll-pane,
+.card-copy-field .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
 .stack-pane {
      -fx-background-color: derive(#1d1d1d, 20%);
 }
