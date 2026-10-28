@@ -34,6 +34,7 @@ import seedu.address.model.AddressBook;
 import seedu.address.model.Model;
 import seedu.address.model.ModelManager;
 import seedu.address.model.ReadOnlyAddressBook;
+import seedu.address.model.StatusFilter;
 import seedu.address.model.UserPrefs;
 import seedu.address.model.person.Person;
 import seedu.address.model.person.Status;
@@ -49,6 +50,8 @@ public class ImportIntegrationTest {
     private static final String HEADER = "name,phone,email,address,tags,status\n";
     private static final String FIRST_ROW = "Alex Tan,91234567,Alex@U.NUS.EDU,\"NUS, Kent Ridge\","
             + "Publicity;PUBLICITY,active\n";
+    private static final String EXPECTED_RECORD_NUMBERING = "Record numbers include the header as record 1. "
+            + "Blank lines are skipped, and a quoted multiline cell counts as one record.";
 
     @TempDir(factory = BuildDirectoryTempDirFactory.class)
     public Path testFolder;
@@ -91,6 +94,29 @@ public class ImportIntegrationTest {
         assertEquals(Status.ARCHIVED, reloaded.getPersonList().get(2).getStatus());
         assertEquals(reloaded.getPersonList(), model.getFilteredPersonList());
         assertEquals(sourceBefore, Files.readString(file));
+    }
+
+    @Test
+    public void execute_activeImportInArchivedView_reportsHiddenMemberAndPersistsImport() throws Exception {
+        logic.execute("view archived");
+        Path file = writeCsv(HEADER + FIRST_ROW);
+        String sourceBefore = Files.readString(file);
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 0, file)
+                + "\n1 imported member(s) are hidden by the current view. Use view all to see them.",
+                result.getFeedbackToUser());
+        assertEquals(StatusFilter.ARCHIVED, model.getStatusFilter());
+        assertTrue(model.getFilteredPersonList().isEmpty());
+        ReadOnlyAddressBook reloaded = storage.readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), reloaded);
+        assertEquals(2, reloaded.getPersonList().size());
+        assertEquals("alex@u.nus.edu", reloaded.getPersonList().getLast().getEmail().value);
+        assertEquals(sourceBefore, Files.readString(file));
+
+        logic.execute("view all");
+        assertEquals(reloaded.getPersonList(), model.getFilteredPersonList());
     }
 
     @Test
@@ -195,7 +221,8 @@ public class ImportIntegrationTest {
         String rejection = "CSV record 3: Email local-part must contain at most 64 characters; received 65.";
 
         assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 1, 1, file)
-                + "\nRejected records:\n" + rejection, logic.execute(importCommand(file)).getFeedbackToUser());
+                + "\n" + EXPECTED_RECORD_NUMBERING + "\nRejected records:\n" + rejection,
+                logic.execute(importCommand(file)).getFeedbackToUser());
         assertEquals(boundaryEmail, storage.readAddressBook().orElseThrow().getPersonList().getLast().getEmail().value);
         assertEquals(originalSource, Files.readString(file));
 
@@ -214,6 +241,7 @@ public class ImportIntegrationTest {
         String command = importCommand(file);
         CommandException error = assertThrows(CommandException.class, () -> logic.execute(command));
         assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 0, 1, file)
+                + "\n" + EXPECTED_RECORD_NUMBERING
                 + "\nRejected records:\nCSV record 2: Email local-part must contain at most 64 characters; received 65."
                 + "\nNo members were imported.", error.getMessage());
         assertEquals(originalRecords, model.getAddressBook());
