@@ -170,10 +170,11 @@ Each command resolves the person from `Model.getFilteredPersonList()`, copies th
 and adds or removes the requested `Tag` using the existing case-insensitive identity rule. It then constructs
 a replacement `Person` with unchanged contact details and calls `Model.setPerson`.
 
-Adding an existing tag or removing an absent tag succeeds with the normal completion message and leaves the
-record unchanged. Removing the final tag is allowed. After success, both commands clear the search and show members
-in the selected status view, matching `EditCommand`. `LogicManager` saves the updated address book through the
-existing storage flow; no storage schema or UI changes are required.
+Adding an existing tag succeeds with the normal completion message and leaves the record unchanged, while
+attempting to remove an absent tag throws a `CommandException` and leaves the record unchanged. Removing
+the final tag is allowed. After success, both commands clear the search and show members in the selected
+status view, matching `EditCommand`. `LogicManager` saves the updated address book through the existing
+storage flow; no storage schema or UI changes are required.
 
 
 <box type="info" seamless>
