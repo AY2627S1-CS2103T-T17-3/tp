@@ -30,6 +30,30 @@ public class MainAppTest {
     public Path temporaryFolder;
 
     @Test
+    public void recovery_unknownProperty_preservesFileUntilRepairedAndRestarted() throws Exception {
+        Path file = temporaryFolder.resolve("members.json");
+        Files.writeString(file, "{\"persons\":[{\"email\":\"alex@u.nus.edu\","
+                + "\"phoneNumber\":\"91234567\"}]}");
+        byte[] original = Files.readAllBytes(file);
+        MainApp app = startModel(file);
+
+        assertTrue(app.getDataLoadingWarning().contains("Record 1: unrecognized property \"phoneNumber\""));
+        assertEquals(1, app.model.getAddressBook().getPersonList().size());
+        app.logic.execute("list");
+        assertThrows(CommandException.class, () -> app.logic.execute("add e/new@u.nus.edu"));
+        app.stop();
+        assertArrayEquals(original, Files.readAllBytes(file));
+
+        Files.writeString(file, "{\"persons\":[{\"email\":\"alex@u.nus.edu\",\"phone\":\"91234567\"}]}");
+        MainApp restarted = startModel(file);
+        assertNull(restarted.getDataLoadingWarning());
+        restarted.logic.execute("add e/new@u.nus.edu");
+        assertEquals(2, restarted.storage.readAddressBook().orElseThrow().getPersonList().size());
+        assertEquals("91234567", restarted.model.getAddressBook().getPersonList().get(0)
+                .getPhone().orElseThrow().value);
+    }
+
+    @Test
     public void recovery_partialLoad_preservesFileAndRecordsThroughCommandsAndShutdown() throws Exception {
         Path file = temporaryFolder.resolve("members.json");
         Files.writeString(file, """

@@ -808,6 +808,11 @@ addresses longer than 200 characters, and tags longer than 30 characters, even w
 them. The warning identifies the record and field constraints. Close the app, back up the original file,
 correct the affected values, and restart. No value is automatically truncated and the original file is preserved.
 
+Unrecognized properties also trigger protected recovery. The warning identifies each property and, for member
+properties, its record number. Known fields in otherwise valid members remain available for viewing. Close the app,
+back up the file, correct or remove the unrecognized properties, and restart. For example, change `phoneNumber` to
+`phone`. Properties introduced by a newer app version may also trigger this protection in an older version.
+
 <box type="warning" seamless>
 
 **Caution:**
