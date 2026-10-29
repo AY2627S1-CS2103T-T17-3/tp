@@ -1,0 +1,58 @@
+@startuml
+!include style.puml
+skinparam ArrowFontStyle plain
+
+box Logic LOGIC_COLOR_T1
+participant "<u>:LogicManager</u>" as logic LOGIC_COLOR
+participant "<u>:AddressBookParser</u>" as parser LOGIC_COLOR
+participant "<u>:TagAddCommandParser</u>" as tagParser LOGIC_COLOR
+participant "<u>:TagAddCommand</u>" as command LOGIC_COLOR
+end box
+box Model MODEL_COLOR_T1
+participant "<u>:Model</u>" as model MODEL_COLOR
+end box
+
+[-> logic : execute("tag 1 t/treasurer")
+activate logic
+logic -> parser : parseCommand(...)
+activate parser
+parser -> tagParser : parse(...)
+activate tagParser
+create command
+tagParser -> command : new TagAddCommand(...)
+activate command
+command --> tagParser
+deactivate command
+tagParser --> parser : command
+deactivate tagParser
+parser --> logic : command
+deactivate parser
+note over logic : Protection checks and the pre-save snapshot are omitted.
+logic -> command : execute(model)
+activate command
+command -> model : getFilteredPersonList()
+activate model
+model --> command : displayed members
+deactivate model
+note right of command
+  Select the member by displayed index.
+  If the tag already exists (ignoring case),
+  report an error without changing the member.
+  Otherwise, copy and update the tags and
+  create a replacement member.
+end note
+command -> model : setPerson(target, edited)
+activate model
+deactivate model
+command -> model : updateFilteredPersonList(...)
+activate model
+deactivate model
+command --> logic : CommandResult
+deactivate command
+ref over logic, model
+    Persist changed directory
+    See SaveRecoverySequenceDiagram
+end ref
+[<-- logic : CommandResult (after successful save)
+deactivate logic
+@enduml
