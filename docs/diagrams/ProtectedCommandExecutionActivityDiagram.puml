@@ -1,0 +1,23 @@
+@startuml
+!include style.puml
+skinparam ActivityFontSize 15
+skinparam ArrowFontSize 12
+
+start
+:Parse command;
+if (Address book saving allowed?) then (no)
+    if (Command is read-only?) then (yes)
+        :Execute command without saving;
+        :Return result;
+    else (no)
+        :Reject command with protection error;
+    endif
+else (yes)
+    :Continue normal command execution;
+    note right
+      Commands that require saving use the
+      separate save-recovery flow.
+    end note
+endif
+stop
+@enduml

@@ -170,11 +170,16 @@ Each command resolves the person from `Model.getFilteredPersonList()`, copies th
 and adds or removes the requested `Tag` using the existing case-insensitive identity rule. It then constructs
 a replacement `Person` with unchanged contact details and calls `Model.setPerson`.
 
-Adding an existing tag succeeds with the normal completion message and leaves the record unchanged, while
-attempting to remove an absent tag throws a `CommandException` and leaves the record unchanged. Removing
+Adding an existing tag or removing an absent tag throws a `CommandException` and leaves the record unchanged. Removing
 the final tag is allowed. After success, both commands clear the search and show members in the selected
 status view, matching `EditCommand`. `LogicManager` saves the updated address book through the existing
 storage flow; no storage schema or UI changes are required.
+
+The following sequence shows a successful `tag 1 t/treasurer` command. `untag` follows the same replacement
+pattern, but rejects a tag that the member does not have. Saving and rollback are detailed in
+[saving member data safely](#saving-member-data-safely).
+
+<puml src="diagrams/TagSequenceDiagram.puml" alt="Sequence of a tag command updating a member" />
 
 
 <box type="info" seamless>
@@ -221,6 +226,11 @@ New commands require write access by default and must explicitly override `Comma
 recovery. Repairing the file requires a restart to restore saving. Only a missing file starts with sample members;
 a valid empty file stays empty.
 Valid mixed-case emails become lowercase in memory on load and in the JSON file after a normal successful save.
+
+The following diagram shows the command guard after parsing. A protected session permits read-only commands
+without saving and rejects commands that require write access before they execute.
+
+<puml src="diagrams/ProtectedCommandExecutionActivityDiagram.puml" alt="Command execution guard during protected recovery" />
 
 ### Common classes
 
