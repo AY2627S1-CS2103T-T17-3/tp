@@ -870,7 +870,7 @@ _Details coming soon ..._
 
 ## Known issues
 
-1. **If the GUI opens off-screen after a monitor layout change**, delete the `preferences.json` file created by the application before running it again.
+1. **If the GUI opens off-screen after a monitor layout change**, delete the `preferences.json` file beside the JAR (or in the working directory when running from source) before running the application again.
 2. **If you minimize the Help Window** and then run `help`, use the `Help` menu, or press `F1` again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
 
 --------------------------------------------------------------------------------------------------------------------
