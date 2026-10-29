@@ -933,24 +933,19 @@ public class MainWindowTest {
                     .map(node -> (ListCell<?>) node).findFirst().orElseThrow();
             FlowPane tags = (FlowPane) cell.getGraphic().lookup("#tags");
             Label phone = (Label) cell.getGraphic().lookup("#phone");
-            Node tagsParent = tags.getParent();
-            double tagsHBoxMaxY = tagsParent.getBoundsInParent().getMaxY();
-            double phoneMinY = phone.getBoundsInParent().getMinY();
-            assertEquals(tagsHBoxMaxY, phoneMinY, 1.0,
-                    "Tag commands must not introduce empty space between tags and phone");
+            Label status = (Label) cell.getGraphic().lookup("#status");
             double phoneTop = phone.localToScene(phone.getLayoutBounds()).getMinY();
             assertEquals(tagCount, tags.getChildren().size());
             for (Node label : tags.getChildren()) {
                 assertTrue(label.localToScene(label.getLayoutBounds()).getMaxY() <= phoneTop + 1,
                         "Tag commands must not leave a tag row overlapping the phone");
             }
-            if (!tags.getChildren().isEmpty()) {
-                double lastTagBottom = tags.getChildren().stream()
-                        .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY())
-                        .max().orElseThrow();
-                assertEquals(lastTagBottom, phoneTop, 2.0,
-                        "The phone must follow the last tag row without a blank gap");
-            }
+            double statusBottom = status.localToScene(status.getLayoutBounds()).getMaxY();
+            double contentBottom = tags.getChildren().stream()
+                    .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY())
+                    .max().orElse(statusBottom);
+            assertEquals(Math.max(contentBottom, statusBottom), phoneTop, 2.0,
+                    "The phone must follow the tags or status badge without a blank gap");
             return null;
         });
     }
