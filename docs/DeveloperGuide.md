@@ -1100,6 +1100,18 @@ testers are expected to do more *exploratory* testing.
    1. Relaunch the app by double-clicking the JAR file.<br>
        Expected: The most recent window size and location are retained.
 
+1. Compact display and saved monitor placement (manual check; requires two monitors for the second part)
+
+   1. At 1280×720 resolution with 150% display scaling, launch the app and resize it to its minimum height.<br>
+      Expected: The command box, result display, member list, status button and status bar remain visible.
+
+   1. With two monitors connected, maximize the app on the second monitor, close it, and relaunch it.<br>
+      Expected: The app reopens on the second monitor, including when the saved maximized-window coordinates
+      extend slightly above both displays.
+
+   1. Close the app, disconnect the second monitor, and relaunch it.<br>
+      Expected: The window fits within the primary monitor's usable area.
+
 1. _{ more test cases … }_
 
 ### Viewing command help and the online guide
