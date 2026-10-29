@@ -52,8 +52,10 @@ public class TagRemoveCommandTest {
 
     @Test
     public void execute_noExistingTags_throwsCommandException() {
-        setTags(INDEX_FIRST_PERSON);
-        assertTagAbsent(INDEX_FIRST_PERSON, "Volunteer");
+        Person person = setTags(INDEX_FIRST_PERSON);
+        Tag tag = new Tag("Volunteer");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
@@ -88,10 +90,12 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_absentTagInFilteredList_preservesFilter() {
+    public void execute_absentTagInFilteredList_throwsCommandException() {
         setTags(INDEX_SECOND_PERSON, "Exco");
         showPersonAtIndex(model, INDEX_SECOND_PERSON);
-        assertTagAbsent(INDEX_FIRST_PERSON, "VOLUNTEER");
+        Tag tag = new Tag("VOLUNTEER");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
@@ -110,9 +114,11 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_archivedMemberWithUnchangedTags_preservesStatus() {
+    public void execute_archivedMemberAbsentTag_throwsCommandException() {
         setArchivedPerson();
-        assertTagAbsent(INDEX_FIRST_PERSON, "Volunteer");
+        Tag tag = new Tag("Volunteer");
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, tag);
+        assertCommandFailure(new TagRemoveCommand(INDEX_FIRST_PERSON, tag), model, expectedMessage);
     }
 
     @Test
@@ -162,12 +168,6 @@ public class TagRemoveCommandTest {
         Person updatedPerson = new PersonBuilder(person).withTags(tags).build();
         model.setPerson(person, updatedPerson);
         return updatedPerson;
-    }
-
-    private void assertTagAbsent(Index index, String tagName) {
-        Tag tag = new Tag(tagName);
-        assertCommandFailure(new TagRemoveCommand(index, tag), model,
-                String.format(TagRemoveCommand.MESSAGE_TAG_NO_CHANGE, index.getOneBased(), tag));
     }
 
     private void assertTagRemoved(Index index, String tagName, Person originalPerson, Person expectedPerson) {

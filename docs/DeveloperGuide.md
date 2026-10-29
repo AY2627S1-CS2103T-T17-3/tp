@@ -170,10 +170,11 @@ Each command resolves the person from `Model.getFilteredPersonList()`, copies th
 and adds or removes the requested `Tag` using the existing case-insensitive identity rule. It then constructs
 a replacement `Person` with unchanged contact details and calls `Model.setPerson`.
 
-Adding an existing tag or removing an absent tag succeeds with the normal completion message and leaves the
-record unchanged. Removing the final tag is allowed. After success, both commands clear the search and show members
-in the selected status view, matching `EditCommand`. `LogicManager` saves the updated address book through the
-existing storage flow; no storage schema or UI changes are required.
+Adding an existing tag succeeds with the normal completion message and leaves the record unchanged, while
+attempting to remove an absent tag throws a `CommandException` and leaves the record unchanged. Removing
+the final tag is allowed. After success, both commands clear the search and show members in the selected
+status view, matching `EditCommand`. `LogicManager` saves the updated address book through the existing
+storage flow; no storage schema or UI changes are required.
 
 
 <box type="info" seamless>
@@ -195,7 +196,9 @@ The `Storage` component,
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
 
-`MainApp` configures the member data file as `data/nusocietydesk.json` and passes this path to storage and the UI.
+`MainApp` configures `data/nusocietydesk.json` and `preferences.json` beside the packaged JAR. It passes
+these paths to storage, and the member data path to the UI. When running from compiled classes during
+development, or when the code source location is unavailable, both paths are relative to the working directory.
 
 The JSON root, property names and email string are unchanged. `JsonAdaptedPerson` writes absent name, phone and
 address fields as explicit `null` values. Missing properties and explicit nulls load as empty optionals; supplied
@@ -1071,7 +1074,26 @@ testers are expected to do more *exploratory* testing.
    1. Download the JAR file and copy it into an empty folder.
 
    1. Double-click the JAR file.<br>
-      Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
+      Expected: The GUI opens in All view with eight sample society members in the order listed in the
+      [User Guide](UserGuide.md#exploring-the-sample-members), using role and committee tags in lowercase.
+      Alex has `president` and `exco`, Charlotte has only `publicity`, and Irfan has no tags.
+      The window size may not be optimal.
+
+   1. Run `view archived`, then `view active`.<br>
+      Expected: Archived shows only Roy Balakrishnan at displayed index 1 with an `ARCHIVED` badge and
+      `volunteer` tag. Active shows the other seven members; Roy is absent.
+
+   1. Run `find e/irfan`.<br>
+      Expected: Only Irfan Ibrahim appears, with `irfan@u.nus.edu`, `Phone: -`, `Address: -`, and no tags.
+
+   1. Run `view all`, then `list`, then `find t/publicity`.<br>
+      Expected: Charlotte Oliveiro and Morgan Lee (`morgan.one@u.nus.edu`) appear at displayed indices 1 and 2.
+      Run `list`, then `find Morgan`: both Morgan Lee records appear, sharing phone `91234567` but with distinct emails.
+
+   1. Run `list`, then `tag 5 t/Volunteer` to save the sample directory. Close and relaunch.<br>
+      Expected: All eight members load without a recovery warning. Irfan retains the new tag and absent phone
+      and address, Roy remains archived, and both Morgan Lee records remain. A saved directory is loaded as it
+      is; the built-in samples do not replace it.
 
 1. Saving window preferences
 
@@ -1079,6 +1101,18 @@ testers are expected to do more *exploratory* testing.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
        Expected: The most recent window size and location are retained.
+
+1. Compact display and saved monitor placement (manual check; requires two monitors for the second part)
+
+   1. At 1280×720 resolution with 150% display scaling, launch the app and resize it to its minimum height.<br>
+      Expected: The command box, result display, member list, status button and status bar remain visible.
+
+   1. With two monitors connected, maximize the app on the second monitor, close it, and relaunch it.<br>
+      Expected: The app reopens on the second monitor, including when the saved maximized-window coordinates
+      extend slightly above both displays.
+
+   1. Close the app, disconnect the second monitor, and relaunch it.<br>
+      Expected: The window fits within the primary monitor's usable area.
 
 1. _{ more test cases … }_
 
@@ -1617,7 +1651,7 @@ choosing **Delete all members** in its confirmation dialog.
       Expected: Only `exco` and `volunteer` remain.
 
    1. Repeat `untag INDEX t/publicity`.<br>
-      Expected: Success with the same two tags.
+      Expected: The command is rejected with an error indicating the member does not have the tag. The member's tags remain unchanged.
 
    1. Close and reopen the app.<br>
       Expected: The member still has only `exco` and `volunteer`.
