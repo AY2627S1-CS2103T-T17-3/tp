@@ -7,7 +7,7 @@ NUSocietyDesk is an offline desktop member directory for NUS society secretaries
 
 ![NUSocietyDesk member list](docs/images/Ui.png)
 
-The screenshot is an early UI concept that shows a `FORMER` badge. The current app displays `ARCHIVED` for archived members; new members start `ACTIVE`.
+The screenshot shows the app in All view with sample society members. Member cards display `ACTIVE` or `ARCHIVED` status; new members start `ACTIVE`.
 
 ## Current MVP
 
