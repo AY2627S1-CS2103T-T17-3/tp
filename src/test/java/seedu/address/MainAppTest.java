@@ -94,7 +94,21 @@ public class MainAppTest {
         assertEquals(SampleDataUtil.getSampleAddressBook(), app.model.getAddressBook());
         assertNull(app.getDataLoadingWarning());
         assertTrue(app.storage.isAddressBookSaveAllowed());
+
+        app.logic.execute("view archived");
+        assertEquals(List.of("royb@u.nus.edu"), app.logic.getFilteredPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+        app.logic.execute("view active");
+        assertEquals(7, app.logic.getFilteredPersonList().size());
+        app.logic.execute("find Morgan");
+        assertEquals(2, app.logic.getFilteredPersonList().size());
+        app.logic.execute("find e/irfan");
+        assertEquals(1, app.logic.getFilteredPersonList().size());
+        assertTrue(app.logic.getFilteredPersonList().getFirst().getPhone().isEmpty());
+        assertTrue(app.logic.getFilteredPersonList().getFirst().getAddress().isEmpty());
+        app.logic.execute("view all");
         app.logic.execute("list");
+        assertEquals(8, app.logic.getFilteredPersonList().size());
         assertFalse(Files.exists(file));
         app.logic.execute("add e/new@u.nus.edu");
         assertEquals(app.model.getAddressBook(), app.storage.readAddressBook().orElseThrow());

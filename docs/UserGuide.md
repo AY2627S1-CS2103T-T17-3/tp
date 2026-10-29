@@ -56,6 +56,31 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 
 1. Refer to the [Features](#features) section below for details of each command.
 
+### Exploring the sample members
+
+When no data file exists, the app starts in All view with these eight fictional society members.
+Tags are displayed in lowercase.
+
+| All-view index | Member | Status | Tags | Contact details |
+| --- | --- | --- | --- | --- |
+| 1 | Alex Yeoh | Active | `president`, `exco` | Complete |
+| 2 | Bernice Yu | Active | `secretary`, `exco` | Complete |
+| 3 | Charlotte Oliveiro | Active | `publicity` | Complete |
+| 4 | David Li | Active | `logistics`, `volunteer` | Complete |
+| 5 | Irfan Ibrahim | Active | None | Phone and address absent |
+| 6 | Roy Balakrishnan | Archived | `volunteer` | Complete |
+| 7 | Morgan Lee (`morgan.one@u.nus.edu`) | Active | `publicity` | Complete |
+| 8 | Morgan Lee (`morgan.two@u.nus.edu`) | Active | `logistics` | Complete |
+
+Try `view archived` to see Roy, then `view active` to see the seven active members.
+Run `find e/irfan` to see an incomplete record with `Phone: -` and `Address: -`.
+Run `view all`, then `find Morgan` to see two members who share a name and phone number (`91234567`)
+but have distinct NUS emails. Run `list`, then `find t/publicity` to find Charlotte and the first Morgan.
+Always use the index in the currently displayed list when changing a member.
+
+These samples are used only when the data file is missing. Existing saved records, including a saved empty
+directory, are loaded as they are.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## Features
@@ -648,10 +673,11 @@ Examples:
 * `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
 * `find e/ALEX` returns members whose email addresses contain `alex`, including Alex Yeoh in the sample data.
 * `find e/ALExYeOh@U.NUS.EDU` returns Alex Yeoh in the sample data.
-* `find t/publicity` returns every member tagged `publicity`, including members who also have other tags.
+* `find t/publicity` returns every member tagged `publicity`, including Charlotte Oliveiro and
+  Morgan Lee (`morgan.one@u.nus.edu`) in the sample data with All view selected.
 * `find t/PUBLICITY` returns the same members as `find t/publicity`.
-* `find alex david` returns `Alex Yeoh`, `David Li`<br>
-  ![result for 'find alex david'](images/findAlexDavidResult.png)
+* `find alex david` returns Alex Yeoh and David Li in the sample data. Alex has `president` and `exco` tags;
+  David has `logistics` and `volunteer` tags.
 
 ### Combining search conditions: `findall` and `findany`
 
