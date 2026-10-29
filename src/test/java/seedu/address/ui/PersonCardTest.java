@@ -168,6 +168,20 @@ public class PersonCardTest {
                 - card.localToScene(card.getBoundsInLocal()).getMinY();
     }
 
+    @Test
+    public void tags_resizeToZero_keepsLastUsableWrappingWidth() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            Region card = new PersonCard(ALICE, 1).getRoot();
+            FlowPane tags = (FlowPane) card.lookup("#tags");
+            tags.resize(200, 20);
+            assertEquals(200, tags.getPrefWrapLength(), 0.01);
+            tags.resize(0, 20);
+            assertEquals(200, tags.getPrefWrapLength(), 0.01,
+                    "A temporarily zero width must not replace the last usable wrapping width");
+            return null;
+        });
+    }
+
     private void assertLabelText(Region card, String field, String expectedText) {
         Label label = (Label) card.lookup("#" + field);
         assertEquals(expectedText, label.getText(), field);
