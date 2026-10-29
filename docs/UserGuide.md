@@ -23,9 +23,9 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 1. Copy the file to the folder you want to use as the home folder for your member directory.
 
 1. Open a terminal, `cd` to the folder containing the JAR file, and run `java -jar NUSocietyDesk.jar`.<br>
-   A GUI should appear in a few seconds with sample data. The image below is an early UI concept; the current
-   app has an **ALL** status button and uses **ARCHIVED** instead of **FORMER** on member cards.<br>
-   ![Ui](images/Ui.png)
+   A GUI should appear in a few seconds with sample data, as shown below.
+   The **ALL** status button indicates that both active and archived members are included in the list.<br>
+   ![NUSocietyDesk showing sample members and the ALL status button](images/Ui.png)
 
 1. Type a command in the command box and press Enter to execute it. For example, type **`help`** and press Enter to open the offline command reference in the Help window.<br>
    The status button starts at **ALL**. Click it to cycle through **ACTIVE**, **ARCHIVED**, and back to **ALL**;
