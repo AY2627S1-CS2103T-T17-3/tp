@@ -3,6 +3,8 @@ package seedu.address.ui;
 import java.util.Comparator;
 import java.util.List;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -54,11 +56,11 @@ public class PersonCard extends UiPart<Region> {
         this.person = person;
         id.setText(displayedIndex + ". ");
         name.setText(person.getName().map(memberName -> memberName.fullName).orElse(person.getEmail().value));
-        phone.setText(person.getPhone().map(memberPhone -> memberPhone.value)
-                .orElse("Phone: -"));
-        address.setText(person.getAddress().map(memberAddress -> memberAddress.value)
-                .orElse("Address: -"));
-        email.setText(person.getEmail().value);
+        phone.setText("Phone: " + person.getPhone().map(memberPhone -> memberPhone.value).orElse("-"));
+        address.setText("Address: " + person.getAddress().map(memberAddress -> memberAddress.value).orElse("-"));
+        email.setText("Email: " + person.getEmail().value);
+        email.setVisible(person.getName().isPresent());
+        email.setManaged(person.getName().isPresent());
         for (Label field : List.of(name, phone, address, email)) {
             field.setTooltip(new Tooltip(field.getText()));
         }
@@ -71,12 +73,15 @@ public class PersonCard extends UiPart<Region> {
                 tags.setPrefWrapLength(newVal.doubleValue());
             }
         });
+        // Preserve natural tag widths when the first height calculation precedes the pane's initial sizing.
+        DoubleBinding tagMaxWidth = Bindings.when(tags.widthProperty().greaterThan(0))
+                .then(tags.widthProperty()).otherwise(Double.MAX_VALUE);
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))
                 .forEach(tag -> {
                     Label label = new Label(tag.tagName);
                     label.setMinWidth(0);
-                    label.maxWidthProperty().bind(tags.widthProperty());
+                    label.maxWidthProperty().bind(tagMaxWidth);
                     label.setTooltip(new Tooltip(tag.tagName));
                     tags.getChildren().add(label);
                 });

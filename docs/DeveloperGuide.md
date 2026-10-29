@@ -260,6 +260,29 @@ files, a failing save implementation, and startup recovery. `MainWindowTest` che
 reference placement below the guide link, wrapping, popup reuse, and F1/menu access with an unsent draft.
 It also checks that rejected help arguments retain editable input with error styling and do not open a popup.
 
+### Confirming a directory clear
+
+`AddressBookParser` delegates `clear` arguments to `ClearCommandParser`. Only empty trimmed arguments are
+accepted. Extra arguments produce `MESSAGE_INVALID_COMMAND_FORMAT` with `ClearCommand.MESSAGE_USAGE` before
+confirmation or execution.
+
+`MainWindow` calls `Logic.execute(commandText, clearConfirmation)` with a callback that opens a JavaFX confirmation
+dialog. After parsing and checking startup recovery protection, `LogicManager` invokes this callback only for
+`ClearCommand`, before taking a snapshot, executing the command, or saving. The single-argument `execute` method
+supplies no approval and therefore cancels a valid `clear`. The logic layer has no JavaFX dialog dependency.
+
+The dialog describes deletion of all members, including archived, hidden, existing, and imported members, and
+suggests `delete INDEX` for one member. Cancel is the default and initially focused button. Escape, closing the
+dialog, and Cancel return false, producing `Clear cancelled.` without changing records, search, status view, or
+the saved file. Cancellation is a completed submission: the command box clears and the submission remains in history.
+Only **Delete all members** returns true. `ClearCommand` then empties the entire directory through the existing
+save-and-rollback flow. The status view is retained. Even an empty directory requires confirmation.
+
+`ClearCommandParserTest` and `AddressBookParserTest` cover strict syntax and surrounding whitespace.
+`ClearCommandIntegrationTest` checks confirmation timing, cancellation without saving, persisted deletion of hidden
+and archived members, save-failure restoration, and startup recovery protection. `MainWindowTest` exercises the
+actual dialog, safe defaults, keyboard cancellation, window closure, and confirmed clearing.
+
 ### Recalling submitted commands
 
 #### UI ownership and history state
@@ -415,11 +438,28 @@ commands clear the search and show members in the selected status view.
 
 Add, edit, tag and delete commands use `Messages.formatProvidedDetails` to omit absent contact fields and empty tags from their success messages.
 The formatter label a supplied name as `Name: <person name>` consistently across command confirmations.
-Unnamed duplicate errors identify the existing
-member by email only. `PersonCard` uses the canonical email as its heading when the name is absent and displays
-`Phone: -` or `Address: -` in the existing rows. No new card row, membership state or badge
-is introduced. Once supplied, contact values use the existing display style. Name and phone predicates return
-false for absent fields. Email search remains available, and display placeholders are never model values.
+Unnamed duplicate errors identify the existing member by email only.
+`PersonCard` uses the canonical email as its heading when the name is absent. Its separate email label is then
+both invisible and unmanaged, so it contributes no layout space. When a name is present, the heading uses that
+name and the email row is visible and managed. **Headings never wrap:** both names and emails used as headings
+stay on one line, with an ellipsis when they exceed the available width. Phone and email rows also remain on
+one line. Full values are available in tooltips and are not shortened in the model or saved data.
+Phone, address and email rows always include `Phone: `,
+`Address: ` and `Email: ` respectively; missing phone and address values use `-` after their labels.
+Full-text tooltips include these prefixes. The content `VBox` in `PersonListCard.fxml` uses `TOP_LEFT`
+alignment, five pixels of top padding and a shared 105-pixel minimum height. Short, single-line headings and
+shared fields keep the same offsets from the top of each card when the last email row is hidden. Unused space
+stays below the content. Cards with short details share the same height; wrapped address text and additional
+rows of tag badges can make cards taller, so their height is not fixed. All other card fields remain on one
+line. The heading row uses `TOP_LEFT` so the index stays aligned with the heading. Fields below a wrapped
+address or additional tag rows move down naturally.
+
+These display rules apply to active and archived members regardless of whether they were added, imported or
+loaded from JSON. `PersonListPanel` constructs a new card when a member is replaced, so supplying a name through
+`edit` restores the email row through the existing list refresh. No new model state or storage field is needed.
+Name and phone predicates return false for absent fields. Email search remains available, and display
+placeholders are never model values. A supplied address of `-` remains valid and looks the same as a missing
+address; this display change does not alter validation.
 
 `JsonAdaptedPerson` maps between optional model values and nullable saved strings. An email-only record can be
 represented as `{"name":null,"phone":null,"email":"alex@u.nus.edu","address":null,"status":"active","tags":[]}`.
@@ -435,6 +475,12 @@ incremental completion across reloads, filtered edits, unnamed duplicates, email
 The import regression checks supplied-field validation and that imported emails conflict with existing
 incomplete members. `PersonBuilder` supports absent fields and preserves status when copying a member;
 `PersonUtil` omits absent prefixes when generating commands.
+`PersonCardTest` checks all eight optional-contact combinations, exact labels and tooltips, conditional email
+visibility and layout participation, and narrow named and unnamed cards containing maximum-length emails.
+It also compares card heights and shared field positions at narrow and wide widths, and checks that wrapped
+addresses and tags can expand a card without shifting its heading or overflowing vertically.
+`MainWindowTest` checks that editing an unnamed member's email updates the heading and supplying a name restores
+the email row through the command submission and list refresh path.
 
 ### Rejecting Unicode blank addresses
 
@@ -513,10 +559,45 @@ Name and phone search values retain their independent keyword/substring rules; f
 substring remains valid. Exact tag searches in `find`, `findall`, and `findany` use `ParserUtil.parseTag` and
 therefore enforce the same 30-character tag maximum. `edit` continues rejecting every `t/` argument.
 
-The member card constrains its content to the allocated width. Addresses wrap; other contact labels and tags
-can use ellipses, with the full text available in tooltips. Tags continue flowing over multiple rows and the
-result display continues wrapping feedback. Length limits bound stored values; display constraints accommodate
-valid long values and narrower windows.
+The member card constrains its content to the allocated width. Only the address label wraps its text; JavaFX
+handles word boundaries and uninterrupted values without inserting line breaks into model values or label text.
+The tag `FlowPane` places whole badges on additional rows when they cannot all fit on one row. Individual tags
+do not wrap internally. Names, phone numbers and emails, including email headings for unnamed members, remain
+on one line. These fields and individual tags can use ellipses, with their full text available in tooltips.
+The index and status badge remain visible. Result feedback wraps in its separate pane. Length limits bound
+stored values; display constraints accommodate valid long values and narrower windows.
+
+Tag labels in `PersonCard` share a conditional maximum-width binding. Until the tag pane has a positive width,
+the labels keep their natural widths so JavaFX can measure the height of wrapped tag rows correctly. After
+sizing, each label is constrained to the actual pane width, preserving ellipses and full-text tooltips for long
+tags. Binding directly to the initial zero width makes the first height calculation treat all tags as tiny
+labels on one row; when the labels expand, extra rows can overlap the phone and address until another layout.
+The conditional binding corrects that first measurement without delayed refreshes, forced layouts or changes
+to tag commands, validation or storage.
+
+`PersonListViewCell` sets its preferred width to zero so long graphics do not expand the horizontal scroll range.
+The existing list-cell skin sizes the resizable card to the allocated cell width, accounting for the list's
+vertical scrollbar and insets. Card heights remain computed from the available width; no fixed cell height,
+scrollbar measurements or additional width listeners are needed. `MainWindow.fxml` sets the minimum window
+width to 800 pixels. `GuiSettings` defaults to a window of 800 by 600 pixels; existing window preferences continue
+to load and save through the same preference format.
+
+`PersonListPanelTest` exercises the actual list at 340 and 1556 pixels, including narrow-wide-narrow resizing,
+scrolling and cell reuse, member replacement, selection, scrollbar appearance and disappearance, and a card
+taller than the viewport. It checks horizontal overflow, card bounds, and the skin's rendered address text for
+complete values without ellipses or vertical clipping. Full-text address display is distinct from the
+single-line ellipsis truncation used for names, phone numbers and emails. Long email rows and email headings
+are checked for single-line rendering with ellipses at narrow widths and complete displayed text at wide
+widths, while their label values and tooltips retain the complete email. `PersonCardTest` also checks labels,
+tooltips, conditional email-row visibility, non-wrapping headings and email rows, and heading-index alignment.
+The minimum-width window check verifies its actual width after showing it.
+
+The tag-update regression uses shown stages and `JavaFxTestUtil.runAfterLayoutPulse` to measure the card after a
+normal JavaFX layout pulse. It checks each tag label's bounds against the tag pane and phone row, and verifies
+that subsequent contact rows do not overlap. Repeated member replacements cover short and maximum-length tags,
+named and unnamed members, both statuses, selection, resizing, cell reuse, and growth and shrinkage across row
+boundaries. `MainWindowTest` submits repeated `tag` and `untag` commands against the last visible member without
+scrolling between commands. These tests do not call `applyCss`, `layout` or `refresh` to repair the measured card.
 
 Model and parser tests cover maximum-minus-one, maximum, maximum-plus-one, large inputs, and surrounding
 argument whitespace. `FieldLengthValidationIntegrationTest` covers command rejection without state or file
@@ -551,7 +632,7 @@ predicates; other field predicates and parsing helpers are omitted.
 <puml src="diagrams/SearchClassDiagram.puml" alt="Partial search class diagram showing shared command execution and predicate composition" />
 
 `AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
-arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes whitespace
+arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes ASCII whitespace
 before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
 
 `FindCommandParser` accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
@@ -559,9 +640,14 @@ its restrictions against repeated prefixes, multiple fields and multiple values 
 
 `FindAllCommandParser` and `FindAnyCommandParser` use `SearchParserUtil.parseConditions` to require at least
 one explicitly prefixed condition. It reads every occurrence with `ArgumentMultimap.getAllValues`, rejects
-unprefixed text and empty values, and validates the entire input before returning predicates.
+unprefixed text and blank values, and validates the entire input before returning predicates.
 `AllConditionsPredicate` combines these with AND; `AnyConditionsPredicate` combines them with OR.
 Invalid conditions therefore reject even an OR search that could otherwise match a member.
+
+`FindCommandParser` and `SearchParserUtil.parseConditions` reject empty or Java-whitespace-only values using
+`String.isBlank()` before constructing field predicates, reporting the command's invalid-format message.
+This includes EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000), which `trim()` leaves intact. Non-breaking
+spaces such as U+00A0 are not blank under these rules. Trimming and splitting retain the `trim()` and `\s+` rules.
 
 All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
@@ -576,7 +662,8 @@ the visible count, including zero for an empty result. It remains read-only for
 recovery mode and requires no changes to member data or the storage schema.
 
 Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
-invalid conditions, incomplete and archived members, and searches after an earlier filter.
+invalid conditions, incomplete and archived members, and searches after an earlier filter. Parser regression
+tests cover Unicode whitespace-only values in every search field, alone and alongside valid combined conditions.
 Rejected searches preserve the previous results, member records and saved data.
 
 ### Importing member directories from CSV
@@ -648,7 +735,7 @@ Saving protects both the in-memory directory and the existing JSON file. Command
 success to the UI only after persistence succeeds. Read-only commands (`find`, `findall`, `findany`, `list`, `view`,
 `help`, and `exit`) return `false` from `requiresSave()` and execute without attempting to save. They remain available
 when a previously loaded data file becomes unwritable. In a normal writable session, parsing and pre-execution guards
-run first. For commands that require saving, `LogicManager` then follows this sequence:
+run first, including confirmation for `clear`. For commands that require saving, `LogicManager` then follows this sequence:
 
 1. **Snapshot.** Copy the directory and capture `Model.getFilteredPersonListPredicate()` before executing the command.
 1. **Execute.** Run `command.execute(model)`. A parser or command exception exits before saving; the save-failure
@@ -1083,14 +1170,20 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
 `{"persons":[]}`. A missing file would load sample members instead.
 
 1. Run `add e/Alex@U.NUS.EDU`.<br>
-   Expected: One active member is added with heading `alex@u.nus.edu`, missing phone/address placeholders,
-   and feedback `New person added: Email: alex@u.nus.edu`.
+   Expected: One active member is added with heading `alex@u.nus.edu`, rows `Phone: -` and `Address: -`,
+   no separate email row, and feedback `New person added: Email: alex@u.nus.edu`.
 1. Close and reopen the app before filling any details.<br>
-   Expected: The same incomplete member loads; saved name, phone and address values are null.
+   Expected: The same incomplete member loads with its email row still hidden; saved name, phone and address
+   values are null.
+1. Run `edit 1 e/alex.updated@u.nus.edu`, then `edit 1 e/alex@u.nus.edu`.<br>
+   Expected: The heading changes to the updated email, then back to `alex@u.nus.edu`. No separate email row
+   appears while the name is absent.
 1. Run `find e/alex`, then `edit 1 n/Alex Tan`. Close and reopen again.<br>
-   Expected: Alex Tan is the heading; phone and address remain absent.
+   Expected: Alex Tan is the heading and `Email: alex@u.nus.edu` appears below the address row immediately after
+   the edit and after restarting. Phone and address remain `Phone: -` and `Address: -`.
 1. Run `edit 1 p/91234567`, then `edit 1 a/Kent Ridge`, and restart.<br>
-   Expected: Exactly one complete member remains with all supplied values.
+   Expected: Exactly one complete member remains with rows `Phone: 91234567`, `Address: Kent Ridge` and
+   `Email: alex@u.nus.edu`, in that order.
 1. Repeat in a populated directory, searching for the target before each edit and checking its displayed index.<br>
    Expected: Only the intended member changes. Each successful edit clears the search and shows members in the
    selected status view.
@@ -1100,6 +1193,11 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
    Expected: Missing details remain absent through tag changes; command feedback never shows Java optional wrappers.
 1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
    Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
+   Named and unnamed cards with short details have the same height and top spacing. Hiding the duplicate email
+   row does not shift the heading, status, phone or address rows. Cards grow for wrapped addresses and additional
+   tag rows. Names, phone numbers and emails, including email headings, stay on one line and use ellipses when
+   they exceed the available width. Hover over a truncated field to read its full value. Individual tags stay on
+   one line, with ellipses and full-text tooltips when needed; the status badge remains readable.
 
 ### Rejecting Unicode blank addresses in the command box
 
@@ -1262,6 +1360,28 @@ Run these searches in order; later searches must check the complete directory de
 Run `find n/Alice`, then try `findall John t/exco`, `findall n/John Tan` and `findany n/John p/abc`.
 Each must report an error and leave Alice Tan displayed, with member records and saved JSON unchanged.
 
+### Rejecting blank search values
+
+Use a nonempty directory and run `list`. Note the displayed members, then paste each command below separately.
+Each line contains an actual EM SPACE (U+2003):
+
+```text
+find n/ 
+find  
+find e/ 
+findall n/  e/@u.nus.edu
+findany e/@u.nus.edu n/ 
+```
+
+Expected: Each command reports "Invalid command format!" with its usage guidance and preserves the previous
+results, member records and saved JSON. The combined searches must be rejected even though the email condition
+matches existing members.
+
+Repeat using IDEOGRAPHIC SPACE (U+3000), copying the character between these brackets: `[　]`.
+Also try ordinary spaces and a mixture of ordinary and Unicode spaces as the complete value.
+Finally, run `find e/@u.nus.edu`, `findall e/@u.nus.edu` and `findany e/@u.nus.edu`.
+Expected: All three valid searches display every member in the selected status view.
+
 ### Finding members by name
 
 Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
@@ -1420,6 +1540,37 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
    1. Test case: `find n/David`, followed by `find e/ALEX`<br>
       Expected: The email search displays Alex Yeoh even though he was absent from the preceding results.
 
+### Clearing the entire directory
+
+Use a disposable application folder. Any setup step elsewhere in this guide that runs `clear` also requires
+choosing **Delete all members** in its confirmation dialog.
+
+1. Prepare an active member and an archived member with different emails, then search for the active member
+   and select Active view. Keep a copy of `data/nusocietydesk.json` for comparison.
+1. Submit `clear 1`, `clear all`, `clear member`, and `clear extra_text`.<br>
+   Expected: each shows `Invalid command format!` followed by the `clear` usage. No dialog opens, input remains
+   editable with error styling, and records, search, view, and the file are unchanged.
+1. Submit `clear`.<br>
+   Expected: a confirmation explains that all members, including archived members and those outside the search,
+   will be permanently deleted. It also warns that existing and imported members will both be deleted and
+   suggests `delete INDEX`. Buttons are **Cancel** and **Delete all members**, with Cancel initially focused
+   and the default. Records and the file remain unchanged while the dialog is open.
+1. Cancel using each of the following, submitting `clear` again between attempts: click Cancel, press Enter
+   without moving focus, press Escape, and close the dialog with its window close button.<br>
+   Expected: `Clear cancelled.` appears, the command box clears, and records, search, view, and the file are
+   unchanged. The prior `clear` submission can still be recalled with the Up arrow.
+1. Submit `clear` and use Tab to focus **Delete all members**, then activate it with the keyboard.<br>
+   Expected: `Member directory has been cleared!` appears. Both active and archived members are deleted,
+   even though only one was displayed. The selected view remains Active and the saved directory is empty.
+1. Restart the app.<br>
+   Expected: the directory stays empty; sample members are not loaded from a valid empty data file.
+1. Submit `clear` with the directory already empty.<br>
+   Expected: confirmation is still required. Cancel leaves the directory empty.
+1. Add a disposable member and make saving fail using the obstacle described in
+   [Recovering from a failed save](#recovering-from-a-failed-save). Submit `clear` and confirm deletion.<br>
+   Expected: a saving error replaces success feedback. The records, search, view, and original saved data are
+   preserved. A retry requires confirmation again.
+
 ### Deleting a person
 
 1. Deleting a person while all persons are being shown
@@ -1538,6 +1689,69 @@ searches leave saved data unchanged. The GUI checks above are provided for manua
       `nusocietydesk.saved.json`, create a directory named `nusocietydesk.json`, and put `keep.txt` inside it.<br>
       Expected: the same read-only commands work and member changes roll back on save failure. The backup and
       `keep.txt` remain unchanged. Restore the original JSON path before restarting.
+
+### Reading long contact details in a narrow member list
+
+Use Java 25 and a rebuilt JAR in a disposable writable folder. These native-window and display-scaling checks
+require manual execution; their execution status for this change is **not run**.
+
+1. Add a member with maximum-length contact values using PowerShell to copy the command, then paste and submit:
+
+   ```powershell
+   ('add e/' + ('w' * 64) + '@u.nus.edu n/' + ('W' * 127) + ' p/' + ('9' * 15) +
+       ' a/' + ('W' * 200) + ' t/' + ('w' * 30)) | Set-Clipboard
+   ```
+
+   Expected: success. At the configured minimum window width, the address wraps completely. The name, phone and
+   email stay on one line, with ellipses if they exceed the available width; hover to read their full values.
+   Tag badges flow onto additional rows when needed; an individual badge can show an ellipsis with a full-text
+   tooltip. The index and status badge remain visible. No member-list horizontal scrollbar appears. Resizing
+   wide and narrow again recalculates address wrapping, tag rows and card height.
+1. Add an unnamed member with a different 64-character email local-part and a long address.<br>
+   Expected: the email heading stays on one line and uses an ellipsis if necessary, with its full value available
+   in a tooltip. The index stays beside the heading and the separate email row is hidden. Use
+   `edit INDEX n/Named Member` with its displayed index: the heading becomes a single-line name and the separate
+   email row appears, also on one line with an ellipsis if necessary. Repeat with an archived member.
+1. Scroll through enough members to reuse list cells, select a long card, and reach the final member.<br>
+   Expected: wrapped address text and all tag rows stay within each card without overlap or clipping, including
+   after selection. Names, phone numbers and emails continue using single-line ellipsis truncation when needed.
+   A card taller than the viewport remains readable by vertical scrolling, and following members are reachable.
+1. Repeat at 1920 by 1080 with 100% and 125% scaling and 1280 by 720 with 150% scaling.<br>
+   Expected: all contact text remains accessible. Restart and confirm that full values and window preferences
+   persist without storing display line breaks. Command syntax, validation and feedback remain unchanged.
+
+### Adding tags across wrapped rows
+
+Use a rebuilt JAR with Java 25 in a disposable writable folder. Before launch, create
+`data/nusocietydesk.json` containing `{"persons":[]}` so the directory starts empty instead of loading samples.
+Packaged verification for this change: **passed** for eight `tag` submissions followed by eight `untag`
+submissions on the last member in an 18-member list, without scrolling between commands; the rendering was
+also inspected. The broader manual scenarios below are **not run**. The JUnit regression submits the same
+command path in a shown JavaFX window.
+
+1. Run `add e/taglayout@u.nus.edu`. The only member is at index 1.
+1. Add the following tags one command at a time, without scrolling or resizing between commands:
+
+   ```text
+   tag 1 t/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+   tag 1 t/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+   tag 1 t/cccccccccccccccccccccccccccccc
+   tag 1 t/dddddddddddddddddddddddddddddd
+   tag 1 t/eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+   tag 1 t/ffffffffffffffffffffffffffffff
+   ```
+
+   Expected: each command adds one tag with the normal confirmation. As the tags wrap into additional rows,
+   the card immediately grows and `Phone: -` and `Address: -` stay below all tags. There is no overlap to repair
+   by scrolling. Long individual tags retain ellipses and full-text tooltips when necessary.
+1. Remove those tags one at a time using `untag 1 t/TAG`, replacing `TAG` with each exact value above.<br>
+   Expected: the card shrinks as tag rows disappear and returns to its original minimum content height when
+   the final tag is removed. The email heading, contact placeholders and status remain correct.
+1. Repeat with a named member, an archived member, and a member near the bottom of a populated list.<br>
+   Expected: no overlap immediately after each command or after scrolling away and back, selecting the card,
+   resizing the window or restarting. Addresses continue wrapping in full and tag badges flow onto additional
+   rows when needed. Names, phone numbers and emails remain on one line, with ellipses and full-text tooltips
+   when necessary. No member-list horizontal scrollbar appears.
 
 ### Contact and tag length validation
 
