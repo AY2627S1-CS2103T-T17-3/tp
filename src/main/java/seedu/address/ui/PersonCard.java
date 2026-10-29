@@ -3,7 +3,6 @@ package seedu.address.ui;
 import java.util.Comparator;
 import java.util.List;
 
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
 import javafx.fxml.FXML;
@@ -72,10 +71,6 @@ public class PersonCard extends UiPart<Region> {
         tags.widthProperty().addListener((obs, oldWidth, newWidth) -> {
             if (newWidth.doubleValue() > 0) {
                 tags.setPrefWrapLength(newWidth.doubleValue());
-                Platform.runLater(() -> {
-                    HBox row = (HBox) tags.getParent();
-                    row.setPrefHeight(Math.max(tags.prefHeight(tags.getWidth()), status.prefHeight(-1)));
-                });
             }
         });
         // Preserve natural tag widths when the first height calculation precedes the pane's initial sizing.

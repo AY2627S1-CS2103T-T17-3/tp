@@ -870,6 +870,7 @@ public class MainWindowTest {
             Stage windowStage = new Stage();
             MainWindow window = new MainWindow(windowStage, logic, dataFile);
             window.fillInnerParts();
+            windowStage.setWidth(450);
             windowStage.show();
             return windowStage;
         });
@@ -948,7 +949,9 @@ public class MainWindowTest {
             double badgeHeight = status.getLayoutBounds().getHeight();
             assertTrue(phoneTop - visibleBottom < badgeHeight / 2,
                     "Unexpected gap " + (phoneTop - visibleBottom) + " with badge height " + badgeHeight
-                            + " and " + tagCount + " tags");
+                            + " and " + tagCount + " tags; width " + tags.getWidth()
+                            + ", row height " + tags.getParent().getLayoutBounds().getHeight()
+                            + ", preferred tag height " + tags.prefHeight(tags.getWidth()));
             return null;
         });
     }
