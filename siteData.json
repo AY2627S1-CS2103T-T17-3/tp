@@ -173,7 +173,11 @@
       "src": "index.md",
       "title": "",
       "headings": {
-        "nusocietydesk": "NUSocietyDesk"
+        "nusocietydesk": "NUSocietyDesk",
+        "spend-less-time-on-member-administration": "Spend less time on member administration",
+        "work-from-your-keyboard-even-offline": "Work from your keyboard, even offline",
+        "start-managing-your-directory": "Start managing your directory",
+        "acknowledgements": "Acknowledgements"
       },
       "headingKeywords": {}
     },
