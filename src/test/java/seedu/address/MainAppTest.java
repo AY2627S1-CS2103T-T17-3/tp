@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSource;
+import java.security.cert.Certificate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -30,18 +32,40 @@ public class MainAppTest {
     public Path temporaryFolder;
 
     @Test
-    public void resolveAddressBookFilePath_packagedJar_usesJarDirectory() throws Exception {
-        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
-        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+    public void getApplicationLocation_availableAndMissingCodeSource() throws Exception {
+        Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
 
-        assertEquals(appFolder.resolve("data/nusocietydesk.json"),
-                MainApp.resolveAddressBookFilePath(jarFile));
+        assertEquals(jarFile, MainApp.getApplicationLocation(
+                new CodeSource(jarFile.toUri().toURL(), (Certificate[]) null)));
+        assertNull(MainApp.getApplicationLocation(null));
+        assertNull(MainApp.getApplicationLocation(new CodeSource(null, (Certificate[]) null)));
     }
 
     @Test
-    public void resolveAddressBookFilePath_developmentDirectory_usesWorkingDirectory() {
+    public void resolveFilePath_packagedJar_usesJarDirectory() throws Exception {
+        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
+        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+
+        assertEquals(appFolder.resolve(Path.of("data", "nusocietydesk.json")),
+                MainApp.resolveFilePath(jarFile, Path.of("data", "nusocietydesk.json")));
+        assertEquals(appFolder.resolve("preferences.json"),
+                MainApp.resolveFilePath(jarFile, Path.of("preferences.json")));
+    }
+
+    @Test
+    public void resolveFilePath_developmentDirectory_usesWorkingDirectory() {
         assertEquals(Path.of("data", "nusocietydesk.json"),
-                MainApp.resolveAddressBookFilePath(temporaryFolder));
+                MainApp.resolveFilePath(temporaryFolder, Path.of("data", "nusocietydesk.json")));
+        assertEquals(Path.of("preferences.json"),
+                MainApp.resolveFilePath(temporaryFolder, Path.of("preferences.json")));
+    }
+
+    @Test
+    public void resolveFilePath_missingCodeSource_usesWorkingDirectory() {
+        assertEquals(Path.of("data", "nusocietydesk.json"),
+                MainApp.resolveFilePath(null, Path.of("data", "nusocietydesk.json")));
+        assertEquals(Path.of("preferences.json"),
+                MainApp.resolveFilePath(null, Path.of("preferences.json")));
     }
 
     @Test

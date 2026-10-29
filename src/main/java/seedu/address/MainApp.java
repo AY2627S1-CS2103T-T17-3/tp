@@ -1,9 +1,11 @@
 package seedu.address;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.CodeSource;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -50,12 +52,12 @@ public class MainApp extends Application {
         logger.info("=============================[ Initializing AddressBook ]===========================");
         super.init();
 
-        JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(USER_PREFS_FILE_PATH);
+        Path applicationLocation = getApplicationLocation(MainApp.class.getProtectionDomain().getCodeSource());
+        JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(
+                resolveFilePath(applicationLocation, USER_PREFS_FILE_PATH));
         UserPrefs userPrefs = initPrefs(userPrefsStorage);
-        Path applicationLocation = Paths.get(MainApp.class.getProtectionDomain().getCodeSource()
-                .getLocation().toURI());
         JsonAddressBookStorage addressBookStorage = new JsonAddressBookStorage(
-                resolveAddressBookFilePath(applicationLocation));
+                resolveFilePath(applicationLocation, ADDRESS_BOOK_FILE_PATH));
         storage = new StorageManager(addressBookStorage, userPrefsStorage);
 
         model = initModelManager(storage, userPrefs);
@@ -65,15 +67,21 @@ public class MainApp extends Application {
         ui = new UiManager(logic, storage.getAddressBookFilePath(), dataLoadingWarning);
     }
 
+    /** Returns the code source path, or null when it is unavailable. */
+    static Path getApplicationLocation(CodeSource codeSource) throws URISyntaxException {
+        return codeSource == null || codeSource.getLocation() == null
+                ? null : Paths.get(codeSource.getLocation().toURI());
+    }
+
     /**
-     * Locates member data beside the packaged JAR. During development, the code source is a directory,
-     * so the data file remains relative to the working directory.
+     * Locates an application file beside the packaged JAR. During development, or when the code source
+     * is unavailable, the file remains relative to the working directory.
      */
-    static Path resolveAddressBookFilePath(Path applicationLocation) {
-        if (Files.isRegularFile(applicationLocation)) {
-            return applicationLocation.toAbsolutePath().getParent().resolve(ADDRESS_BOOK_FILE_PATH);
+    static Path resolveFilePath(Path applicationLocation, Path filePath) {
+        if (applicationLocation != null && Files.isRegularFile(applicationLocation)) {
+            return applicationLocation.toAbsolutePath().getParent().resolve(filePath);
         }
-        return ADDRESS_BOOK_FILE_PATH;
+        return filePath;
     }
 
     /**

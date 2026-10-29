@@ -195,9 +195,9 @@ The `Storage` component,
 * is implemented by `StorageManager`, which delegates the actual JSON file access to `JsonAddressBookStorage` and `JsonUserPrefsStorage` (one class per data file).
 * depends on some classes in the `Model` component (because the `Storage` component's job is to save/retrieve objects that belong to the `Model`)
 
-`MainApp` configures the member data file as `data/nusocietydesk.json` beside the packaged JAR and passes
-this path to storage and the UI. When running from compiled classes during development, the path is relative
-to the working directory.
+`MainApp` configures `data/nusocietydesk.json` and `preferences.json` beside the packaged JAR. It passes
+these paths to storage, and the member data path to the UI. When running from compiled classes during
+development, or when the code source location is unavailable, both paths are relative to the working directory.
 
 The JSON root, property names and email string are unchanged. `JsonAdaptedPerson` writes absent name, phone and
 address fields as explicit `null` values. Missing properties and explicit nulls load as empty optionals; supplied
