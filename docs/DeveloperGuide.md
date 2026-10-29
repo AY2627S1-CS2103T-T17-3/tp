@@ -1072,7 +1072,26 @@ testers are expected to do more *exploratory* testing.
    1. Download the JAR file and copy it into an empty folder.
 
    1. Double-click the JAR file.<br>
-      Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
+      Expected: The GUI opens in All view with eight sample society members in the order listed in the
+      [User Guide](UserGuide.md#exploring-the-sample-members), using role and committee tags in lowercase.
+      Alex has `president` and `exco`, Charlotte has only `publicity`, and Irfan has no tags.
+      The window size may not be optimal.
+
+   1. Run `view archived`, then `view active`.<br>
+      Expected: Archived shows only Roy Balakrishnan at displayed index 1 with an `ARCHIVED` badge and
+      `volunteer` tag. Active shows the other seven members; Roy is absent.
+
+   1. Run `find e/irfan`.<br>
+      Expected: Only Irfan Ibrahim appears, with `irfan@u.nus.edu`, `Phone: -`, `Address: -`, and no tags.
+
+   1. Run `view all`, then `list`, then `find t/publicity`.<br>
+      Expected: Charlotte Oliveiro and Morgan Lee (`morgan.one@u.nus.edu`) appear at displayed indices 1 and 2.
+      Run `list`, then `find Morgan`: both Morgan Lee records appear, sharing phone `91234567` but with distinct emails.
+
+   1. Run `list`, then `tag 5 t/Volunteer` to save the sample directory. Close and relaunch.<br>
+      Expected: All eight members load without a recovery warning. Irfan retains the new tag and absent phone
+      and address, Roy remains archived, and both Morgan Lee records remain. A saved directory is loaded as it
+      is; the built-in samples do not replace it.
 
 1. Saving window preferences
 
