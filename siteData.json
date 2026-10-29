@@ -91,6 +91,8 @@
         "deleting-a-person": "Deleting a person",
         "tag-identity-and-editing": "Tag identity and editing",
         "saving-data": "Saving data",
+        "reading-long-contact-details-in-a-narrow-member-list": "Reading long contact details in a narrow member list",
+        "adding-tags-across-wrapped-rows": "Adding tags across wrapped rows",
         "contact-and-tag-length-validation": "Contact and tag length validation",
         "email-domain-validation": "Email domain validation",
         "email-local-part-length-validation": "Email local-part length validation",
