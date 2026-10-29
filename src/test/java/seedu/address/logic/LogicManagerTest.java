@@ -407,10 +407,17 @@ public class LogicManagerTest {
                 new Tag("publicity"), Messages.formatProvidedDetails(expectedPerson));
 
         assertCommandSuccess("untag 1 t/publicity", expectedMessage, expectedModel);
-        assertCommandSuccess("untag 1 t/PUBLICITY", expectedMessage, expectedModel);
         ReadOnlyAddressBook savedAddressBook = new JsonAddressBookStorage(temporaryFolder.resolve("nusocietydesk.json"))
                 .readAddressBook().orElseThrow();
         assertEquals(expectedModel.getAddressBook(), savedAddressBook);
+    }
+
+    @Test
+    public void execute_tagRemoveNonexistentTag_throwsCommandException() {
+        Person person = new PersonBuilder(AMY).withTags("Publicity").build();
+        model.addPerson(person);
+        String expectedMessage = String.format(TagRemoveCommand.MESSAGE_TAG_NOT_FOUND, new Tag("Exco"));
+        assertCommandException("untag 1 t/Exco", expectedMessage);
     }
 
     @Test

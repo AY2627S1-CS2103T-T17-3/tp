@@ -33,6 +33,13 @@ public class PersonListPanel extends UiPart<Region> {
      * Custom {@code ListCell} that displays the graphics of a {@code Person} using a {@code PersonCard}.
      */
     class PersonListViewCell extends ListCell<Person> {
+        /**
+         * Lets the list allocate the cell width instead of expanding to fit its graphic's preferred width.
+         */
+        PersonListViewCell() {
+            setPrefWidth(0);
+        }
+
         @Override
         protected void updateItem(Person person, boolean empty) {
             super.updateItem(person, empty);
