@@ -51,9 +51,9 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_noExistingTags_succeedsWithoutChangingTags() {
-        Person person = setTags(INDEX_FIRST_PERSON);
-        assertTagRemoved(INDEX_FIRST_PERSON, "Volunteer", person, person);
+    public void execute_noExistingTags_throwsCommandException() {
+        setTags(INDEX_FIRST_PERSON);
+        assertTagAbsent(INDEX_FIRST_PERSON, "Volunteer");
     }
 
     @Test
@@ -88,10 +88,10 @@ public class TagRemoveCommandTest {
     }
 
     @Test
-    public void execute_absentTagInFilteredList_showsAllPersons() {
-        Person person = setTags(INDEX_SECOND_PERSON, "Exco");
+    public void execute_absentTagInFilteredList_preservesFilter() {
+        setTags(INDEX_SECOND_PERSON, "Exco");
         showPersonAtIndex(model, INDEX_SECOND_PERSON);
-        assertTagRemoved(INDEX_FIRST_PERSON, "VOLUNTEER", person, person);
+        assertTagAbsent(INDEX_FIRST_PERSON, "VOLUNTEER");
     }
 
     @Test
@@ -111,8 +111,8 @@ public class TagRemoveCommandTest {
 
     @Test
     public void execute_archivedMemberWithUnchangedTags_preservesStatus() {
-        Person person = setArchivedPerson();
-        assertTagRemoved(INDEX_FIRST_PERSON, "Volunteer", person, person);
+        setArchivedPerson();
+        assertTagAbsent(INDEX_FIRST_PERSON, "Volunteer");
     }
 
     @Test
@@ -162,6 +162,12 @@ public class TagRemoveCommandTest {
         Person updatedPerson = new PersonBuilder(person).withTags(tags).build();
         model.setPerson(person, updatedPerson);
         return updatedPerson;
+    }
+
+    private void assertTagAbsent(Index index, String tagName) {
+        Tag tag = new Tag(tagName);
+        assertCommandFailure(new TagRemoveCommand(index, tag), model,
+                String.format(TagRemoveCommand.MESSAGE_TAG_NO_CHANGE, index.getOneBased(), tag));
     }
 
     private void assertTagRemoved(Index index, String tagName, Person originalPerson, Person expectedPerson) {

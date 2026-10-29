@@ -27,6 +27,7 @@ public class TagRemoveCommand extends Command {
             + ": Removes one tag from the person identified by the index number in the displayed person list.\n"
             + "Parameters: INDEX (must be a positive integer) " + PREFIX_TAG + "TAG\n"
             + "Example: " + COMMAND_WORD + " 1 " + PREFIX_TAG + "Volunteer";
+    public static final String MESSAGE_TAG_NO_CHANGE = "Member %1$s does not have tag %2$s.";
     public static final String MESSAGE_SUCCESS = "Tag removed: %1$s; %2$s";
 
     private final Index targetIndex;
@@ -50,6 +51,9 @@ public class TagRemoveCommand extends Command {
         }
 
         Person personToEdit = lastShownList.get(targetIndex.getZeroBased());
+        if (!personToEdit.getTags().contains(tag)) {
+            throw new CommandException(String.format(MESSAGE_TAG_NO_CHANGE, targetIndex.getOneBased(), tag));
+        }
         Set<Tag> updatedTags = new HashSet<>(personToEdit.getTags());
         updatedTags.remove(tag);
         Person editedPerson = new Person(personToEdit.getName(), personToEdit.getPhone(), personToEdit.getEmail(),

@@ -504,7 +504,7 @@ Format: `tag INDEX t/TAG`
 * Exactly one index and one `t/` argument are required. Empty tags, multiple tags, and extra arguments are rejected.
 * Tag names must contain 1 to 30 alphanumeric characters. Matching is case-insensitive;
   tags are stored and displayed in lowercase. Overlong tags are rejected without changing the member or saved data.
-* Adding a tag the member already has succeeds with the normal completion message and leaves their tags unchanged.
+* Adding a tag the member already has is rejected with an error; their tags and the current filter remain unchanged.
 * After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
 Example: `tag 1 t/Volunteer` adds `volunteer` to the first displayed member. If they already have `publicity`
@@ -518,7 +518,7 @@ Format: `untag INDEX t/TAG`
 
 * The same index, single-tag, and tag-name rules as `tag` apply.
 * Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
-* Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
+* Removing a tag the member does not have is rejected with an error; their tags and the current filter remain unchanged.
 * Removing the last tag is allowed and leaves the member with no tags.
 * After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
