@@ -51,6 +51,16 @@ public class TagAddCommandTest {
     }
 
     @Test
+    public void execute_multipleTags_displaysTagsInOrder() throws Exception {
+        Person person = setTags(INDEX_FIRST_PERSON, "volunteer", "exco");
+        CommandResult result = new TagAddCommand(INDEX_FIRST_PERSON, new Tag("123")).execute(model);
+
+        assertTrue(result.getFeedbackToUser().endsWith("Tags: [123][exco][volunteer]"));
+        assertEquals(new PersonBuilder(person).withTags("volunteer", "exco", "123").build(),
+                model.getFilteredPersonList().get(0));
+    }
+
+    @Test
     public void execute_noExistingTags_addsTag() {
         Person person = setTags(INDEX_FIRST_PERSON);
         Person expectedPerson = new PersonBuilder(person).withTags("Volunteer").build();
@@ -84,9 +94,10 @@ public class TagAddCommandTest {
     }
 
     @Test
-    public void execute_existingTagWithDifferentCase_succeedsWithoutChangingTags() {
-        Person person = setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
-        assertTagAdded(INDEX_FIRST_PERSON, "PUBLICITY", person, person);
+    public void execute_existingTagWithDifferentCase_throwsCommandException() {
+        setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
+        assertTagAlreadyPresent(INDEX_FIRST_PERSON, "PUBLICITY");
+        assertTagAlreadyPresent(INDEX_FIRST_PERSON, "publicity");
     }
 
     @Test
@@ -98,10 +109,10 @@ public class TagAddCommandTest {
     }
 
     @Test
-    public void execute_existingTagInFilteredList_showsAllPersons() {
-        Person person = setTags(INDEX_SECOND_PERSON, "Volunteer");
+    public void execute_existingTagInFilteredList_preservesFilter() {
+        setTags(INDEX_SECOND_PERSON, "Volunteer");
         showPersonAtIndex(model, INDEX_SECOND_PERSON);
-        assertTagAdded(INDEX_FIRST_PERSON, "VOLUNTEER", person, person);
+        assertTagAlreadyPresent(INDEX_FIRST_PERSON, "VOLUNTEER");
     }
 
     @Test
@@ -114,8 +125,8 @@ public class TagAddCommandTest {
 
     @Test
     public void execute_archivedMemberWithUnchangedTags_preservesStatus() {
-        Person person = setArchivedPerson();
-        assertTagAdded(INDEX_FIRST_PERSON, "PUBLICITY", person, person);
+        setArchivedPerson();
+        assertTagAlreadyPresent(INDEX_FIRST_PERSON, "PUBLICITY");
     }
 
     @Test
@@ -165,6 +176,12 @@ public class TagAddCommandTest {
         Person updatedPerson = new PersonBuilder(person).withTags(tags).build();
         model.setPerson(person, updatedPerson);
         return updatedPerson;
+    }
+
+    private void assertTagAlreadyPresent(Index index, String tagName) {
+        Tag tag = new Tag(tagName);
+        assertCommandFailure(new TagAddCommand(index, tag), model,
+                String.format(TagAddCommand.MESSAGE_TAG_NO_CHANGE, index.getOneBased(), tag));
     }
 
     private void assertTagAdded(Index index, String tagName, Person originalPerson, Person expectedPerson) {

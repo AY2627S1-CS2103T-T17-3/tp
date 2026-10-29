@@ -22,6 +22,7 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -41,6 +42,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import seedu.address.commons.core.GuiSettings;
 import seedu.address.logic.Logic;
 import seedu.address.logic.LogicManager;
 import seedu.address.logic.commands.ClearCommand;
@@ -66,6 +68,68 @@ public class MainWindowTest {
 
     @TempDir
     public Path temporaryFolder;
+
+    @Test
+    public void screenIndexWithLargestOverlap_maximizedWindowAboveBothScreens_keepsSecondMonitor() {
+        List<Rectangle2D> screens = List.of(
+                new Rectangle2D(0, 0, 1920, 1080),
+                new Rectangle2D(1920, 0, 1920, 1080));
+
+        assertEquals(1, MainWindow.screenIndexWithLargestOverlap(
+                new GuiSettings(1200, 800, 1900, -8), screens));
+        assertEquals(0, MainWindow.screenIndexWithLargestOverlap(
+                new GuiSettings(1200, 800, 100, -8), screens));
+        assertEquals(-1, MainWindow.screenIndexWithLargestOverlap(
+                new GuiSettings(1200, 800, 5000, 100), screens));
+        assertEquals(-1, MainWindow.screenIndexWithLargestOverlap(new GuiSettings(), screens));
+    }
+
+    @Test
+    public void compactDisplay_windowFitsAndKeepsMainControlsVisible() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("compactDisplay.json");
+        AddressBook addressBook = new AddressBook();
+        addressBook.addPerson(new PersonBuilder().build());
+        Logic logic = new LogicManager(new ModelManager(addressBook, new UserPrefs()),
+                new StorageManager(new JsonAddressBookStorage(dataFile),
+                        new JsonUserPrefsStorage(temporaryFolder.resolve("compactPrefs.json"))));
+
+        JavaFxTestUtil.runAndWait(() -> {
+            Stage stage = new Stage();
+            try {
+                MainWindow window = new MainWindow(stage, logic, dataFile);
+                window.fillInnerParts();
+                Rectangle2D usableDisplay = new Rectangle2D(0, 0, 853, 440);
+                window.fitWindowToBounds(new GuiSettings(), usableDisplay);
+                assertEquals(800, stage.getWidth(), 1);
+                assertEquals(440, stage.getHeight(), 1);
+                window.fitWindowToBounds(new GuiSettings(1000, 600, 900, 500), usableDisplay);
+                assertEquals(853, stage.getWidth(), 1);
+                assertEquals(440, stage.getHeight(), 1);
+                assertEquals(0, stage.getX(), 1);
+                assertEquals(0, stage.getY(), 1);
+
+                stage.setWidth(853);
+                stage.setHeight(400);
+                stage.show();
+                stage.getScene().getRoot().applyCss();
+                stage.getScene().getRoot().layout();
+                assertTrue(stage.getHeight() <= 400);
+                for (String selector : List.of("#statusFilterButton", "#commandTextField", "#resultDisplay",
+                        "#personListView", "#statusbarPlaceholder")) {
+                    Node node = stage.getScene().lookup(selector);
+                    Bounds bounds = node.localToScene(node.getBoundsInLocal());
+                    assertTrue(bounds.getMinY() >= 0 && bounds.getMaxY() <= stage.getScene().getHeight() + 1,
+                            selector + " is outside the compact window");
+                }
+                ListView<?> members = (ListView<?>) stage.getScene().lookup("#personListView");
+                assertTrue(members.getHeight() >= 90, "Member list should remain usable");
+            } finally {
+                stage.close();
+            }
+            return null;
+        });
+    }
 
     @Test
     public void submit_invalidClear_showsFormatErrorWithoutDialogOrDataChanges() throws Exception {

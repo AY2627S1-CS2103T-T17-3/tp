@@ -3,12 +3,15 @@ package seedu.address;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSource;
+import java.security.cert.Certificate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,88 @@ import seedu.address.storage.StorageManager;
 public class MainAppTest {
     @TempDir
     public Path temporaryFolder;
+
+    @Test
+    public void recovery_unknownProperty_preservesFileUntilRepairedAndRestarted() throws Exception {
+        Path file = temporaryFolder.resolve("members.json");
+        Files.writeString(file, "{\"persons\":[{\"email\":\"alex@u.nus.edu\","
+                + "\"phoneNumber\":\"91234567\"}]}");
+        byte[] original = Files.readAllBytes(file);
+        MainApp app = startModel(file);
+
+        assertTrue(app.getDataLoadingWarning().contains("Record 1: unrecognized property \"phoneNumber\""));
+        assertEquals(1, app.model.getAddressBook().getPersonList().size());
+        app.logic.execute("list");
+        assertThrows(CommandException.class, () -> app.logic.execute("add e/new@u.nus.edu"));
+        app.stop();
+        assertArrayEquals(original, Files.readAllBytes(file));
+
+        Files.writeString(file, "{\"persons\":[{\"email\":\"alex@u.nus.edu\",\"phone\":\"91234567\"}]}");
+        MainApp restarted = startModel(file);
+        assertNull(restarted.getDataLoadingWarning());
+        restarted.logic.execute("add e/new@u.nus.edu");
+        assertEquals(2, restarted.storage.readAddressBook().orElseThrow().getPersonList().size());
+        assertEquals("91234567", restarted.model.getAddressBook().getPersonList().get(0)
+                .getPhone().orElseThrow().value);
+    }
+
+    @Test
+    public void init_packagedJar_usesJarDirectoryForBothFiles() throws Exception {
+        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
+        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+        MainApp app = new MainApp() {
+            @Override
+            protected Path getApplicationLocation() {
+                return jarFile;
+            }
+        };
+
+        app.init();
+
+        assertEquals(appFolder.resolve("preferences.json"), app.storage.getUserPrefsFilePath());
+        assertEquals(appFolder.resolve(Path.of("data", "nusocietydesk.json")),
+                app.storage.getAddressBookFilePath());
+        assertTrue(Files.isRegularFile(appFolder.resolve("preferences.json")));
+        app.stop();
+    }
+
+    @Test
+    public void getApplicationLocation_availableAndMissingCodeSource() throws Exception {
+        Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
+
+        assertNotNull(new MainApp().getApplicationLocation());
+        assertEquals(jarFile, MainApp.getApplicationLocation(
+                new CodeSource(jarFile.toUri().toURL(), (Certificate[]) null)));
+        assertNull(MainApp.getApplicationLocation(null));
+        assertNull(MainApp.getApplicationLocation(new CodeSource(null, (Certificate[]) null)));
+    }
+
+    @Test
+    public void resolveFilePath_packagedJar_usesJarDirectory() throws Exception {
+        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
+        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+
+        assertEquals(appFolder.resolve(Path.of("data", "nusocietydesk.json")),
+                MainApp.resolveFilePath(jarFile, Path.of("data", "nusocietydesk.json")));
+        assertEquals(appFolder.resolve("preferences.json"),
+                MainApp.resolveFilePath(jarFile, Path.of("preferences.json")));
+    }
+
+    @Test
+    public void resolveFilePath_developmentDirectory_usesWorkingDirectory() {
+        assertEquals(Path.of("data", "nusocietydesk.json"),
+                MainApp.resolveFilePath(temporaryFolder, Path.of("data", "nusocietydesk.json")));
+        assertEquals(Path.of("preferences.json"),
+                MainApp.resolveFilePath(temporaryFolder, Path.of("preferences.json")));
+    }
+
+    @Test
+    public void resolveFilePath_missingCodeSource_usesWorkingDirectory() {
+        assertEquals(Path.of("data", "nusocietydesk.json"),
+                MainApp.resolveFilePath(null, Path.of("data", "nusocietydesk.json")));
+        assertEquals(Path.of("preferences.json"),
+                MainApp.resolveFilePath(null, Path.of("preferences.json")));
+    }
 
     @Test
     public void recovery_partialLoad_preservesFileAndRecordsThroughCommandsAndShutdown() throws Exception {
@@ -94,7 +179,21 @@ public class MainAppTest {
         assertEquals(SampleDataUtil.getSampleAddressBook(), app.model.getAddressBook());
         assertNull(app.getDataLoadingWarning());
         assertTrue(app.storage.isAddressBookSaveAllowed());
+
+        app.logic.execute("view archived");
+        assertEquals(List.of("royb@u.nus.edu"), app.logic.getFilteredPersonList().stream()
+                .map(person -> person.getEmail().value).toList());
+        app.logic.execute("view active");
+        assertEquals(7, app.logic.getFilteredPersonList().size());
+        app.logic.execute("find Morgan");
+        assertEquals(2, app.logic.getFilteredPersonList().size());
+        app.logic.execute("find e/irfan");
+        assertEquals(1, app.logic.getFilteredPersonList().size());
+        assertTrue(app.logic.getFilteredPersonList().getFirst().getPhone().isEmpty());
+        assertTrue(app.logic.getFilteredPersonList().getFirst().getAddress().isEmpty());
+        app.logic.execute("view all");
         app.logic.execute("list");
+        assertEquals(8, app.logic.getFilteredPersonList().size());
         assertFalse(Files.exists(file));
         app.logic.execute("add e/new@u.nus.edu");
         assertEquals(app.model.getAddressBook(), app.storage.readAddressBook().orElseThrow());

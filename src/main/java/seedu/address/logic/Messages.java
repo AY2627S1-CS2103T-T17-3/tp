@@ -1,5 +1,6 @@
 package seedu.address.logic;
 
+import java.util.Comparator;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
@@ -64,9 +65,8 @@ public class Messages {
         person.getAddress().ifPresent(address -> details.add(ADDRESS_PREFIX + address.value));
         if (!person.getTags().isEmpty()) {
             details.add(TAGS_PREFIX + person.getTags().stream()
-                    .sorted()
-                    .map(Object::toString)
-                    .collect(Collectors.joining()));
+                    .sorted(Comparator.comparing(tag -> tag.tagName))
+                    .map(Object::toString).collect(Collectors.joining()));
         }
         return details.toString();
     }
