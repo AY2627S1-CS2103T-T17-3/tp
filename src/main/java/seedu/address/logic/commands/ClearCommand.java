@@ -11,8 +11,11 @@ import seedu.address.model.Model;
 public class ClearCommand extends Command {
 
     public static final String COMMAND_WORD = "clear";
+    public static final String MESSAGE_USAGE = COMMAND_WORD + ": Clears all members after confirmation.\n"
+            + "Parameters: None\n"
+            + "Example: " + COMMAND_WORD;
     public static final String MESSAGE_SUCCESS = "Member directory has been cleared!";
-
+    public static final String MESSAGE_CANCELLED = "Clear cancelled.";
 
     @Override
     public CommandResult execute(Model model) {

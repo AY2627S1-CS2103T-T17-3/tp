@@ -160,7 +160,8 @@ public class ReadOnlyCommandIntegrationTest {
             Predicate<Person> search = person -> person.equals(target);
             model.updateFilteredPersonList(search);
             model.setStatusFilter(status);
-            CommandException failure = assertThrows(CommandException.class, () -> logic.execute(command), command);
+            CommandException failure = assertThrows(CommandException.class, () ->
+                    logic.execute(command, () -> true), command);
 
             assertTrue(failure.getMessage().contains(LogicManager.MESSAGE_SAVE_REVERTED), failure.getMessage());
             assertEquals(members, model.getAddressBook().getPersonList(), command);

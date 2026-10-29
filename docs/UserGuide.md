@@ -76,8 +76,8 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 * Parameters can be in any order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
 
-* Extraneous parameters for `list`, `exit`, and `clear` are ignored.<br>
-  For example, `list 123` is interpreted as `list`. The `help` command rejects extra arguments.
+* Extraneous parameters for `list` and `exit` are ignored.<br>
+  For example, `list 123` is interpreted as `list`. The `help` and `clear` commands reject extra arguments.
 
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </box>
@@ -210,10 +210,28 @@ on edit; a blank address cannot clear an existing value. Ordinary surrounding ar
 trimmed; Unicode spaces in an otherwise valid nonblank address are preserved by add/edit. Inputs containing
 line or paragraph separators can instead receive an invalid-command-format error.
 
-For an unnamed member, the card heading displays their email. Missing phone and address rows display
-`Phone: -` and `Address: -`. The add confirmation shows only supplied details, omitting missing contact fields
-and the tags section when there are no tags. Addresses wrap within the card. Long contact labels and tags can
-show an ellipsis at narrower widths; hover over them to read the full value in a tooltip. For an email-only member:
+For an unnamed member, the card heading displays their email and the separate email row is hidden.
+After a name is supplied, the heading displays the name and the email appears in its own `Email: VALUE` row.
+
+**Names, phone numbers and emails do not wrap.** This includes an email used as an unnamed member's heading.
+Each is displayed on a single line; text that exceeds the available width is truncated with an ellipsis.
+Hover over the field to read its full value in a tooltip. Display truncation does not shorten the stored value.
+
+Phone and address rows always include their labels, for example `Phone: 91234567` and `Address: Kent Ridge`.
+Missing values display `Phone: -` and `Address: -`. These rules apply to both active and archived members,
+including imported and previously saved records. Cards share a minimum height and align their contents from
+the top. Short named and unnamed cards keep the same heading and shared-field positions. A wrapped address or
+additional rows of tags can make a card taller; the following fields move down to remain readable.
+
+The add confirmation shows only supplied details, omitting missing contact fields and the tags section when
+there are no tags. **Only the address text and the tag list wrap in the card.** Addresses wrap in full across
+multiple lines, including between characters in uninterrupted text, without changing the saved value. When tag
+badges cannot all fit on one row, the remaining badges flow onto the next row. Each individual tag stays on one
+line and can show an ellipsis if it is too wide; hover over it to read the full tag in a tooltip.
+Resize the window down to its 800-pixel minimum width without needing to scroll the member list horizontally.
+Use vertical scrolling for taller cards and later members. Contact tooltips remain available for all fields,
+including wrapped addresses.
+For an email-only member, the add confirmation is:
 
 ```text
 New person added: Email: alex@u.nus.edu
@@ -500,7 +518,7 @@ Format: `untag INDEX t/TAG`
 
 * The same index, single-tag, and tag-name rules as `tag` apply.
 * Matching is case-insensitive: `t/publicity` also matches a tag entered as `Publicity`.
-* Removing a tag the member does not have succeeds with the normal completion message and leaves their tags unchanged.
+* Removing a tag the member does not have produces an error message and leaves their tags unchanged.
 * Removing the last tag is allowed and leaves the member with no tags.
 * After success, the search is cleared, as with `edit`. Check the displayed indices before your next command.
 
@@ -535,7 +553,7 @@ Formats:
 **Name searches**
 
 * Use `find n/Alice` or `find Alice` to search for one name keyword; both return the same results.
-* The `n/` prefix accepts exactly one nonempty keyword. Commands such as `find n/Alice Bob` and
+* The `n/` prefix accepts exactly one nonblank keyword. Commands such as `find n/Alice Bob` and
   `find n/Alice Alice` are rejected, including keywords separated by tabs or line breaks.
   The error is: "Prefixed name searches accept only one keyword. Use find Alice Bob to match names containing
   Alice OR Bob."
@@ -610,7 +628,9 @@ Formats:
   remain literal search values.
 * Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
   `find e/alice e/bob` and `find t/publicity t/exco` are rejected.
-* Provide a nonempty search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
+* Provide a nonblank search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
+  Empty or whitespace-only values report "Invalid command format!". Blank uses Java whitespace rules, including
+  EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000); non-breaking spaces such as U+00A0 are not classified as blank.
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
@@ -646,7 +666,7 @@ findany PREFIX/VALUE [PREFIX/VALUE]...
 ```
 
 * Supply at least one condition. Every condition needs a lowercase `n/`, `p/`, `e/` or `t/` prefix
-  and one nonempty value. Field validation and matching follow `find` above.
+  and one nonblank value. The same Java whitespace rules and field validation as `find` apply to every condition.
 * Repeat a prefix to add another condition: use `n/John n/Tan`, not `n/John Tan`.
 * Every condition must be valid. For example, `findany n/Alice p/abc` is rejected even if Alice exists.
   Rejected searches preserve the previous results, member records and saved data.
@@ -709,9 +729,23 @@ it reads `Deleted person: Email: bobby@u.nus.edu`.
 
 ### Clearing all entries: `clear`
 
-Clears all entries from the address book.
+Permanently deletes every member after confirmation, including archived members and members outside the
+current search or selected status view.
 
 Format: `clear`
+
+* Takes no parameters. Inputs such as `clear 1`, `clear all`, and `clear member` show an invalid-command-format
+  error without opening the confirmation dialog. Surrounding whitespace is allowed.
+* The confirmation dialog has **Cancel** and **Delete all members** buttons. **Cancel** is selected by default;
+  pressing Enter without moving focus, pressing Escape, or closing the dialog cancels the command.
+* Cancelling shows `Clear cancelled.` and leaves member records, the current search, the selected status view,
+  and the saved data file unchanged.
+* Choosing **Delete all members** clears and saves the entire directory. This cannot be undone in the app.
+  If saving fails, the previous records and search are restored as described below.
+* To remove one member, use `delete INDEX` instead.
+
+You can use `clear` to start over after importing an unwanted CSV file. It removes members that existed before
+the import as well as imported members; it does not selectively reverse an import.
 
 ### Exiting the program: `exit`
 
@@ -810,7 +844,7 @@ _Details coming soon ..._
 
 ## Known issues
 
-1. **When using multiple screens**, if you move the application to a secondary screen, and later switch to using only the primary screen, the GUI will open off-screen. The remedy is to delete the `preferences.json` file created by the application before running the application again.
+1. **If the GUI opens off-screen after a monitor layout change**, delete the `preferences.json` file created by the application before running it again.
 2. **If you minimize the Help Window** and then run `help`, use the `Help` menu, or press `F1` again, the original Help Window will remain minimized, and no new Help Window will appear. The remedy is to manually restore the minimized Help Window.
 
 --------------------------------------------------------------------------------------------------------------------

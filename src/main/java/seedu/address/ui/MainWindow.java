@@ -2,17 +2,22 @@ package seedu.address.ui;
 
 import java.awt.Point;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -32,6 +37,9 @@ import seedu.address.model.StatusFilter;
 public class MainWindow extends UiPart<Stage> {
 
     private static final String FXML = "MainWindow.fxml";
+    private static final String CLEAR_CONFIRMATION_MESSAGE = "This permanently deletes every member, including "
+            + "archived members and those outside your current search. Existing members and imported members "
+            + "will both be deleted.\n\nTo delete one member, cancel and use delete INDEX.";
     private final Logger logger = LogsCenter.getLogger(getClass());
 
     private Stage primaryStage;
@@ -140,11 +148,39 @@ public class MainWindow extends UiPart<Stage> {
      * Sets the default size based on {@code guiSettings}.
      */
     private void setWindowDefaultSize(GuiSettings guiSettings) {
-        Point savedPosition = guiSettings.getWindowCoordinates();
-        Screen screen = savedPosition == null ? Screen.getPrimary()
-                : Screen.getScreensForRectangle(savedPosition.getX(), savedPosition.getY(), 1, 1).stream()
-                        .findFirst().orElse(Screen.getPrimary());
+        List<Screen> screens = Screen.getScreens();
+        int screenIndex = screenIndexWithLargestOverlap(guiSettings,
+                screens.stream().map(Screen::getBounds).toList());
+        Screen screen = screenIndex < 0 ? Screen.getPrimary() : screens.get(screenIndex);
         fitWindowToBounds(guiSettings, screen.getVisualBounds());
+    }
+
+    /** Returns the screen containing the largest area of the saved window, or -1 if none overlaps. */
+    static int screenIndexWithLargestOverlap(GuiSettings guiSettings, List<Rectangle2D> screenBounds) {
+        Point savedPosition = guiSettings.getWindowCoordinates();
+        if (savedPosition == null) {
+            return -1;
+        }
+
+        double savedMinX = savedPosition.getX();
+        double savedMinY = savedPosition.getY();
+        double savedMaxX = savedMinX + guiSettings.getWindowWidth();
+        double savedMaxY = savedMinY + guiSettings.getWindowHeight();
+        double largestOverlap = 0;
+        int selectedIndex = -1;
+        for (int index = 0; index < screenBounds.size(); index++) {
+            Rectangle2D bounds = screenBounds.get(index);
+            double overlapWidth = Math.max(0,
+                    Math.min(savedMaxX, bounds.getMaxX()) - Math.max(savedMinX, bounds.getMinX()));
+            double overlapHeight = Math.max(0,
+                    Math.min(savedMaxY, bounds.getMaxY()) - Math.max(savedMinY, bounds.getMinY()));
+            double overlapArea = overlapWidth * overlapHeight;
+            if (overlapArea > largestOverlap) {
+                largestOverlap = overlapArea;
+                selectedIndex = index;
+            }
+        }
+        return selectedIndex;
     }
 
     /** Fits a saved window size and position within the usable area of its display. */
@@ -211,6 +247,23 @@ public class MainWindow extends UiPart<Stage> {
         }
     }
 
+    private boolean confirmClear() {
+        ButtonType deleteAll = new ButtonType("Delete all members", ButtonData.OK_DONE);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, CLEAR_CONFIRMATION_MESSAGE, ButtonType.CANCEL, deleteAll);
+        alert.initOwner(primaryStage);
+        alert.setTitle("Confirm clear");
+        alert.setHeaderText("Delete all members?");
+        alert.getDialogPane().getStylesheets().add("view/DarkTheme.css");
+        alert.getDialogPane().setId(UiManager.ALERT_DIALOG_PANE_FIELD_ID);
+        alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+        Button cancelButton = (Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL);
+        Button deleteButton = (Button) alert.getDialogPane().lookupButton(deleteAll);
+        cancelButton.setDefaultButton(true);
+        deleteButton.setDefaultButton(false);
+        alert.setOnShown(event -> cancelButton.requestFocus());
+        return alert.showAndWait().filter(deleteAll::equals).isPresent();
+    }
+
     /**
      * Executes the command and returns the result.
      *
@@ -218,7 +271,7 @@ public class MainWindow extends UiPart<Stage> {
      */
     private CommandResult executeCommand(String commandText) throws CommandException, ParseException {
         try {
-            CommandResult commandResult = logic.execute(commandText);
+            CommandResult commandResult = logic.execute(commandText, this::confirmClear);
             updateStatusFilterButton();
             logger.info("Result: " + commandResult.getFeedbackToUser());
             resultDisplay.setFeedbackToUser(commandResult.getFeedbackToUser());

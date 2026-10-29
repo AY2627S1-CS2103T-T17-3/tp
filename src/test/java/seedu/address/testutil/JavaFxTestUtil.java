@@ -8,6 +8,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import javafx.application.Platform;
+import javafx.scene.Scene;
 
 /**
  * Shares one JavaFX toolkit across UI tests in a test worker.
@@ -43,6 +44,31 @@ public final class JavaFxTestUtil {
     public static <T> T runAndWait(Callable<T> operation) throws Exception {
         FutureTask<T> task = new FutureTask<>(operation);
         Platform.runLater(task);
+        return task.get(10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Runs an operation after the scene's next normal layout pulse, without forcing a layout.
+     * Called from the test thread, not the JavaFX thread.
+     *
+     * @param scene The shown scene whose layout must complete.
+     * @param operation The assertions or measurements to run after layout.
+     * @return The operation's result.
+     * @throws Exception If the operation fails or the pulse does not finish in time.
+     */
+    public static <T> T runAfterLayoutPulse(Scene scene, Callable<T> operation) throws Exception {
+        FutureTask<T> task = new FutureTask<>(operation);
+        runAndWait(() -> {
+            scene.addPostLayoutPulseListener(new Runnable() {
+                @Override
+                public void run() {
+                    scene.removePostLayoutPulseListener(this);
+                    task.run();
+                }
+            });
+            Platform.requestNextPulse();
+            return null;
+        });
         return task.get(10, TimeUnit.SECONDS);
     }
 }
