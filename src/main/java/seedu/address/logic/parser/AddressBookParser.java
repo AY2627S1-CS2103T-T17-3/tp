@@ -73,7 +73,7 @@ public class AddressBookParser {
             case TagAddCommand.COMMAND_WORD -> new TagAddCommandParser().parse(arguments);
             case TagRemoveCommand.COMMAND_WORD -> new TagRemoveCommandParser().parse(arguments);
             case DeleteCommand.COMMAND_WORD -> new DeleteCommandParser().parse(arguments);
-            case ClearCommand.COMMAND_WORD -> new ClearCommand();
+            case ClearCommand.COMMAND_WORD -> new ClearCommandParser().parse(arguments);
             case FindCommand.COMMAND_WORD -> new FindCommandParser().parse(arguments);
             case FindCommand.COMMAND_WORD_ALL -> new FindAllCommandParser().parse(arguments);
             case FindCommand.COMMAND_WORD_ANY -> new FindAnyCommandParser().parse(arguments);

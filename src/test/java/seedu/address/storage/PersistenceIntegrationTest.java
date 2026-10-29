@@ -219,7 +219,8 @@ public class PersistenceIntegrationTest {
         List<Person> filteredBefore = List.copyOf(model.getFilteredPersonList());
         LogicManager logic = createLogic(new JsonAddressBookStorage(dataFile, writer));
 
-        CommandException error = assertThrows(CommandException.class, () -> logic.execute(command), command);
+        CommandException error = assertThrows(CommandException.class, () ->
+                logic.execute(command, () -> true), command);
 
         assertTrue(error.getMessage().contains(LogicManager.MESSAGE_SAVE_REVERTED));
         assertEquals(original, model.getAddressBook(), command);

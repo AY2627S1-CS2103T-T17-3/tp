@@ -6,11 +6,15 @@ import java.util.logging.Logger;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import seedu.address.commons.core.GuiSettings;
@@ -29,6 +33,9 @@ import seedu.address.model.StatusFilter;
 public class MainWindow extends UiPart<Stage> {
 
     private static final String FXML = "MainWindow.fxml";
+    private static final String CLEAR_CONFIRMATION_MESSAGE = "This permanently deletes every member, including "
+            + "archived members and those outside your current search. Existing members and imported members "
+            + "will both be deleted.\n\nTo delete one member, cancel and use delete INDEX.";
     private final Logger logger = LogsCenter.getLogger(getClass());
 
     private Stage primaryStage;
@@ -195,6 +202,23 @@ public class MainWindow extends UiPart<Stage> {
         }
     }
 
+    private boolean confirmClear() {
+        ButtonType deleteAll = new ButtonType("Delete all members", ButtonData.OK_DONE);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, CLEAR_CONFIRMATION_MESSAGE, ButtonType.CANCEL, deleteAll);
+        alert.initOwner(primaryStage);
+        alert.setTitle("Confirm clear");
+        alert.setHeaderText("Delete all members?");
+        alert.getDialogPane().getStylesheets().add("view/DarkTheme.css");
+        alert.getDialogPane().setId(UiManager.ALERT_DIALOG_PANE_FIELD_ID);
+        alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+        Button cancelButton = (Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL);
+        Button deleteButton = (Button) alert.getDialogPane().lookupButton(deleteAll);
+        cancelButton.setDefaultButton(true);
+        deleteButton.setDefaultButton(false);
+        alert.setOnShown(event -> cancelButton.requestFocus());
+        return alert.showAndWait().filter(deleteAll::equals).isPresent();
+    }
+
     /**
      * Executes the command and returns the result.
      *
@@ -202,7 +226,7 @@ public class MainWindow extends UiPart<Stage> {
      */
     private CommandResult executeCommand(String commandText) throws CommandException, ParseException {
         try {
-            CommandResult commandResult = logic.execute(commandText);
+            CommandResult commandResult = logic.execute(commandText, this::confirmClear);
             updateStatusFilterButton();
             logger.info("Result: " + commandResult.getFeedbackToUser());
             resultDisplay.setFeedbackToUser(commandResult.getFeedbackToUser());
