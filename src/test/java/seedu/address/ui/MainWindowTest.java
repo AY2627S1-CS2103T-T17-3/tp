@@ -890,6 +890,12 @@ public class MainWindowTest {
                 assertTrue(label.localToScene(label.getLayoutBounds()).getMaxY() <= phoneTop + 1,
                         "Tag commands must not leave a tag row overlapping the phone");
             }
+            if (!tags.getChildren().isEmpty()) {
+                double lastTagBottom = tags.getChildren().stream()
+                        .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY()).max().orElseThrow();
+                assertEquals(lastTagBottom, phoneTop, 2.0,
+                        "The phone must follow the last tag row without a blank gap");
+            }
             return null;
         });
     }
