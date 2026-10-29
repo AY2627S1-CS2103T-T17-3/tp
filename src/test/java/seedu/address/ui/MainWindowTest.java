@@ -37,6 +37,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -773,37 +774,85 @@ public class MainWindowTest {
         Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
                 new JsonUserPrefsStorage(temporaryFolder.resolve("manyTagsPrefs.json"))));
 
-        JavaFxTestUtil.runAndWait(() -> {
-            Stage stage = new Stage();
-            try {
-                MainWindow window = new MainWindow(stage, logic, dataFile);
-                window.fillInnerParts();
-                stage.show();
+        Stage stage = JavaFxTestUtil.runAndWait(() -> {
+            Stage windowStage = new Stage();
+            MainWindow window = new MainWindow(windowStage, logic, dataFile);
+            window.fillInnerParts();
+            StackPane placeholder = (StackPane) windowStage.getScene().lookup("#resultDisplayPlaceholder");
+            placeholder.setMaxWidth(250);
+            windowStage.show();
+            return windowStage;
+        });
+        try {
+            JavaFxTestUtil.runAndWait(() -> {
                 TextField input = (TextField) stage.getScene().lookup("#commandTextField");
-                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
-
-                assertTrue(results.isWrapText());
-
                 input.setText("tag 1 t/testing");
                 input.fireEvent(new ActionEvent());
-
+                return null;
+            });
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
                 assertTrue(results.isWrapText());
+
+                ScrollBar horizontalBar = results.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.HORIZONTAL)
+                        .map(node -> (ScrollBar) node)
+                        .findFirst()
+                        .orElse(null);
+                assertNotNull(horizontalBar);
+                assertFalse(horizontalBar.isVisible());
+
+                assertFalse(results.lookupAll(".text").isEmpty());
+                assertTrue(results.lookupAll(".text").stream()
+                        .anyMatch(node -> node.getLayoutBounds().getHeight() > 2 * results.getFont().getSize()),
+                        "Long feedback must occupy multiple rendered lines");
+                for (Node textNode : results.lookupAll(".text")) {
+                    assertTrue(textNode.getLayoutBounds().getWidth() <= results.getWidth());
+                }
+
                 String expectedAddedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
                         + "[organisingcommittee][president][publicity][testing][testing123][volunteer]";
                 assertTrue(results.getText().contains(expectedAddedTags));
+                return null;
+            });
 
+            JavaFxTestUtil.runAndWait(() -> {
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
                 input.setText("untag 1 t/testing");
                 input.fireEvent(new ActionEvent());
-
+                return null;
+            });
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
                 assertTrue(results.isWrapText());
+
+                ScrollBar horizontalBar = results.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.HORIZONTAL)
+                        .map(node -> (ScrollBar) node)
+                        .findFirst()
+                        .orElse(null);
+                assertNotNull(horizontalBar);
+                assertFalse(horizontalBar.isVisible());
+
+                assertFalse(results.lookupAll(".text").isEmpty());
+                assertTrue(results.lookupAll(".text").stream()
+                        .anyMatch(node -> node.getLayoutBounds().getHeight() > 2 * results.getFont().getSize()),
+                        "Long feedback must occupy multiple rendered lines");
+                for (Node textNode : results.lookupAll(".text")) {
+                    assertTrue(textNode.getLayoutBounds().getWidth() <= results.getWidth());
+                }
+
                 String expectedRemovedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
                         + "[organisingcommittee][president][publicity][testing123][volunteer]";
                 assertTrue(results.getText().contains(expectedRemovedTags));
-            } finally {
+                return null;
+            });
+        } finally {
+            JavaFxTestUtil.runAndWait(() -> {
                 stage.close();
-            }
-            return null;
-        });
+                return null;
+            });
+        }
     }
 
     @Test
@@ -884,6 +933,11 @@ public class MainWindowTest {
                     .map(node -> (ListCell<?>) node).findFirst().orElseThrow();
             FlowPane tags = (FlowPane) cell.getGraphic().lookup("#tags");
             Label phone = (Label) cell.getGraphic().lookup("#phone");
+            Node tagsParent = tags.getParent();
+            double tagsHBoxMaxY = tagsParent.getBoundsInParent().getMaxY();
+            double phoneMinY = phone.getBoundsInParent().getMinY();
+            assertEquals(tagsHBoxMaxY, phoneMinY, 1.0,
+                    "Tag commands must not introduce empty space between tags and phone");
             double phoneTop = phone.localToScene(phone.getLayoutBounds()).getMinY();
             assertEquals(tagCount, tags.getChildren().size());
             for (Node label : tags.getChildren()) {
@@ -892,7 +946,8 @@ public class MainWindowTest {
             }
             if (!tags.getChildren().isEmpty()) {
                 double lastTagBottom = tags.getChildren().stream()
-                        .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY()).max().orElseThrow();
+                        .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY())
+                        .max().orElseThrow();
                 assertEquals(lastTagBottom, phoneTop, 2.0,
                         "The phone must follow the last tag row without a blank gap");
             }
