@@ -3,6 +3,8 @@ package seedu.address.ui;
 import java.util.Comparator;
 import java.util.List;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -66,12 +68,15 @@ public class PersonCard extends UiPart<Region> {
         if (person.getStatus() == Status.ARCHIVED) {
             status.getStyleClass().add("archived");
         }
+        // Preserve natural tag widths when the first height calculation precedes the pane's initial sizing.
+        DoubleBinding tagMaxWidth = Bindings.when(tags.widthProperty().greaterThan(0))
+                .then(tags.widthProperty()).otherwise(Double.MAX_VALUE);
         person.getTags().stream()
                 .sorted(Comparator.comparing(tag -> tag.tagName))
                 .forEach(tag -> {
                     Label label = new Label(tag.tagName);
                     label.setMinWidth(0);
-                    label.maxWidthProperty().bind(tags.widthProperty());
+                    label.maxWidthProperty().bind(tagMaxWidth);
                     label.setTooltip(new Tooltip(tag.tagName));
                     tags.getChildren().add(label);
                 });

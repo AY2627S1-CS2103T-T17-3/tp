@@ -441,13 +441,18 @@ The formatter label a supplied name as `Name: <person name>` consistently across
 Unnamed duplicate errors identify the existing member by email only.
 `PersonCard` uses the canonical email as its heading when the name is absent. Its separate email label is then
 both invisible and unmanaged, so it contributes no layout space. When a name is present, the heading uses that
-name and the email row is visible and managed. Phone, address and email rows always include `Phone: `,
+name and the email row is visible and managed. **Headings never wrap:** both names and emails used as headings
+stay on one line, with an ellipsis when they exceed the available width. Phone and email rows also remain on
+one line. Full values are available in tooltips and are not shortened in the model or saved data.
+Phone, address and email rows always include `Phone: `,
 `Address: ` and `Email: ` respectively; missing phone and address values use `-` after their labels.
 Full-text tooltips include these prefixes. The content `VBox` in `PersonListCard.fxml` uses `TOP_LEFT`
-alignment, five pixels of top padding and a shared 105-pixel minimum height. Headings and shared fields
-therefore keep the same offsets from the top of each card when the last email row is hidden. Unused space
-stays below the content. Cards with short details share the same height; wrapped addresses and tags can make
-cards taller, so their height is not fixed.
+alignment, five pixels of top padding and a shared 105-pixel minimum height. Short, single-line headings and
+shared fields keep the same offsets from the top of each card when the last email row is hidden. Unused space
+stays below the content. Cards with short details share the same height; wrapped address text and additional
+rows of tag badges can make cards taller, so their height is not fixed. All other card fields remain on one
+line. The heading row uses `TOP_LEFT` so the index stays aligned with the heading. Fields below a wrapped
+address or additional tag rows move down naturally.
 
 These display rules apply to active and archived members regardless of whether they were added, imported or
 loaded from JSON. `PersonListPanel` constructs a new card when a member is replaced, so supplying a name through
@@ -554,10 +559,45 @@ Name and phone search values retain their independent keyword/substring rules; f
 substring remains valid. Exact tag searches in `find`, `findall`, and `findany` use `ParserUtil.parseTag` and
 therefore enforce the same 30-character tag maximum. `edit` continues rejecting every `t/` argument.
 
-The member card constrains its content to the allocated width. Addresses wrap; other contact labels and tags
-can use ellipses, with the full text available in tooltips. Tags continue flowing over multiple rows and the
-result display continues wrapping feedback. Length limits bound stored values; display constraints accommodate
-valid long values and narrower windows.
+The member card constrains its content to the allocated width. Only the address label wraps its text; JavaFX
+handles word boundaries and uninterrupted values without inserting line breaks into model values or label text.
+The tag `FlowPane` places whole badges on additional rows when they cannot all fit on one row. Individual tags
+do not wrap internally. Names, phone numbers and emails, including email headings for unnamed members, remain
+on one line. These fields and individual tags can use ellipses, with their full text available in tooltips.
+The index and status badge remain visible. Result feedback wraps in its separate pane. Length limits bound
+stored values; display constraints accommodate valid long values and narrower windows.
+
+Tag labels in `PersonCard` share a conditional maximum-width binding. Until the tag pane has a positive width,
+the labels keep their natural widths so JavaFX can measure the height of wrapped tag rows correctly. After
+sizing, each label is constrained to the actual pane width, preserving ellipses and full-text tooltips for long
+tags. Binding directly to the initial zero width makes the first height calculation treat all tags as tiny
+labels on one row; when the labels expand, extra rows can overlap the phone and address until another layout.
+The conditional binding corrects that first measurement without delayed refreshes, forced layouts or changes
+to tag commands, validation or storage.
+
+`PersonListViewCell` sets its preferred width to zero so long graphics do not expand the horizontal scroll range.
+The existing list-cell skin sizes the resizable card to the allocated cell width, accounting for the list's
+vertical scrollbar and insets. Card heights remain computed from the available width; no fixed cell height,
+scrollbar measurements or additional width listeners are needed. `MainWindow.fxml` sets the minimum window
+width to 800 pixels. `GuiSettings` defaults to a window of 800 by 600 pixels; existing window preferences continue
+to load and save through the same preference format.
+
+`PersonListPanelTest` exercises the actual list at 340 and 1556 pixels, including narrow-wide-narrow resizing,
+scrolling and cell reuse, member replacement, selection, scrollbar appearance and disappearance, and a card
+taller than the viewport. It checks horizontal overflow, card bounds, and the skin's rendered address text for
+complete values without ellipses or vertical clipping. Full-text address display is distinct from the
+single-line ellipsis truncation used for names, phone numbers and emails. Long email rows and email headings
+are checked for single-line rendering with ellipses at narrow widths and complete displayed text at wide
+widths, while their label values and tooltips retain the complete email. `PersonCardTest` also checks labels,
+tooltips, conditional email-row visibility, non-wrapping headings and email rows, and heading-index alignment.
+The minimum-width window check verifies its actual width after showing it.
+
+The tag-update regression uses shown stages and `JavaFxTestUtil.runAfterLayoutPulse` to measure the card after a
+normal JavaFX layout pulse. It checks each tag label's bounds against the tag pane and phone row, and verifies
+that subsequent contact rows do not overlap. Repeated member replacements cover short and maximum-length tags,
+named and unnamed members, both statuses, selection, resizing, cell reuse, and growth and shrinkage across row
+boundaries. `MainWindowTest` submits repeated `tag` and `untag` commands against the last visible member without
+scrolling between commands. These tests do not call `applyCss`, `layout` or `refresh` to repair the measured card.
 
 Model and parser tests cover maximum-minus-one, maximum, maximum-plus-one, large inputs, and surrounding
 argument whitespace. `FieldLengthValidationIntegrationTest` covers command rejection without state or file
@@ -1154,9 +1194,10 @@ Use a disposable application folder. Before launching, create `data/nusocietydes
 1. Inspect named and unnamed cards at the supported resolutions and scaling settings.<br>
    Expected: Existing rows remain readable and the heading changes correctly after a name is supplied.
    Named and unnamed cards with short details have the same height and top spacing. Hiding the duplicate email
-   row does not shift the heading, status, phone or address rows. Cards with wrapped details grow as needed.
-   Addresses wrap, long headings and contact rows expose their complete text in tooltips, and tags and status
-   badges remain readable.
+   row does not shift the heading, status, phone or address rows. Cards grow for wrapped addresses and additional
+   tag rows. Names, phone numbers and emails, including email headings, stay on one line and use ellipses when
+   they exceed the available width. Hover over a truncated field to read its full value. Individual tags stay on
+   one line, with ellipses and full-text tooltips when needed; the status badge remains readable.
 
 ### Rejecting Unicode blank addresses in the command box
 
@@ -1648,6 +1689,69 @@ choosing **Delete all members** in its confirmation dialog.
       `nusocietydesk.saved.json`, create a directory named `nusocietydesk.json`, and put `keep.txt` inside it.<br>
       Expected: the same read-only commands work and member changes roll back on save failure. The backup and
       `keep.txt` remain unchanged. Restore the original JSON path before restarting.
+
+### Reading long contact details in a narrow member list
+
+Use Java 25 and a rebuilt JAR in a disposable writable folder. These native-window and display-scaling checks
+require manual execution; their execution status for this change is **not run**.
+
+1. Add a member with maximum-length contact values using PowerShell to copy the command, then paste and submit:
+
+   ```powershell
+   ('add e/' + ('w' * 64) + '@u.nus.edu n/' + ('W' * 127) + ' p/' + ('9' * 15) +
+       ' a/' + ('W' * 200) + ' t/' + ('w' * 30)) | Set-Clipboard
+   ```
+
+   Expected: success. At the configured minimum window width, the address wraps completely. The name, phone and
+   email stay on one line, with ellipses if they exceed the available width; hover to read their full values.
+   Tag badges flow onto additional rows when needed; an individual badge can show an ellipsis with a full-text
+   tooltip. The index and status badge remain visible. No member-list horizontal scrollbar appears. Resizing
+   wide and narrow again recalculates address wrapping, tag rows and card height.
+1. Add an unnamed member with a different 64-character email local-part and a long address.<br>
+   Expected: the email heading stays on one line and uses an ellipsis if necessary, with its full value available
+   in a tooltip. The index stays beside the heading and the separate email row is hidden. Use
+   `edit INDEX n/Named Member` with its displayed index: the heading becomes a single-line name and the separate
+   email row appears, also on one line with an ellipsis if necessary. Repeat with an archived member.
+1. Scroll through enough members to reuse list cells, select a long card, and reach the final member.<br>
+   Expected: wrapped address text and all tag rows stay within each card without overlap or clipping, including
+   after selection. Names, phone numbers and emails continue using single-line ellipsis truncation when needed.
+   A card taller than the viewport remains readable by vertical scrolling, and following members are reachable.
+1. Repeat at 1920 by 1080 with 100% and 125% scaling and 1280 by 720 with 150% scaling.<br>
+   Expected: all contact text remains accessible. Restart and confirm that full values and window preferences
+   persist without storing display line breaks. Command syntax, validation and feedback remain unchanged.
+
+### Adding tags across wrapped rows
+
+Use a rebuilt JAR with Java 25 in a disposable writable folder. Before launch, create
+`data/nusocietydesk.json` containing `{"persons":[]}` so the directory starts empty instead of loading samples.
+Packaged verification for this change: **passed** for eight `tag` submissions followed by eight `untag`
+submissions on the last member in an 18-member list, without scrolling between commands; the rendering was
+also inspected. The broader manual scenarios below are **not run**. The JUnit regression submits the same
+command path in a shown JavaFX window.
+
+1. Run `add e/taglayout@u.nus.edu`. The only member is at index 1.
+1. Add the following tags one command at a time, without scrolling or resizing between commands:
+
+   ```text
+   tag 1 t/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+   tag 1 t/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+   tag 1 t/cccccccccccccccccccccccccccccc
+   tag 1 t/dddddddddddddddddddddddddddddd
+   tag 1 t/eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+   tag 1 t/ffffffffffffffffffffffffffffff
+   ```
+
+   Expected: each command adds one tag with the normal confirmation. As the tags wrap into additional rows,
+   the card immediately grows and `Phone: -` and `Address: -` stay below all tags. There is no overlap to repair
+   by scrolling. Long individual tags retain ellipses and full-text tooltips when necessary.
+1. Remove those tags one at a time using `untag 1 t/TAG`, replacing `TAG` with each exact value above.<br>
+   Expected: the card shrinks as tag rows disappear and returns to its original minimum content height when
+   the final tag is removed. The email heading, contact placeholders and status remain correct.
+1. Repeat with a named member, an archived member, and a member near the bottom of a populated list.<br>
+   Expected: no overlap immediately after each command or after scrolling away and back, selecting the card,
+   resizing the window or restarting. Addresses continue wrapping in full and tag badges flow onto additional
+   rows when needed. Names, phone numbers and emails remain on one line, with ellipses and full-text tooltips
+   when necessary. No member-list horizontal scrollbar appears.
 
 ### Contact and tag length validation
 

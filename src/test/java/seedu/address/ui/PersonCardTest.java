@@ -1,6 +1,7 @@
 package seedu.address.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 
@@ -170,6 +171,9 @@ public class PersonCardTest {
             assertLabelText(card, "address", "Address: " + "W".repeat(200));
             assertLabelText(card, "email", "Email: " + "w".repeat(64) + "@u.nus.edu");
             assertTrue(((Label) card.lookup("#address")).isWrapText());
+            assertFalse(((Label) card.lookup("#email")).isWrapText());
+            assertFalse(((Label) card.lookup("#name")).isWrapText());
+            assertEquals(relativeTop(card, "name"), relativeTop(card, "id"), 0.01);
             FlowPane tags = (FlowPane) card.lookup("#tags");
             for (Node child : tags.getChildren()) {
                 Label label = (Label) child;

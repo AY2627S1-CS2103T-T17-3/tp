@@ -19,18 +19,23 @@ import org.junit.jupiter.api.io.TempDir;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.geometry.Bounds;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -305,9 +310,10 @@ public class MainWindowTest {
             try {
                 MainWindow window = new MainWindow(stage, logic, dataFile);
                 window.fillInnerParts();
-                stage.setWidth(450);
+                stage.setWidth(stage.getMinWidth());
                 stage.setHeight(600);
                 stage.show();
+                assertEquals(stage.getMinWidth(), stage.getWidth(), 1, "The window must use its configured minimum");
                 TextField input = (TextField) stage.getScene().lookup("#commandTextField");
                 TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
                 input.setText("add n/Alex e/alex@u.nus.edu");
@@ -749,6 +755,94 @@ public class MainWindowTest {
                 assertEquals(List.of(active, archived), list.getItems());
             } finally {
                 stage.close();
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void submit_repeatedTagCommands_keepsContactRowsBelowTagsWithoutScrolling() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("tagLayout.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        for (int index = 0; index < 18; index++) {
+            model.addPerson(new PersonBuilder().withoutName().withoutPhone().withoutAddress()
+                    .withEmail("member" + index + "@u.nus.edu").build());
+        }
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("tagLayoutPrefs.json"))));
+        Stage stage = JavaFxTestUtil.runAndWait(() -> {
+            Stage windowStage = new Stage();
+            MainWindow window = new MainWindow(windowStage, logic, dataFile);
+            window.fillInnerParts();
+            windowStage.show();
+            return windowStage;
+        });
+        try {
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                ListView<?> list = (ListView<?>) stage.getScene().lookup("#personListView");
+                ScrollBar verticalBar = list.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.VERTICAL)
+                        .map(node -> (ScrollBar) node).findFirst().orElseThrow();
+                verticalBar.setValue(verticalBar.getMax());
+                return null;
+            });
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                ListView<?> list = (ListView<?>) stage.getScene().lookup("#personListView");
+                ListCell<?> lastCell = list.lookupAll(".list-cell").stream()
+                        .filter(node -> node instanceof ListCell<?> cell && cell.isVisible()
+                                && !cell.isEmpty() && cell.getIndex() == 17)
+                        .map(node -> (ListCell<?>) node).findFirst().orElse(null);
+                assertNotNull(lastCell, "The last member card must be rendered before submitting tag commands");
+                Node viewport = list.lookup(".clipped-container");
+                Bounds viewportBounds = viewport.localToScene(viewport.getLayoutBounds());
+                Bounds cellBounds = lastCell.localToScene(lastCell.getLayoutBounds());
+                assertTrue(cellBounds.intersects(viewportBounds),
+                        "The last member card must be inside the viewport before submitting tag commands");
+                return null;
+            });
+            for (int count = 1; count <= 8; count++) {
+                String tag = "a".repeat(29) + (char) ('a' + count);
+                submitTagCommandAndAssertLayout(stage, "tag 18 t/" + tag, "Tag added: [" + tag + "]", count);
+            }
+            assertEquals(8, model.getFilteredPersonList().get(17).getTags().size());
+            for (int count = 8; count >= 1; count--) {
+                String tag = "a".repeat(29) + (char) ('a' + count);
+                submitTagCommandAndAssertLayout(stage, "untag 18 t/" + tag, "Tag removed: [" + tag + "]", count - 1);
+            }
+            assertTrue(model.getFilteredPersonList().get(17).getTags().isEmpty());
+        } finally {
+            JavaFxTestUtil.runAndWait(() -> {
+                stage.close();
+                return null;
+            });
+        }
+    }
+
+    private static void submitTagCommandAndAssertLayout(Stage stage, String command, String feedback, int tagCount)
+            throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+            input.setText(command);
+            input.fireEvent(new ActionEvent());
+            assertEquals("", input.getText());
+            TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+            assertTrue(results.getText().startsWith(feedback));
+            return null;
+        });
+        JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+            ListView<?> list = (ListView<?>) stage.getScene().lookup("#personListView");
+            ListCell<?> cell = list.lookupAll(".list-cell").stream()
+                    .filter(node -> node instanceof ListCell<?> candidate && candidate.isVisible()
+                            && !candidate.isEmpty() && candidate.getIndex() == 17)
+                    .map(node -> (ListCell<?>) node).findFirst().orElseThrow();
+            FlowPane tags = (FlowPane) cell.getGraphic().lookup("#tags");
+            Label phone = (Label) cell.getGraphic().lookup("#phone");
+            double phoneTop = phone.localToScene(phone.getLayoutBounds()).getMinY();
+            assertEquals(tagCount, tags.getChildren().size());
+            for (Node label : tags.getChildren()) {
+                assertTrue(label.localToScene(label.getLayoutBounds()).getMaxY() <= phoneTop + 1,
+                        "Tag commands must not leave a tag row overlapping the phone");
             }
             return null;
         });

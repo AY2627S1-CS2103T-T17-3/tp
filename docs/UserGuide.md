@@ -212,16 +212,26 @@ line or paragraph separators can instead receive an invalid-command-format error
 
 For an unnamed member, the card heading displays their email and the separate email row is hidden.
 After a name is supplied, the heading displays the name and the email appears in its own `Email: VALUE` row.
+
+**Names, phone numbers and emails do not wrap.** This includes an email used as an unnamed member's heading.
+Each is displayed on a single line; text that exceeds the available width is truncated with an ellipsis.
+Hover over the field to read its full value in a tooltip. Display truncation does not shorten the stored value.
+
 Phone and address rows always include their labels, for example `Phone: 91234567` and `Address: Kent Ridge`.
 Missing values display `Phone: -` and `Address: -`. These rules apply to both active and archived members,
 including imported and previously saved records. Cards share a minimum height and align their contents from
-the top, keeping headings and shared fields in the same positions when the email row is hidden. Longer
-addresses and tags can make a card taller so their contents remain readable.
+the top. Short named and unnamed cards keep the same heading and shared-field positions. A wrapped address or
+additional rows of tags can make a card taller; the following fields move down to remain readable.
 
 The add confirmation shows only supplied details, omitting missing contact fields and the tags section when
-there are no tags. Addresses wrap within the card. Long headings, contact labels and tags can show an ellipsis
-at narrower widths; hover over them to read the full text in a tooltip. For an email-only member,
-the add confirmation is:
+there are no tags. **Only the address text and the tag list wrap in the card.** Addresses wrap in full across
+multiple lines, including between characters in uninterrupted text, without changing the saved value. When tag
+badges cannot all fit on one row, the remaining badges flow onto the next row. Each individual tag stays on one
+line and can show an ellipsis if it is too wide; hover over it to read the full tag in a tooltip.
+Resize the window down to its 800-pixel minimum width without needing to scroll the member list horizontally.
+Use vertical scrolling for taller cards and later members. Contact tooltips remain available for all fields,
+including wrapped addresses.
+For an email-only member, the add confirmation is:
 
 ```text
 New person added: Email: alex@u.nus.edu
