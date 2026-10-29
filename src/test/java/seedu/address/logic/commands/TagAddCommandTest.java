@@ -51,6 +51,16 @@ public class TagAddCommandTest {
     }
 
     @Test
+    public void execute_multipleTags_displaysTagsInOrder() throws Exception {
+        Person person = setTags(INDEX_FIRST_PERSON, "volunteer", "exco");
+        CommandResult result = new TagAddCommand(INDEX_FIRST_PERSON, new Tag("123")).execute(model);
+
+        assertTrue(result.getFeedbackToUser().endsWith("Tags: [123][exco][volunteer]"));
+        assertEquals(new PersonBuilder(person).withTags("volunteer", "exco", "123").build(),
+                model.getFilteredPersonList().get(0));
+    }
+
+    @Test
     public void execute_noExistingTags_addsTag() {
         Person person = setTags(INDEX_FIRST_PERSON);
         Person expectedPerson = new PersonBuilder(person).withTags("Volunteer").build();
