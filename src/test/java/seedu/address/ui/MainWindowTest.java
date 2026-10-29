@@ -38,6 +38,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -825,6 +826,100 @@ public class MainWindowTest {
     }
 
     @Test
+    public void submit_tagCommandsWithManyTags_wrapsResultAndOrdersTagsAlphabetically() throws Exception {
+        JavaFxTestUtil.initialize();
+        Path dataFile = temporaryFolder.resolve("manyTags.json");
+        ModelManager model = new ModelManager(new AddressBook(), new UserPrefs());
+        Person person = new PersonBuilder().withName("John Tan").withEmail("john@u.nus.edu")
+                .withTags("exco", "1221212123213", "volunteer", "ay2728", "ay2627",
+                        "moretagsgobrrrrr", "testing123", "organisingcommittee", "publicity", "president")
+                .build();
+        model.addPerson(person);
+        Logic logic = new LogicManager(model, new StorageManager(new JsonAddressBookStorage(dataFile),
+                new JsonUserPrefsStorage(temporaryFolder.resolve("manyTagsPrefs.json"))));
+
+        Stage stage = JavaFxTestUtil.runAndWait(() -> {
+            Stage windowStage = new Stage();
+            MainWindow window = new MainWindow(windowStage, logic, dataFile);
+            window.fillInnerParts();
+            StackPane placeholder = (StackPane) windowStage.getScene().lookup("#resultDisplayPlaceholder");
+            placeholder.setMaxWidth(250);
+            windowStage.show();
+            return windowStage;
+        });
+        try {
+            JavaFxTestUtil.runAndWait(() -> {
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                input.setText("tag 1 t/testing");
+                input.fireEvent(new ActionEvent());
+                return null;
+            });
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                assertTrue(results.isWrapText());
+
+                ScrollBar horizontalBar = results.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.HORIZONTAL)
+                        .map(node -> (ScrollBar) node)
+                        .findFirst()
+                        .orElse(null);
+                assertNotNull(horizontalBar);
+                assertFalse(horizontalBar.isVisible());
+
+                assertFalse(results.lookupAll(".text").isEmpty());
+                assertTrue(results.lookupAll(".text").stream()
+                        .anyMatch(node -> node.getLayoutBounds().getHeight() > 2 * results.getFont().getSize()),
+                        "Long feedback must occupy multiple rendered lines");
+                for (Node textNode : results.lookupAll(".text")) {
+                    assertTrue(textNode.getLayoutBounds().getWidth() <= results.getWidth());
+                }
+
+                String expectedAddedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
+                        + "[organisingcommittee][president][publicity][testing][testing123][volunteer]";
+                assertTrue(results.getText().contains(expectedAddedTags));
+                return null;
+            });
+
+            JavaFxTestUtil.runAndWait(() -> {
+                TextField input = (TextField) stage.getScene().lookup("#commandTextField");
+                input.setText("untag 1 t/testing");
+                input.fireEvent(new ActionEvent());
+                return null;
+            });
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
+                assertTrue(results.isWrapText());
+
+                ScrollBar horizontalBar = results.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.HORIZONTAL)
+                        .map(node -> (ScrollBar) node)
+                        .findFirst()
+                        .orElse(null);
+                assertNotNull(horizontalBar);
+                assertFalse(horizontalBar.isVisible());
+
+                assertFalse(results.lookupAll(".text").isEmpty());
+                assertTrue(results.lookupAll(".text").stream()
+                        .anyMatch(node -> node.getLayoutBounds().getHeight() > 2 * results.getFont().getSize()),
+                        "Long feedback must occupy multiple rendered lines");
+                for (Node textNode : results.lookupAll(".text")) {
+                    assertTrue(textNode.getLayoutBounds().getWidth() <= results.getWidth());
+                }
+
+                String expectedRemovedTags = "Tags: [1221212123213][ay2627][ay2728][exco][moretagsgobrrrrr]"
+                        + "[organisingcommittee][president][publicity][testing123][volunteer]";
+                assertTrue(results.getText().contains(expectedRemovedTags));
+                return null;
+            });
+        } finally {
+            JavaFxTestUtil.runAndWait(() -> {
+                stage.close();
+                return null;
+            });
+        }
+    }
+
+    @Test
     public void submit_repeatedTagCommands_keepsContactRowsBelowTagsWithoutScrolling() throws Exception {
         JavaFxTestUtil.initialize();
         Path dataFile = temporaryFolder.resolve("tagLayout.json");
@@ -839,6 +934,7 @@ public class MainWindowTest {
             Stage windowStage = new Stage();
             MainWindow window = new MainWindow(windowStage, logic, dataFile);
             window.fillInnerParts();
+            windowStage.setWidth(450);
             windowStage.show();
             return windowStage;
         });
@@ -902,12 +998,24 @@ public class MainWindowTest {
                     .map(node -> (ListCell<?>) node).findFirst().orElseThrow();
             FlowPane tags = (FlowPane) cell.getGraphic().lookup("#tags");
             Label phone = (Label) cell.getGraphic().lookup("#phone");
+            Label status = (Label) cell.getGraphic().lookup("#status");
             double phoneTop = phone.localToScene(phone.getLayoutBounds()).getMinY();
             assertEquals(tagCount, tags.getChildren().size());
             for (Node label : tags.getChildren()) {
                 assertTrue(label.localToScene(label.getLayoutBounds()).getMaxY() <= phoneTop + 1,
                         "Tag commands must not leave a tag row overlapping the phone");
             }
+            double statusBottom = status.localToScene(status.getLayoutBounds()).getMaxY();
+            double contentBottom = tags.getChildren().stream()
+                    .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY())
+                    .max().orElse(statusBottom);
+            double visibleBottom = Math.max(contentBottom, statusBottom);
+            double badgeHeight = status.getLayoutBounds().getHeight();
+            assertTrue(phoneTop - visibleBottom < badgeHeight / 2,
+                    "Unexpected gap " + (phoneTop - visibleBottom) + " with badge height " + badgeHeight
+                            + " and " + tagCount + " tags; width " + tags.getWidth()
+                            + ", row height " + tags.getParent().getLayoutBounds().getHeight()
+                            + ", preferred tag height " + tags.prefHeight(tags.getWidth()));
             return null;
         });
     }
@@ -925,7 +1033,6 @@ public class MainWindowTest {
         assertEquals(hasName, email.isVisible());
         assertEquals(hasName, email.isManaged());
     }
-
     private static void assertButtonColors(Button button, String background, Color text) {
         button.applyCss();
         assertEquals(Color.web(background), button.getBackground().getFills().get(0).getFill());

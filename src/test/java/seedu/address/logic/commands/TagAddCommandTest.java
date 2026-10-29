@@ -81,6 +81,19 @@ public class TagAddCommandTest {
     }
 
     @Test
+    public void execute_multipleTags_ordersTagsAlphabeticallyInFeedback() throws Exception {
+        Person original = model.getFilteredPersonList().get(0);
+        Person person = new PersonBuilder(original).withoutName().withoutPhone().withoutAddress()
+                .withEmail("2@u.nus.edu").withTags("volunteer", "ay2627", "exco").build();
+        model.setPerson(original, person);
+
+        CommandResult result = new TagAddCommand(INDEX_FIRST_PERSON, new Tag("publicity")).execute(model);
+
+        assertEquals("Tag added: [publicity]; Email: 2@u.nus.edu; Tags: [ay2627][exco][publicity][volunteer]",
+                result.getFeedbackToUser());
+    }
+
+    @Test
     public void execute_existingTagWithDifferentCase_throwsCommandException() {
         setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
         assertTagAlreadyPresent(INDEX_FIRST_PERSON, "PUBLICITY");

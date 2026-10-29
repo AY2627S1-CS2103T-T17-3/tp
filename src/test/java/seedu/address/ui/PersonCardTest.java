@@ -108,6 +108,33 @@ public class PersonCardTest {
     }
 
     @Test
+    public void constructor_manyTags_noLargeGapBeforePhone() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            Person person = new PersonBuilder(ALICE).withTags("exco", "1221212123213", "volunteer",
+                    "ay2728", "ay2627", "moretagsgobrrrrr", "testing123", "organisingcommittee",
+                    "publicity", "president").build();
+            Region card = new PersonCard(person, 1).getRoot();
+            StackPane container = new StackPane(card);
+            Scene scene = new Scene(container, 400, 600);
+            FlowPane tags = (FlowPane) card.lookup("#tags");
+            Label phone = (Label) card.lookup("#phone");
+            scene.getStylesheets().add(getClass().getResource("/view/DarkTheme.css").toExternalForm());
+            card.applyCss();
+            container.applyCss();
+            container.layout();
+            card.applyCss();
+            card.layout();
+            container.layout();
+
+            Node tagsRow = tags.getParent();
+            double tagsBottom = tagsRow.getBoundsInParent().getMaxY();
+            double phoneTop = phone.getBoundsInParent().getMinY();
+            assertEquals(tagsBottom, phoneTop, 1.0);
+            return null;
+        });
+    }
+
+    @Test
     public void constructor_displaysStatusBadge() throws Exception {
         Person archived = new Person(ALICE.getName(), ALICE.getPhone(), ALICE.getEmail(), ALICE.getAddress(),
                 Status.ARCHIVED, ALICE.getTags());
@@ -139,6 +166,20 @@ public class PersonCardTest {
         Node value = card.lookup("#" + field);
         return value.localToScene(value.getBoundsInLocal()).getMinY()
                 - card.localToScene(card.getBoundsInLocal()).getMinY();
+    }
+
+    @Test
+    public void tags_resizeToZero_keepsLastUsableWrappingWidth() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            Region card = new PersonCard(ALICE, 1).getRoot();
+            FlowPane tags = (FlowPane) card.lookup("#tags");
+            tags.resize(200, 20);
+            assertEquals(200, tags.getPrefWrapLength(), 0.01);
+            tags.resize(0, 20);
+            assertEquals(200, tags.getPrefWrapLength(), 0.01,
+                    "A temporarily zero width must not replace the last usable wrapping width");
+            return null;
+        });
     }
 
     private void assertLabelText(Region card, String field, String expectedText) {

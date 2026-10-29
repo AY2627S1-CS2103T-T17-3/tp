@@ -99,4 +99,16 @@ public class TagTest {
         assertTrue(tags.isEmpty());
     }
 
+    @Test
+    public void compareTo_alphabeticalOrder() {
+        Tag exco = new Tag("exco");
+        Tag publicity = new Tag("publicity");
+        Tag volunteer = new Tag("volunteer");
+
+        assertTrue(exco.compareTo(publicity) < 0);
+        assertTrue(publicity.compareTo(exco) > 0);
+        assertEquals(0, exco.compareTo(new Tag("EXCO")));
+        assertTrue(publicity.compareTo(volunteer) < 0);
+    }
+
 }

@@ -85,6 +85,19 @@ public class TagRemoveCommandTest {
     }
 
     @Test
+    public void execute_multipleRemainingTags_ordersTagsAlphabeticallyInFeedback() throws Exception {
+        Person original = model.getFilteredPersonList().get(0);
+        Person person = new PersonBuilder(original).withoutName().withoutPhone().withoutAddress()
+                .withEmail("2@u.nus.edu").withTags("volunteer", "ay2627", "exco", "publicity").build();
+        model.setPerson(original, person);
+
+        CommandResult result = new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("publicity")).execute(model);
+
+        assertEquals("Tag removed: [publicity]; Email: 2@u.nus.edu; Tags: [ay2627][exco][volunteer]",
+                result.getFeedbackToUser());
+    }
+
+    @Test
     public void execute_existingTagWithDifferentCase_removesMatchingTag() {
         Person person = setTags(INDEX_FIRST_PERSON, "Publicity", "Exco");
         Person expectedPerson = new PersonBuilder(person).withTags("Exco").build();

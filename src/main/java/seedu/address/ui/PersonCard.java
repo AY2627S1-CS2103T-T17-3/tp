@@ -68,6 +68,11 @@ public class PersonCard extends UiPart<Region> {
         if (person.getStatus() == Status.ARCHIVED) {
             status.getStyleClass().add("archived");
         }
+        tags.widthProperty().addListener((obs, oldWidth, newWidth) -> {
+            if (newWidth.doubleValue() > 0) {
+                tags.setPrefWrapLength(newWidth.doubleValue());
+            }
+        });
         // Preserve natural tag widths when the first height calculation precedes the pane's initial sizing.
         DoubleBinding tagMaxWidth = Bindings.when(tags.widthProperty().greaterThan(0))
                 .then(tags.widthProperty()).otherwise(Double.MAX_VALUE);
