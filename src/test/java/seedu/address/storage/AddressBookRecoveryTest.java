@@ -26,6 +26,30 @@ public class AddressBookRecoveryTest {
     public Path temporaryFolder;
 
     @Test
+    public void loadAddressBook_unknownProperties_reportsAndProtectsRecoveredData() throws Exception {
+        Path file = temporaryFolder.resolve("members.json");
+        Files.writeString(file, """
+                {"version":2,"persons":[
+                  {"email":"alex@u.nus.edu","phoneNumber":"91234567","extra":true},
+                  {"email":"bob@u.nus.edu","phone":"87654321"}
+                ]}
+                """);
+        byte[] original = Files.readAllBytes(file);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(file);
+
+        AddressBookLoadResult result = storage.loadAddressBook();
+
+        assertEquals(AddressBookLoadResult.Status.PARTIAL, result.getStatus());
+        assertEquals(2, result.getAddressBook().getPersonList().size());
+        assertEquals(List.of("Data file: unrecognized property \"version\".",
+                "Record 1: unrecognized property \"phoneNumber\".",
+                "Record 1: unrecognized property \"extra\"."), result.getErrors());
+        assertFalse(storage.isSaveAllowed());
+        assertThrows(IOException.class, () -> storage.saveAddressBook(result.getAddressBook()));
+        assertArrayEquals(original, Files.readAllBytes(file));
+    }
+
+    @Test
     public void loadAddressBook_mixedRecords_recoversValidRecordsAndReportsOriginalPositions() throws Exception {
         Path file = temporaryFolder.resolve("members.json");
         Files.writeString(file, """

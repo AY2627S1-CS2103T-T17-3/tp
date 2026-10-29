@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -36,6 +37,8 @@ public class JsonAddressBookStorage {
 
     private static final Logger logger = LogsCenter.getLogger(JsonAddressBookStorage.class);
     private static final ObjectMapper treeMapper = new ObjectMapper();
+    private static final Set<String> ROOT_PROPERTIES = Set.of("persons");
+    private static final Set<String> PERSON_PROPERTIES = Set.of("name", "phone", "email", "address", "status", "tags");
 
     private Path filePath;
     private final AtomicFileWriter fileWriter;
@@ -109,7 +112,7 @@ public class JsonAddressBookStorage {
             if (root == null || !root.isObject() || !root.path("persons").isArray()) {
                 throw new IOException("The data file does not match the expected address-book JSON format.");
             }
-            result = recoverRecords(root.get("persons"));
+            result = recoverRecords(root);
         } catch (IOException | SecurityException e) {
             result = new AddressBookLoadResult(AddressBookLoadResult.Status.FAILURE,
                     new AddressBook(), List.of("Could not read data file: " + e.getMessage()));
@@ -122,9 +125,11 @@ public class JsonAddressBookStorage {
         return result;
     }
 
-    private AddressBookLoadResult recoverRecords(JsonNode records) {
+    private AddressBookLoadResult recoverRecords(JsonNode root) {
         AddressBook recovered = new AddressBook();
         List<String> errors = new ArrayList<>();
+        reportUnknownProperties(root, ROOT_PROPERTIES, "Data file", errors);
+        JsonNode records = root.get("persons");
         Map<String, Integer> originalRecords = new HashMap<>();
         for (int i = 0; i < records.size(); i++) {
             int recordNumber = i + 1;
@@ -133,6 +138,7 @@ public class JsonAddressBookStorage {
                 if (!record.isObject()) {
                     throw new IllegalValueException("Member record must be a JSON object.");
                 }
+                reportUnknownProperties(record, PERSON_PROPERTIES, "Record " + recordNumber, errors);
                 Person person = JsonUtil.fromJsonString(record.toString(), JsonAdaptedPerson.class).toModelType();
                 Integer existingRecord = originalRecords.get(person.getEmail().value);
                 if (existingRecord != null) {
@@ -149,6 +155,15 @@ public class JsonAddressBookStorage {
         AddressBookLoadResult.Status status = errors.isEmpty()
                 ? AddressBookLoadResult.Status.SUCCESS : AddressBookLoadResult.Status.PARTIAL;
         return new AddressBookLoadResult(status, recovered, errors);
+    }
+
+    private void reportUnknownProperties(JsonNode object, Set<String> knownProperties, String location,
+            List<String> errors) {
+        object.fieldNames().forEachRemaining(name -> {
+            if (!knownProperties.contains(name)) {
+                errors.add(location + ": unrecognized property \"" + name + "\".");
+            }
+        });
     }
 
     /** Returns whether this storage instance has avoided loading errors. */
