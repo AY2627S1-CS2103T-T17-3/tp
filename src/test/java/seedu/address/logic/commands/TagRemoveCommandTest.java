@@ -59,6 +59,16 @@ public class TagRemoveCommandTest {
     }
 
     @Test
+    public void execute_multipleTags_displaysTagsInOrder() throws Exception {
+        Person person = setTags(INDEX_FIRST_PERSON, "volunteer", "exco", "123", "publicity");
+        CommandResult result = new TagRemoveCommand(INDEX_FIRST_PERSON, new Tag("publicity")).execute(model);
+
+        assertTrue(result.getFeedbackToUser().endsWith("Tags: [123][exco][volunteer]"));
+        assertEquals(new PersonBuilder(person).withTags("volunteer", "exco", "123").build(),
+                model.getFilteredPersonList().get(0));
+    }
+
+    @Test
     public void execute_emailOnlyMember_omitsMissingDetailsAndEmptyTags() throws Exception {
         Person original = model.getFilteredPersonList().get(0);
         Person person = new PersonBuilder(original).withoutName().withoutPhone().withoutAddress()
