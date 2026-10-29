@@ -52,7 +52,7 @@ public class MainApp extends Application {
         logger.info("=============================[ Initializing AddressBook ]===========================");
         super.init();
 
-        Path applicationLocation = getApplicationLocation(MainApp.class.getProtectionDomain().getCodeSource());
+        Path applicationLocation = getApplicationLocation();
         JsonUserPrefsStorage userPrefsStorage = new JsonUserPrefsStorage(
                 resolveFilePath(applicationLocation, USER_PREFS_FILE_PATH));
         UserPrefs userPrefs = initPrefs(userPrefsStorage);
@@ -65,6 +65,11 @@ public class MainApp extends Application {
         logic = new LogicManager(model, storage);
 
         ui = new UiManager(logic, storage.getAddressBookFilePath(), dataLoadingWarning);
+    }
+
+    /** Returns the location of this application's code source, if available. */
+    protected Path getApplicationLocation() throws URISyntaxException {
+        return getApplicationLocation(MainApp.class.getProtectionDomain().getCodeSource());
     }
 
     /** Returns the code source path, or null when it is unavailable. */

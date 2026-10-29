@@ -3,6 +3,7 @@ package seedu.address;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,9 +33,30 @@ public class MainAppTest {
     public Path temporaryFolder;
 
     @Test
+    public void init_packagedJar_usesJarDirectoryForBothFiles() throws Exception {
+        Path appFolder = Files.createDirectory(temporaryFolder.resolve("app folder"));
+        Path jarFile = Files.createFile(appFolder.resolve("NUSocietyDesk.jar"));
+        MainApp app = new MainApp() {
+            @Override
+            protected Path getApplicationLocation() {
+                return jarFile;
+            }
+        };
+
+        app.init();
+
+        assertEquals(appFolder.resolve("preferences.json"), app.storage.getUserPrefsFilePath());
+        assertEquals(appFolder.resolve(Path.of("data", "nusocietydesk.json")),
+                app.storage.getAddressBookFilePath());
+        assertTrue(Files.isRegularFile(appFolder.resolve("preferences.json")));
+        app.stop();
+    }
+
+    @Test
     public void getApplicationLocation_availableAndMissingCodeSource() throws Exception {
         Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
 
+        assertNotNull(new MainApp().getApplicationLocation());
         assertEquals(jarFile, MainApp.getApplicationLocation(
                 new CodeSource(jarFile.toUri().toURL(), (Certificate[]) null)));
         assertNull(MainApp.getApplicationLocation(null));
