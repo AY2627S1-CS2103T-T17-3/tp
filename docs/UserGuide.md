@@ -855,10 +855,6 @@ Versions that require complete contact details reject the entire data file if an
 They may open an empty directory and overwrite the original file after a successful command, including `list`.
 Back up the file before switching versions; incomplete records are not compatible with those older versions.
 
-### Archiving data files `[coming in v2.0]`
-
-_Details coming soon ..._
-
 --------------------------------------------------------------------------------------------------------------------
 
 ## FAQ
