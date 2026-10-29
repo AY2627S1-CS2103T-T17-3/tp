@@ -177,7 +177,8 @@ storage flow; no storage schema or UI changes are required.
 
 The following sequence shows a successful `tag 1 t/treasurer` command. `untag` follows the same replacement
 pattern, but rejects a tag that the member does not have. Saving and rollback are detailed in
-[saving member data safely](#saving-member-data-safely).
+[saving member data safely](#saving-member-data-safely). The referenced `Persist changed directory` frame
+follows a snapshot taken before the tag command executes.
 
 <puml src="diagrams/TagSequenceDiagram.puml" alt="Sequence of a tag command updating a member" />
 
@@ -1655,7 +1656,8 @@ choosing **Delete all members** in its confirmation dialog.
       Expected: The member has `exco`, `publicity`, and `volunteer`; contact details and other members remain unchanged.
 
    1. Test case: `tag INDEX t/VOLUNTEER`<br>
-      Expected: Success with the same three tags and no duplicate.
+      Expected: An error indicates that the member already has the tag. The member's tags and the current
+      search filter remain unchanged.
 
    1. Test case: `untag INDEX t/PUBLICITY`<br>
       Expected: Only `exco` and `volunteer` remain.
