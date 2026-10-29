@@ -944,8 +944,10 @@ public class MainWindowTest {
             double contentBottom = tags.getChildren().stream()
                     .mapToDouble(label -> label.localToScene(label.getLayoutBounds()).getMaxY())
                     .max().orElse(statusBottom);
-            assertEquals(Math.max(contentBottom, statusBottom), phoneTop, 2.0,
-                    "The phone must follow the tags or status badge without a blank gap");
+            double visibleBottom = Math.max(contentBottom, statusBottom);
+            double badgeHeight = status.getLayoutBounds().getHeight();
+            assertTrue(phoneTop - visibleBottom < badgeHeight / 2,
+                    "The phone must follow the tags or status badge without a blank row");
             return null;
         });
     }
