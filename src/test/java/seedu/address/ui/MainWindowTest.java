@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javafx.event.ActionEvent;
+import javafx.geometry.Bounds;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -20,6 +22,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
@@ -576,10 +579,26 @@ public class MainWindowTest {
         try {
             JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
                 ListView<?> list = (ListView<?>) stage.getScene().lookup("#personListView");
-                list.scrollTo(17);
+                ScrollBar verticalBar = list.lookupAll(".scroll-bar").stream()
+                        .filter(node -> node instanceof ScrollBar bar && bar.getOrientation() == Orientation.VERTICAL)
+                        .map(node -> (ScrollBar) node).findFirst().orElseThrow();
+                verticalBar.setValue(verticalBar.getMax());
                 return null;
             });
-            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> null);
+            JavaFxTestUtil.runAfterLayoutPulse(stage.getScene(), () -> {
+                ListView<?> list = (ListView<?>) stage.getScene().lookup("#personListView");
+                ListCell<?> lastCell = list.lookupAll(".list-cell").stream()
+                        .filter(node -> node instanceof ListCell<?> cell && cell.isVisible()
+                                && !cell.isEmpty() && cell.getIndex() == 17)
+                        .map(node -> (ListCell<?>) node).findFirst().orElse(null);
+                assertNotNull(lastCell, "The last member card must be rendered before submitting tag commands");
+                Node viewport = list.lookup(".clipped-container");
+                Bounds viewportBounds = viewport.localToScene(viewport.getLayoutBounds());
+                Bounds cellBounds = lastCell.localToScene(lastCell.getLayoutBounds());
+                assertTrue(cellBounds.intersects(viewportBounds),
+                        "The last member card must be inside the viewport before submitting tag commands");
+                return null;
+            });
             for (int count = 1; count <= 8; count++) {
                 String tag = "a".repeat(29) + (char) ('a' + count);
                 submitTagCommandAndAssertLayout(stage, "tag 18 t/" + tag, "Tag added: [" + tag + "]", count);
