@@ -947,7 +947,8 @@ public class MainWindowTest {
             double visibleBottom = Math.max(contentBottom, statusBottom);
             double badgeHeight = status.getLayoutBounds().getHeight();
             assertTrue(phoneTop - visibleBottom < badgeHeight / 2,
-                    "The phone must follow the tags or status badge without a blank row");
+                    "Unexpected gap " + (phoneTop - visibleBottom) + " with badge height " + badgeHeight
+                            + " and " + tagCount + " tags");
             return null;
         });
     }

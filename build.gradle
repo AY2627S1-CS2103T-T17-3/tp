@@ -31,6 +31,7 @@ checkstyle {
 test {
     useJUnitPlatform()
     enableAssertions = true
+    testLogging.exceptionFormat = 'full'
     finalizedBy jacocoTestReport
 }
 
