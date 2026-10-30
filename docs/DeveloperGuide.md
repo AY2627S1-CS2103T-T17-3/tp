@@ -13,7 +13,16 @@
 
 ## **Acknowledgements**
 
-* _{List the sources of reused or adapted ideas, code, documentation, and third-party libraries here, with links to the originals.}_
+NUSocietyDesk acknowledges the following open-source projects:
+
+* [SE-EDU's AddressBook-Level3 (AB3)](https://github.com/se-edu/addressbook-level3), from which our codebase,
+  architecture and documentation are adapted.
+* [JavaFX](https://openjfx.io/), [Jackson](https://github.com/FasterXML/jackson) and
+  [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) for the graphical interface,
+  JSON processing and CSV importing.
+* [JUnit 5](https://docs.junit.org/5.14.4/overview.html) for automated testing.
+* [MarkBind](https://markbind.org/) and [PlantUML](https://plantuml.com/) for generating the documentation
+  website and UML diagrams.
 
 --------------------------------------------------------------------------------------------------------------------
 
