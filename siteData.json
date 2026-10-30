@@ -85,6 +85,7 @@
         "combining-search-conditions": "Combining search conditions",
         "rejecting-blank-search-values": "Rejecting blank search values",
         "finding-members-by-name": "Finding members by name",
+        "finding-members-with-punctuation": "Finding members with punctuation",
         "finding-members-by-phone-number": "Finding members by phone number",
         "finding-members-by-tag": "Finding members by tag",
         "finding-members-by-email": "Finding members by email",
