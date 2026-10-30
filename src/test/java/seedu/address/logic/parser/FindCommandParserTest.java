@@ -25,23 +25,59 @@ public class FindCommandParserTest {
     private FindCommandParser parser = new FindCommandParser();
 
     @Test
-    public void parse_unsupportedPrefix_throwsParseException() {
+    public void parse_unsupportedPrefixInPrefixedSearch_throwsParseException() {
         for (String prefix : List.of("G/", "F/", "H/", "g/", "f/", "h/", "a/", "name/", "tag/", "1/", "?/")) {
             String expectedMessage = "Unsupported search prefix: " + prefix + ". Use n/, p/, e/ or t/.";
-            assertParseFailure(parser, prefix, expectedMessage);
-            assertParseFailure(parser, prefix + "value", expectedMessage);
-            assertParseFailure(parser, " \t\n " + prefix + "value \t\n ", expectedMessage);
+            assertParseFailure(parser, prefix + " n/Alice", expectedMessage);
+            assertParseFailure(parser, prefix + "value n/Alice", expectedMessage);
+            assertParseFailure(parser, "n/Alice \t\n " + prefix + "value \t\n ", expectedMessage);
         }
     }
 
     @Test
     public void parse_unsupportedPrefixAfterOtherArguments_throwsParseException() {
         String expectedMessage = "Unsupported search prefix: G/. Use n/, p/, e/ or t/.";
-        for (String args : List.of("Alice G/", "n/Alice G/value", "p/9123 G/value", "e/alice G/value",
-                "t/publicity G/value", "G/value n/Alice", "G/ F/ H/")) {
+        for (String args : List.of("n/Alice G/value", "p/9123 G/value", "e/alice G/value",
+                "t/publicity G/value", "G/value n/Alice")) {
             for (String separator : List.of(" ", "\t", "\n")) {
                 assertParseFailure(parser, args.replace(" ", separator), expectedMessage);
             }
+        }
+    }
+
+    @Test
+    public void parse_unprefixedSlashKeywords_returnsNameSearch() {
+        for (String keyword : List.of("S/O", "D/O", "s/o", "d/o", "AN/NA", "G/value", "name/Alice",
+                "a/Alex", "1/", "?/", "/Alex/")) {
+            FindCommand expected = new FindCommand(new NameContainsKeywordsPredicate(List.of(keyword)));
+            assertParseSuccess(parser, keyword, expected);
+            assertParseSuccess(parser, " \t\n " + keyword + " \t\n ", expected);
+        }
+        for (String separator : List.of(" ", "  ", "\t", "\n", "\r\n")) {
+            assertParseSuccess(parser, "S/O" + separator + "D/O" + separator + "AN/NA",
+                    new FindCommand(new NameContainsKeywordsPredicate(List.of("S/O", "D/O", "AN/NA"))));
+            assertParseSuccess(parser, "Alice" + separator + "G/",
+                    new FindCommand(new NameContainsKeywordsPredicate(List.of("Alice", "G/"))));
+        }
+        assertParseSuccess(parser, "G/ F/ H/",
+                new FindCommand(new NameContainsKeywordsPredicate(List.of("G/", "F/", "H/"))));
+    }
+
+    @Test
+    public void parse_nameValuesResemblingPrefixes_returnsLiteralNameSearch() {
+        for (String keyword : List.of("n/Alice", "N/Alice", "p/9123", "P/9123", "e/Alex", "E/Alex",
+                "t/exco", "T/exco", "S/O", "D/O")) {
+            assertParseSuccess(parser, "n/" + keyword,
+                    new FindCommand(new NameContainsKeywordsPredicate(List.of(keyword))));
+        }
+    }
+
+    @Test
+    public void parse_prefixTextInsideUnprefixedNameToken_returnsLiteralNameSearch() {
+        for (String keyword : List.of("(n/Alice)", "/n/Alice/", "G/value,n/Alice", "n-A/n/Alice",
+                "Tan@n/Alice", "N-A/N/Alice")) {
+            assertParseSuccess(parser, keyword,
+                    new FindCommand(new NameContainsKeywordsPredicate(List.of(keyword))));
         }
     }
 

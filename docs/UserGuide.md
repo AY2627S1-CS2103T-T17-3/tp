@@ -596,6 +596,16 @@ Formats:
 * In an unprefixed search, keyword order does not matter: `find Hans Bo` and `find Bo Hans` return the same results.
 * Unprefixed searches and `n/` searches consider only names.
 * Only full words match; for example, `Han` does not match `Hans`.
+* Commas, parentheses, periods and `@` separate name words, even without spaces. For example, `Alex`
+  matches `Tan,Alex`, `Tan(Alex)` and `Tan@Alex`; `J` matches `J.P.Tan`.
+* Internal hyphens, straight apostrophes and slashes stay within a word. Use `Anne-Marie`, `O'Connor`
+  and `S/O` to match those complete words; `Anne`, `Connor` and `S` do not match their parts.
+  Complete compounds also match next to punctuation: `O'Connor` matches `Tan(O'Connor)`.
+* Leading or trailing punctuation is not required when searching for a complete word. For example,
+  `Ali` matches `'Ali`, and `Alex` matches `Alex-`. Punctuation never joins words: `TanAlex` does not match `Tan,Alex`.
+* Keywords containing other punctuation match a complete, literal whitespace-separated word. For example,
+  `(Alex)` matches `Tan (Alex)` but not `Tan(Alex)`; `tan,` matches `Tan, Alex`.
+  A punctuation-only keyword such as `@` matches only a standalone `@` word, as in `Tan @ Alex`; it is not a wildcard.
 * Unprefixed searches return members matching at least one keyword (an `OR` search); for example, `find Hans Bo` returns
   `Hans Gruber` and `Bo Yang`.
 
@@ -652,12 +662,15 @@ Formats:
   are rejected with: "Search prefixes must be lowercase. Use n/, p/, e/ or t/."
   This rule applies to prefixes; uppercase values such as `find n/ALICE`, `find e/ALICE` and `find t/PUBLICITY`
   remain valid.
-* Other field prefixes are unsupported. For example, `find G/`, `find g/alice`, `find name/Alice`
-  and `find n/Alice G/value` are rejected. For `G/`, the error is:
-  "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
-  At the start of the search or after whitespace, a token beginning with a nonempty label followed by `/`
-  is treated as a field selection. Slash-containing values attached to a supported prefix, such as `find e/G/`,
-  remain literal search values.
+* A supported prefix, or its uppercase equivalent, at the start of an argument or after whitespace selects
+  prefixed syntax. This also applies when it appears after other text, so `find Alice n/Bob` is rejected.
+* When no supported prefix is present, all whitespace-separated arguments are literal name keywords.
+  Slash-containing keywords such as `find S/O`, `find D/O`, `find AN/NA` and `find G/value` are valid name searches.
+* In prefixed searches, other field prefixes remain unsupported. For example, `find n/Alice G/value`
+  and `find G/value n/Alice` are rejected with "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
+  Slashes inside attached values, such as `find e/G/` and `find n/AN/NA`, remain literal.
+* To search for a literal name word that resembles a supported prefix, attach it to `n/`.
+  For example, `find n/n/Alice` searches names for `n/Alice`; `find n/N/Alice` returns the same matches.
 * Use each prefix only once. Commands such as `find n/Alice n/Bob`, `find p/9123 p/4567`,
   `find e/alice e/bob` and `find t/publicity t/exco` are rejected.
 * Provide a nonblank search value. Commands such as `find`, `find n/`, `find p/`, `find e/` and `find t/` are rejected.
@@ -675,6 +688,7 @@ Examples:
 
 * `find John` returns members named `john` and `John Doe`.
 * `find n/alex` returns members whose names contain the whole word `alex`, ignoring case.
+* `find S/O` returns members whose names contain the complete word `S/O`, including `Ravi S/O Kumar`.
 * `find n/alex david` is rejected; use `find alex david` to match either name keyword.
 * `find p/9103` returns members whose phone numbers contain `9103`, including David Li in the sample data.
 * `find p/91031282` returns members whose phone numbers contain the full number `91031282`.
@@ -703,6 +717,8 @@ findany PREFIX/VALUE [PREFIX/VALUE]...
 * Repeat a prefix to add another condition: use `n/John n/Tan`, not `n/John Tan`.
 * Every condition must be valid. For example, `findany n/Alice p/abc` is rejected even if Alice exists.
   Rejected searches preserve the previous results, member records and saved data.
+* Name conditions use the same punctuation and compound-word rules as `find`. Every condition still needs
+  a prefix: use `findall n/S/O`, not `findall S/O`.
 
 | Example | Matches |
 | --- | --- |

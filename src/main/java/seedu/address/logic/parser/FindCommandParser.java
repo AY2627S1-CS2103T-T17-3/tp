@@ -33,6 +33,15 @@ public class FindCommandParser implements Parser<FindCommand> {
      */
     public FindCommand parse(String args) throws ParseException {
         String trimmedArgs = args.trim();
+        // trim() leaves Unicode whitespace such as EM SPACE intact.
+        if (trimmedArgs.isBlank()) {
+            throw new ParseException(
+                    String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
+        }
+        if (!SearchParserUtil.containsSearchPrefix(trimmedArgs)) {
+            return new FindCommand(new NameContainsKeywordsPredicate(List.of(trimmedArgs.split("\\s+"))));
+        }
+
         ArgumentMultimap argMultimap = SearchParserUtil.tokenize(args);
         argMultimap.verifyNoDuplicatePrefixesFor(SEARCH_PREFIXES.toArray(Prefix[]::new));
 
@@ -43,28 +52,20 @@ public class FindCommandParser implements Parser<FindCommand> {
             throw new ParseException(FindCommand.MESSAGE_MULTIPLE_FIELDS);
         }
 
-        if (!searchPrefixes.isEmpty()) {
-            if (!argMultimap.getPreamble().isEmpty()) {
-                throw new ParseException(
-                        String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
-            }
-            Prefix searchPrefix = searchPrefixes.getFirst();
-            trimmedArgs = argMultimap.getValue(searchPrefix).get();
+        if (!argMultimap.getPreamble().isEmpty()) {
+            throw new ParseException(
+                    String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
         }
+        Prefix searchPrefix = searchPrefixes.getFirst();
+        String value = argMultimap.getValue(searchPrefix).get();
 
-        // trim() leaves Unicode whitespace such as EM SPACE intact.
-        if (trimmedArgs.isBlank()) {
+        if (value.isBlank()) {
             throw new ParseException(
                     String.format(MESSAGE_INVALID_COMMAND_FORMAT, FindCommand.MESSAGE_USAGE));
         }
 
-        if (!searchPrefixes.isEmpty()) {
-            Prefix prefix = searchPrefixes.getFirst();
-            return new FindCommand(SearchParserUtil.parseCondition(prefix, trimmedArgs,
-                    MULTIPLE_VALUE_MESSAGES.get(prefix), FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING));
-        }
-
-        return new FindCommand(new NameContainsKeywordsPredicate(List.of(trimmedArgs.split("\\s+"))));
+        return new FindCommand(SearchParserUtil.parseCondition(searchPrefix, value,
+                MULTIPLE_VALUE_MESSAGES.get(searchPrefix), FindCommand.MESSAGE_INVALID_PHONE_SUBSTRING));
     }
 
 }
