@@ -297,6 +297,30 @@ save-and-rollback flow. The status view is retained. Even an empty directory req
 and archived members, save-failure restoration, and startup recovery protection. `MainWindowTest` exercises the
 actual dialog, safe defaults, keyboard cancellation, window closure, and confirmed clearing.
 
+### Preventing duplicate records when adding members
+
+`Email` stores valid NUS email addresses in lowercase using `Locale.ROOT`, so `Alex@U.NUS.EDU` and
+`alex@u.nus.edu` identify the same member. Names and phone numbers do not determine identity.
+After parsing and validation, `AddCommand.execute` calls `Model.hasPerson` to check the candidate against the
+complete directory, including archived members and members hidden by the current search or status view.
+
+The activity diagram below gives a high-level overview of the duplicate-email decision when adding a member.
+It assumes the supplied details are valid and the application permits member changes. A duplicate email leads
+to rejection, while a unique email allows the member to be added. Parsing, validation and persistence are
+outside the diagram's scope.
+
+<puml src="diagrams/AddMemberActivityDiagram.puml" alt="Activity diagram with duplicate and unique email guards, rejection and addition paths, and a merge before the activity ends" />
+
+If the email already exists, the command locates the existing member and throws a `CommandException` with
+`Messages.formatDuplicatePerson`. The error identifies the existing member by email and, when available, name.
+No records or filters change, no save is attempted, and the records are never merged or overwritten.
+For example, adding `e/ALEX@U.NUS.EDU` is rejected when `alex@u.nus.edu` already belongs to an archived member.
+
+Otherwise, `Model.addPerson` adds the active member and clears the search while retaining the selected status
+view. `AddCommand` returns its result to `LogicManager`, which follows the shared
+[save/recovery flow](#saving-member-data-safely) before returning success to the UI. A save failure restores
+the previous directory and search filter. `AddCommandTest` covers the add and duplicate-error branches.
+
 ### Recalling submitted commands
 
 #### UI ownership and history state
@@ -306,12 +330,8 @@ plain Up/Down events, including boundary no-ops, before JavaFX moves the caret. 
 keys are not intercepted. The existing `CommandExecutor` remains the only path to execution; navigation
 never invokes it, updates the result display, or accesses `Logic`, `Model` or `Storage`.
 
-The partial class diagram shows the owned history helper, the saved input snapshot, and the separate execution
-callback. `CommandExecutor` is supplied by `MainWindow` as `this::executeCommand`; it is only called on submission.
+`CommandExecutor` is supplied by `MainWindow` as `this::executeCommand`; it is only called on submission.
 `InputState` is a nested immutable record used for navigation inputs and results as well as the saved draft.
-The diagram omits JavaFX controls, inherited UI members, and private helper methods.
-
-<puml src="diagrams/CommandHistoryClassDiagram.puml" width="700" alt="CommandBox owns one CommandHistory and separately references a CommandExecutor; history can retain one draft InputState" />
 
 The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `commandsBeforeCursor` holds older entries
 and `commandsAfterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
