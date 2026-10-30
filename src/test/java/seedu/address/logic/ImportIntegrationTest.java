@@ -100,6 +100,33 @@ public class ImportIntegrationTest {
     }
 
     @Test
+    public void execute_punctuatedNames_preservesSpellingAndSourceAfterReload() throws Exception {
+        Path file = writeCsv(HEADER + """
+                Anne-Marie Tan,,hyphen@u.nus.edu,,,active
+                O'Connor Tan,,apostrophe@u.nus.edu,,,active
+                J. P. Tan,,initials@u.nus.edu,,,active
+                Ravi S/O Kumar,,son@u.nus.edu,,,active
+                Devi D/O Kumar,,daughter@u.nus.edu,,,active
+                "Tan, Alex",,comma@u.nus.edu,,,active
+                Tan (Alex),,parentheses@u.nus.edu,,,active
+                Tan @ Alex,,alias@u.nus.edu,,,active
+                """);
+        byte[] originalSource = Files.readAllBytes(file);
+        Person existing = model.getAddressBook().getPersonList().getFirst();
+
+        CommandResult result = logic.execute(importCommand(file));
+
+        assertEquals(String.format(ImportCommand.MESSAGE_SUCCESS, 8, 0, file), result.getFeedbackToUser());
+        ReadOnlyAddressBook reloaded = new JsonAddressBookStorage(dataFile).readAddressBook().orElseThrow();
+        assertEquals(model.getAddressBook(), reloaded);
+        assertEquals(existing, reloaded.getPersonList().getFirst());
+        assertEquals(List.of("Existing Member", "Anne-Marie Tan", "O'Connor Tan", "J. P. Tan", "Ravi S/O Kumar",
+                "Devi D/O Kumar", "Tan, Alex", "Tan (Alex)", "Tan @ Alex"), reloaded.getPersonList().stream()
+                .map(person -> person.getName().orElseThrow().fullName).toList());
+        assertArrayEquals(originalSource, Files.readAllBytes(file));
+    }
+
+    @Test
     public void execute_activeImportInArchivedView_reportsHiddenMemberAndPersistsImport() throws Exception {
         logic.execute("view archived");
         Path file = writeCsv(HEADER + FIRST_ROW);

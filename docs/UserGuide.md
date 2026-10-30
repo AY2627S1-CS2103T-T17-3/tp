@@ -210,7 +210,7 @@ Supplied values must still be valid:
 
 | Field | Accepted values |
 | --- | --- |
-| Name | 1 to 127 characters; alphanumeric characters and spaces; must not be blank. |
+| Name | 1 to 127 characters; letters `A-Z`/`a-z`, digits, spaces, and punctuation `, ( ) / . @ - '`; must contain at least one letter or digit. |
 | Phone | 3 to 15 digits; no spaces or other characters within the number. |
 | Address | Nonblank text, up to 200 characters, including spaces and punctuation. |
 | Each tag | 1 to 30 alphanumeric characters. |
@@ -219,6 +219,11 @@ The phone maximum follows the E.164 international numbering limit, and the name 
 under-128-character full-name requirement. The address limit accommodates Singapore residential addresses,
 including campus accommodation, with formatting space; the tag limit keeps member categories concise.
 See the [length-limit rationale](DeveloperGuide.md#bounding-contact-and-tag-lengths) for sources and calculations.
+
+Names such as `Anne-Marie Tan`, `O'Connor Tan`, `J. P. Tan`, `Ravi S/O Kumar`, `Devi D/O Kumar`,
+`Tan, Alex`, `Tan (Alex)`, and `Tan @ Alex` are accepted with their spelling preserved. Punctuation-only
+values are rejected. Use a straight apostrophe (`'`); curly apostrophes, accented letters, and non-Latin scripts
+are outside the supported character set. These rules also apply when editing or importing supplied names.
 
 The limits apply after ordinary surrounding command whitespace is trimmed. Overlong values are rejected with
 the field's constraints message; values are never shortened automatically. Correct the retained command and
@@ -361,6 +366,8 @@ Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
 Copy or download this file and replace the example members with your own data. Keep the lowercase header row
 unchanged and include all six columns in every member record, even when optional cells are blank.
 Surrounding whitespace is removed from member fields before validation.
+
+Quote a name containing a comma, for example `"Tan, Alex"`, so it remains one CSV cell.
 
 | Column | Accepted values |
 | --- | --- |

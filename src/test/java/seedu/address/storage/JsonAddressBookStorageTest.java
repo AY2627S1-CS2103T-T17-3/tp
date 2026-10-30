@@ -81,6 +81,37 @@ public class JsonAddressBookStorageTest {
     }
 
     @Test
+    public void readAndSaveAddressBook_punctuatedNames_loadsAllRecordsWithoutRecovery() throws Exception {
+        Path filePath = testFolder.resolve("PunctuatedNames.json");
+        String originalJson = """
+                {"persons":[
+                  {"name":"Anne-Marie Tan","email":"hyphen@u.nus.edu"},
+                  {"name":"O'Connor Tan","email":"apostrophe@u.nus.edu"},
+                  {"name":"J. P. Tan","email":"initials@u.nus.edu"},
+                  {"name":"Ravi S/O Kumar","email":"son@u.nus.edu"},
+                  {"name":"Devi D/O Kumar","email":"daughter@u.nus.edu"},
+                  {"name":"Tan, Alex","email":"comma@u.nus.edu"},
+                  {"name":"Tan (Alex)","email":"parentheses@u.nus.edu"},
+                  {"name":"Tan @ Alex","email":"alias@u.nus.edu"}
+                ]}
+                """;
+        Files.writeString(filePath, originalJson);
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
+
+        AddressBookLoadResult result = storage.loadAddressBook();
+
+        assertEquals(AddressBookLoadResult.Status.SUCCESS, result.getStatus());
+        assertTrue(result.getErrors().isEmpty());
+        assertTrue(storage.isSaveAllowed());
+        assertEquals(originalJson, Files.readString(filePath));
+        assertEquals(List.of("Anne-Marie Tan", "O'Connor Tan", "J. P. Tan", "Ravi S/O Kumar", "Devi D/O Kumar",
+                "Tan, Alex", "Tan (Alex)", "Tan @ Alex"), result.getAddressBook().getPersonList().stream()
+                .map(person -> person.getName().orElseThrow().fullName).toList());
+        storage.saveAddressBook(result.getAddressBook());
+        assertEquals(result.getAddressBook(), new JsonAddressBookStorage(filePath).readAddressBook().orElseThrow());
+    }
+
+    @Test
     public void readAddressBook_blankSuppliedFields_rejectsEntireFileWithoutRewriting() throws Exception {
         Path filePath = testFolder.resolve("BlankContact.json");
         JsonAddressBookStorage storage = new JsonAddressBookStorage(filePath);
