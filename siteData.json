@@ -59,6 +59,7 @@
         "recording-a-member-with-incomplete-contact-details": "Recording a member with incomplete contact details",
         "rejecting-unicode-blank-addresses": "Rejecting Unicode blank addresses",
         "bounding-contact-and-tag-lengths": "Bounding contact and tag lengths",
+        "supporting-punctuation-in-member-names": "Supporting punctuation in member names",
         "validating-email-length-safely": "Validating email length safely",
         "finding-members-by-contact-details-or-tag": "Finding members by contact details or tag",
         "importing-member-directories-from-csv": "Importing member directories from CSV",
@@ -94,6 +95,7 @@
         "reading-long-contact-details-in-a-narrow-member-list": "Reading long contact details in a narrow member list",
         "adding-tags-across-wrapped-rows": "Adding tags across wrapped rows",
         "contact-and-tag-length-validation": "Contact and tag length validation",
+        "name-punctuation": "Name punctuation",
         "email-domain-validation": "Email domain validation",
         "email-local-part-length-validation": "Email local-part length validation",
         "email-identity": "Email identity"
