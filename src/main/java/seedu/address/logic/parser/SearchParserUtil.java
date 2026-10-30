@@ -33,6 +33,20 @@ final class SearchParserUtil {
     }
 
     /**
+     * Returns whether an argument-boundary prefix selects a supported search field, regardless of case.
+     */
+    static boolean containsSearchPrefix(String args) {
+        Matcher matcher = SEARCH_PREFIX.matcher(args.trim());
+        while (matcher.find()) {
+            Prefix prefix = new Prefix(matcher.group(1).toLowerCase(Locale.ROOT));
+            if (SEARCH_PREFIXES.contains(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Validates search prefixes and tokenizes arguments, treating spaces, tabs and line breaks consistently.
      *
      * @throws ParseException if an argument-boundary prefix is uppercase or unsupported.

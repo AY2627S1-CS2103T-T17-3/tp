@@ -54,6 +54,11 @@ public class HelpCommand extends Command {
               find p/PHONE_SUBSTRING
               find e/EMAIL_SUBSTRING
               find t/TAG
+            Names ignore case: Alex matches Tan(Alex); O'Connor matches Tan(O'Connor).
+            Internal hyphens, apostrophes and slashes stay in the same word: Connor does not match O'Connor.
+            Other punctuated keywords, such as (Alex) and @, match literal space-separated words.
+            Slash words such as S/O and G/value work without n/. Use n/n/Alice for the literal name word n/Alice.
+            These name rules also apply to n/ conditions in findall and findany.
             Example: find e/alex
 
             findall - Find members matching every supplied search condition.
