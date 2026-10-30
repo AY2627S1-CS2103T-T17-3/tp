@@ -12,14 +12,14 @@ public class Name {
     public static final int MAX_LENGTH = 127;
 
     public static final String MESSAGE_CONSTRAINTS =
-            "Names should only contain alphanumeric characters and spaces, should not be blank, "
-            + "and should be at most " + MAX_LENGTH + " characters long";
+            "Names may contain letters A-Z/a-z, digits, spaces and , ( ) / . @ - ' only.\n"
+            + "Names must contain at least one letter or digit and be at most " + MAX_LENGTH + " characters long";
 
     /*
-     * The first character of the name must not be a whitespace,
-     * otherwise " " (a blank string) becomes a valid input.
+     * Allow the punctuation used in local names, while requiring at least one letter or digit.
+     * Leading spaces remain invalid; command parsing and CSV import trim surrounding whitespace.
      */
-    public static final String VALIDATION_REGEX = "[\\p{Alnum}][\\p{Alnum} ]*";
+    public static final String VALIDATION_REGEX = "(?! )(?=.*\\p{Alnum})[\\p{Alnum} ,()/.'@-]+";
 
     public final String fullName;
 

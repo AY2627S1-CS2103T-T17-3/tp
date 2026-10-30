@@ -530,8 +530,9 @@ import integration tests cover absent-address persistence; `AddressBookRecoveryT
 
 `Name`, `Phone`, `Address`, and `Tag` each define a `MAX_LENGTH` constant and enforce it in their existing
 `isValid...` method before matching a regular expression. Constructors reuse these validators.
-The existing character restrictions, optional contact fields, address blank classification, and lowercase tag
-identity remain unchanged. `Phone.VALIDATION_REGEX` also expresses its 3-to-15-digit range.
+The name character rules are described below. Optional contact fields, address blank classification, and
+lowercase tag identity are independent of the length limits. `Phone.VALIDATION_REGEX` also expresses its
+3-to-15-digit range.
 
 | Field | Inclusive length range | Basis for the maximum |
 | --- | --- | --- |
@@ -541,8 +542,8 @@ identity remain unchanged. `Phone.VALIDATION_REGEX` also expresses its 3-to-15-d
 | Each tag | 1 to 30 | An application policy for concise member categories; `internationalstudentambassadors` fits at exactly 30 characters. |
 
 The name maximum follows the [NUS Canvas name data standard](https://nus.atlassian.net/wiki/spaces/canvasinstructor/pages/270172201),
-which says a full name must be less than 128 characters. We adopt its length bound; this change does not expand
-the existing name character rules. This is a local product choice, not a universal maximum for human names.
+which says a full name must be less than 128 characters. We adopt its length bound. This is a local product
+choice, not a universal maximum for human names.
 
 The phone upper bound follows [ITU-T Recommendation E.164](https://www.itu.int/rec/T-REC-E.164/en).
 The app continues accepting digits only and does not validate country-code allocation, number ownership, or
@@ -618,6 +619,34 @@ argument whitespace. `FieldLengthValidationIntegrationTest` covers command rejec
 changes, no save attempts, successful boundary persistence and edits, and independent search rules.
 CSV and JSON tests cover shared limits and protected recovery; JavaFX tests cover command feedback, retry,
 and narrow-card layout with maximum-length values and full-text tooltips.
+
+### Supporting punctuation in member names
+
+`Name` accepts letters `A-Z`/`a-z`, digits, ordinary spaces, and `, ( ) / . @ - '`. It requires at least one
+letter or digit, rejects leading spaces and unsupported characters (including internal tabs and line breaks),
+and counts spaces and punctuation towards the 127-character limit. Command parsing and CSV import retain
+their existing surrounding-whitespace trimming; JSON loading validates the stored value as supplied.
+Accepted names retain their spelling, case, punctuation, and internal spaces.
+
+The [NUS Office of Admissions name-format guide](https://www.dbs.nus.edu.sg/wp-content/uploads/sites/7/2025/06/nameformatexplanationguide.pdf)
+uses names containing `S/O` and `D/O`, providing direct evidence that a slash is meaningful in NUS member names.
+The [Myinfo name-data guidance](https://partnersupport.singpass.gov.sg/hc/en-sg/articles/32733563138585-What-are-the-special-characters-allowed-in-Myinfo-Name-data-item)
+lists spaces and the complete punctuation set above. Together these sources support accepting ordinary local
+name formats instead of requiring secretaries to alter their spelling. We adopt Myinfo's punctuation set;
+we retain the application's existing digit acceptance for compatibility, although Myinfo disallows digits.
+These are directory input rules, not a claim of complete NUS or Myinfo compliance or universal name support.
+Curly apostrophes, accented letters, and non-Latin scripts require a separate product-scope decision.
+
+Add and edit use `ParserUtil.parseName`, CSV import constructs `Name`, and JSON loading uses
+`Name.isValidName` and the constructor, so all entry paths share the same rules. Name searches continue to
+match whole whitespace-delimited words ignoring case; punctuation remains part of the word. For example,
+`find n/O'Connor` matches `O'Connor Tan`, while `find n/Connor` does not. Use a prefixed search such as
+`find n/S/O` for a patronymic token so it is interpreted as a name keyword.
+
+`NameTest` covers the supported punctuation, rejected characters and length boundaries. `ParserUtilTest`,
+`NameValidationIntegrationTest`, `ImportIntegrationTest`, and `JsonAddressBookStorageTest` verify trimming,
+add/edit, searches, rejected-command state preservation, quoted CSV commas, persistence, and successful
+JSON loading without protected recovery. `PersonCardTest` verifies exact name labels and tooltip text.
 
 ### Validating email length safely
 
@@ -1822,7 +1851,7 @@ editable failed input, retry, and narrow-card layout; the steps below also check
 
    | Field | Rejected length | Expected feedback |
    | --- | --- | --- |
-   | `n/` | 128 | Names should only contain alphanumeric characters and spaces, should not be blank, and should be at most 127 characters long |
+   | `n/` | 128 | Names may contain letters A-Z/a-z, digits, spaces and , ( ) / . @ - ' only.<br>Names must contain at least one letter or digit and be at most 127 characters long |
    | `p/` | 16 | Phone numbers should only contain digits, and should be between 3 and 15 digits long |
    | `a/` | 201 | Addresses must contain at least one non-whitespace character and be at most 200 characters long. |
    | `t/` | 31 | Tag names should be alphanumeric and between 1 and 30 characters long |
@@ -1840,6 +1869,47 @@ editable failed input, retry, and narrow-card layout; the steps below also check
    Expected: valid members load and the warning identifies the rejected member's original record position and
    constraints. The original file is preserved; changes and saving are disabled. Repair the value and restart
    to restore normal saving. Repeat for each of the four fields.
+
+### Name punctuation
+
+Use Java 25 and a rebuilt app in a disposable writable folder with normal saving enabled.
+Manual execution status for this change: **not run**. Automated tests cover command submission, persistence,
+searches, CSV and JSON entry paths, and exact JavaFX name-label and tooltip values.
+
+1. Run `add e/EMAIL n/NAME` for each row below, replacing the placeholders with the literal values:
+
+   | EMAIL | NAME |
+   | --- | --- |
+   | `hyphen@u.nus.edu` | `Anne-Marie Tan` |
+   | `apostrophe@u.nus.edu` | `O'Connor Tan` |
+   | `initials@u.nus.edu` | `J. P. Tan` |
+   | `son@u.nus.edu` | `Ravi S/O Kumar` |
+   | `daughter@u.nus.edu` | `Devi D/O Kumar` |
+   | `comma@u.nus.edu` | `Tan, Alex` |
+   | `parentheses@u.nus.edu` | `Tan (Alex)` |
+   | `alias@u.nus.edu` | `Tan @ Alex` |
+
+   Expected: every command succeeds; the displayed name and its tooltip preserve the entered spelling.
+   Resize to the minimum window width and hover over ellipsized headings to check the complete tooltip.
+1. Run `edit INDEX n/NAME` on one member using each name from the table, then restore its original name.<br>
+   Expected: each edit succeeds and preserves punctuation. `find n/O'CONNOR`, `findall n/S/O`, and
+   `findany n/D/O` each find the corresponding member; `find n/Connor` does not match `O'Connor`.
+1. Restart the app.<br>
+   Expected: all eight names persist exactly, no invalid-record warning appears, and normal saving remains enabled.
+1. Save the following CSV beside the application JAR as `punctuated-names.csv`, then run
+   `import punctuated-names.csv`:
+
+   ```csv
+   name,phone,email,address,tags,status
+   "Tan, Alex",,csv.comma@u.nus.edu,,,active
+   Ravi S/O Kumar,,csv.son@u.nus.edu,,,active
+   Tan @ Alex,,csv.alias@u.nus.edu,,,active
+   ```
+
+   Expected: all three records import without rejection; their names retain their punctuation after restarting.
+   The source CSV remains unchanged.
+1. Try `add e/rejected@u.nus.edu n/---`, `edit 1 n/()`, and `edit 1 n/Alex!`.<br>
+   Expected: the name constraints appear, input remains editable, and existing records and saved JSON remain unchanged.
 
 ### Email domain validation
 

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static seedu.address.testutil.TypicalPersons.ALICE;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +57,18 @@ public class PersonCardTest {
                         assertEquals(hasName, email.isManaged());
                     }
                 }
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void constructor_punctuatedNames_preservesLabelsAndTooltips() throws Exception {
+        JavaFxTestUtil.runAndWait(() -> {
+            for (String value : List.of("Anne-Marie Tan", "O'Connor Tan", "J. P. Tan", "Ravi S/O Kumar",
+                    "Devi D/O Kumar", "Tan, Alex", "Tan (Alex)", "Tan @ Alex")) {
+                Region card = new PersonCard(new PersonBuilder(ALICE).withName(value).build(), 1).getRoot();
+                assertLabelText(card, "name", value);
             }
             return null;
         });

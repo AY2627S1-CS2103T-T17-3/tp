@@ -20,7 +20,7 @@ import seedu.address.model.person.Phone;
 import seedu.address.model.tag.Tag;
 
 public class ParserUtilTest {
-    private static final String INVALID_NAME = "R@chel";
+    private static final String INVALID_NAME = "Rachel!";
     private static final String INVALID_PHONE = "+651234";
     private static final String INVALID_ADDRESS = " ";
     private static final String INVALID_EMAIL = "example.com";
@@ -45,9 +45,7 @@ public class ParserUtilTest {
 
     @Test
     public void parseFields_overlongValues_reportsLengthConstraints() {
-        assertThrows(ParseException.class,
-                "Names should only contain alphanumeric characters and spaces, should not be blank, "
-                        + "and should be at most 127 characters long", ()
+        assertThrows(ParseException.class, Name.MESSAGE_CONSTRAINTS, ()
                 -> ParserUtil.parseName("A".repeat(128)));
         assertThrows(ParseException.class,
                 "Phone numbers should only contain digits, and should be between 3 and 15 digits long", ()
@@ -103,6 +101,14 @@ public class ParserUtilTest {
         String nameWithWhitespace = WHITESPACE + VALID_NAME + WHITESPACE;
         Name expectedName = new Name(VALID_NAME);
         assertEquals(expectedName, ParserUtil.parseName(nameWithWhitespace));
+    }
+
+    @Test
+    public void parseName_supportedPunctuationWithWhitespace_preservesSpelling() throws Exception {
+        for (String value : List.of("Anne-Marie Tan", "O'Connor Tan", "J. P. Tan", "Ravi S/O Kumar",
+                "Devi D/O Kumar", "Tan, Alex", "Tan (Alex)", "Tan @ Alex")) {
+            assertEquals(value, ParserUtil.parseName(WHITESPACE + value + WHITESPACE).fullName);
+        }
     }
 
     @Test
