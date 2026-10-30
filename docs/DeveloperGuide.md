@@ -1174,8 +1174,6 @@ testers are expected to do more *exploratory* testing.
    1. Close the app, disconnect the second monitor, and relaunch it.<br>
       Expected: The window fits within the primary monitor's usable area.
 
-1. _{ more test cases … }_
-
 ### Viewing command help and the online guide
 
 1. Run `help` with Internet access unavailable.<br>
@@ -1679,8 +1677,6 @@ choosing **Delete all members** in its confirmation dialog.
 
    1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
       Expected: Similar to previous.
-
-1. _{ more test cases … }_
 
 ### Tag identity and editing
 
