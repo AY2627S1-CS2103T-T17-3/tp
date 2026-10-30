@@ -638,10 +638,11 @@ These are directory input rules, not a claim of complete NUS or Myinfo complianc
 Curly apostrophes, accented letters, and non-Latin scripts require a separate product-scope decision.
 
 Add and edit use `ParserUtil.parseName`, CSV import constructs `Name`, and JSON loading uses
-`Name.isValidName` and the constructor, so all entry paths share the same rules. Name searches continue to
-match whole whitespace-delimited words ignoring case; punctuation remains part of the word. For example,
-`find n/O'Connor` matches `O'Connor Tan`, while `find n/Connor` does not. Use a prefixed search such as
-`find n/S/O` for a patronymic token so it is interpreted as a name keyword.
+`Name.isValidName` and the constructor, so all entry paths share the same rules. Name searches preserve
+case-insensitive literal whitespace-token matches and additionally match complete name components next to
+punctuation. Internal hyphens, straight apostrophes and slashes stay within a component, so `O'Connor` matches
+`Tan(O'Connor)` but `Connor` does not. Both `find S/O` and `find n/S/O` search for the patronymic word.
+The [shared search design](#finding-members-by-contact-details-or-tag) explains prefix disambiguation and matching.
 
 `NameTest` covers the supported punctuation, rejected characters and length boundaries. `ParserUtilTest`,
 `NameValidationIntegrationTest`, `ImportIntegrationTest`, and `JsonAddressBookStorageTest` verify trimming,
@@ -675,8 +676,14 @@ predicates; other field predicates and parsing helpers are omitted.
 <puml src="diagrams/SearchClassDiagram.puml" alt="Partial search class diagram showing shared command execution and predicate composition" />
 
 `AddressBookParser` routes `find`, `findall` and `findany` to their respective parsers, including multiline
-arguments. `SearchParserUtil` validates lowercase `n/`, `p/`, `e/` and `t/` prefixes and normalizes ASCII whitespace
-before tokenizing. Unsupported and uppercase prefixes are rejected; slashes within attached values remain literal.
+arguments. `SearchParserUtil.containsSearchPrefix` detects supported `n/`, `p/`, `e/` and `t/` labels, including
+uppercase equivalents, at argument boundaries. `FindCommandParser` uses strict prefixed parsing when any such
+label is present; otherwise it splits literal name keywords on ASCII whitespace. Thus `S/O`, `AN/NA` and `G/value`
+are valid unprefixed name keywords. This deliberately replaces unsupported-prefix errors for those unprefixed forms.
+
+In strict prefixed parsing, `SearchParserUtil.tokenize` validates lowercase field labels and normalizes ASCII
+whitespace before tokenizing. Unsupported and uppercase prefixes are rejected, including labels after other
+arguments. Slashes within attached values remain literal: `find n/n/Alice` searches for the name word `n/Alice`.
 
 `FindCommandParser` accepts unprefixed name keywords with OR matching, or one prefixed condition. It retains
 its restrictions against repeated prefixes, multiple fields and multiple values within a prefixed condition.
@@ -694,6 +701,13 @@ spaces such as U+00A0 are not blank under these rules. Trimming and splitting re
 
 All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
+`NameContainsKeywordsPredicate` first checks literal whitespace-separated words through the unchanged
+`StringUtil.containsWordIgnoreCase`. If the keyword is itself a complete name component, it also checks components
+matched by `[A-Za-z0-9]+(?:[-'/]+[A-Za-z0-9]+)*`. Commas, parentheses, periods and `@` separate components;
+leading and trailing punctuation is excluded. Internal hyphens, apostrophes and slashes remain part of the component.
+This matches `Alex` in `Tan(Alex)` and `O'Connor` in `Tan(O'Connor)` without matching `Connor` alone.
+Keywords such as `(Alex)`, `tan,` and `@` retain only their literal whitespace-token behavior. Queries are never
+interpreted as regular expressions, and punctuation-only keywords cannot become empty matches or wildcards.
 Email substrings need not be complete addresses; tags are validated through `ParserUtil.parseTag`.
 Absent names or phones make the corresponding condition false. The selected status view is applied after
 the contact or tag predicate.
@@ -707,6 +721,8 @@ recovery mode and requires no changes to member data or the storage schema.
 Parser, predicate, command and integration tests cover AND/OR matching, repeated prefixes, overlapping matches,
 invalid conditions, incomplete and archived members, and searches after an earlier filter. Parser regression
 tests cover Unicode whitespace-only values in every search field, alone and alongside valid combined conditions.
+Name-search regressions cover all supported punctuation, compounds next to punctuation, repeated and edge punctuation,
+maximum-length names, overlong keywords, regex-like queries, and slash words resembling field labels.
 Rejected searches preserve the previous results, member records and saved data.
 
 ### Importing member directories from CSV
@@ -1488,6 +1504,53 @@ Automated parser and logic tests also cover keywords separated by tabs, LF and C
 error guidance and preservation of previous results, records and saved JSON. The GUI checks above are provided
 for manual execution.
 
+### Finding members with punctuation
+
+Use a disposable application folder, select All view, and clear its directory, confirming only in that test copy.
+Run these setup commands one at a time:
+
+```text
+add e/comma@u.nus.edu n/Tan,Alex t/exco
+add e/compact@u.nus.edu n/Tan(Alex)
+add e/parentheses@u.nus.edu n/Tan (Alex)
+add e/initials@u.nus.edu n/J.P.Tan
+add e/compound@u.nus.edu n/Tan(O'Connor)
+add e/son@u.nus.edu n/Ravi(S/O)Kumar t/exco
+add e/slash@u.nus.edu n/AN/NA
+add e/unknown@u.nus.edu n/G/value
+add e/prefix@u.nus.edu n/n/Alice
+```
+
+1. Test the following commands. Each replaces the previous results across the complete directory:
+
+   | Command | Expected members |
+   | --- | --- |
+   | `find aLeX`, `find n/Alex`, `findall n/Alex`, `findany n/Alex` | The comma, compact and parentheses members |
+   | `find J` | `J.P.Tan` |
+   | `find O'Connor` | `Tan(O'Connor)` |
+   | `find S/O`, `find n/s/o` | `Ravi(S/O)Kumar` |
+   | `find AN/NA` | `AN/NA` |
+   | `find G/value` | `G/value` |
+   | `find n/n/Alice` | `n/Alice` |
+   | `find n/(Alex)` | Only `Tan (Alex)` |
+   | `find n/@`, `find Connor`, `find S`, `find AN`, `find Ale`, `find TanAlex` | No matches |
+
+1. Run `findall n/Alex t/exco`.<br>
+   Expected: only `Tan,Alex` appears. Run `findany n/Alex n/S/O`: the three Alex members and Ravi appear,
+   once each in directory order. Run `findall n/Alex n/S/O`: the count is zero.
+1. Run `find Alex`, record the results, and copy `data/nusocietydesk.json`. Try `find n/`, `find n/Alex Bob`,
+   `find n/Alex n/Tan`, `find Alex n/Tan`, `find N/Alex`, `find n/Alex G/value`, `findall S/O`
+   and `findany n/Alex p/abc`.<br>
+   Expected: every command shows an error and leaves the same three Alex members displayed.
+   All names and the saved JSON remain unchanged.
+1. Run `find S/O`, then `archive 1`, `view active` and `find S/O`.<br>
+   Expected: no matches in Active view. Run `view archived`: Ravi appears because the search is retained.
+   After restarting, the names still have their entered punctuation and Ravi remains archived.
+
+Automated tests additionally cover leading and trailing punctuation, repeated joiners, numeric components,
+regex-like and overlong queries, incomplete members, and zero save attempts during searches.
+The GUI checks above are provided for manual execution.
+
 ### Finding members by phone number
 
 Use a disposable application folder in All view and an empty directory (`clear` removes all members in that copy).
@@ -1572,11 +1635,14 @@ The directory now contains five members. The archived member has no name, phone 
    Expected: Each reports "Search prefixes must be lowercase. Use n/, p/, e/ or t/."
    The previous results remain displayed. Lowercase prefixes with uppercase values, such as `find n/TAG`,
    `find e/TAGACTIVE` and `find t/PUBLICITY`, still work.
-1. Test cases: `find G/`, `find F/value`, `find H/`, `find g/value`, `find name/Tag`
+1. Test cases: `find G/ n/Tag`, `find F/value n/Tag`, `find H/ n/Tag`, `find g/value n/Tag`, `find name/Tag n/Tag`
    and `find n/Tag G/value`.<br>
    Expected: Each reports an unsupported search prefix and lists `n/`, `p/`, `e/` and `t/` as supported options.
    For `G/`, the message is "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
    Previous results, member records and saved data remain unchanged.
+1. Test cases: `find G/`, `find F/value`, `find H/`, `find g/value` and `find name/Tag`.<br>
+   Expected: Each is a valid literal name search with zero matches in this test directory.
+   With no supported prefix present, slash-containing words do not select a field.
 1. Test cases: `find e/G/` and `find e/name/Tag`.<br>
    Expected: Both are valid literal email-substring searches with zero matches in the test directory.
    The slashes inside the attached values do not trigger prefix errors.
