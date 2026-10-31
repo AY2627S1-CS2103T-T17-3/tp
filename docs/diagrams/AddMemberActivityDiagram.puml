@@ -1,0 +1,20 @@
+@startuml
+!include style.puml
+skinparam DefaultFontName Arial
+skinparam ActivityFontSize 15
+skinparam ArrowFontSize 12
+skinparam ArrowFontStyle plain
+skinparam ArrowColor LOGIC_COLOR_T4
+skinparam ActivityBackgroundColor LOGIC_COLOR_T1
+skinparam ActivityBorderColor LOGIC_COLOR_T4
+
+start
+:Receive valid member details;
+:Check NUS email against\nall existing members;
+if () then ([duplicate email])
+    :Reject addition and identify\nthe existing member;
+else ([unique email])
+    :Add the new member;
+endif
+stop
+@enduml

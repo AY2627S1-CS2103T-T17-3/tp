@@ -13,7 +13,16 @@
 
 ## **Acknowledgements**
 
-* _{List the sources of reused or adapted ideas, code, documentation, and third-party libraries here, with links to the originals.}_
+NUSocietyDesk acknowledges the following open-source projects:
+
+* [SE-EDU's AddressBook-Level3 (AB3)](https://github.com/se-edu/addressbook-level3), from which our codebase,
+  architecture and documentation are adapted.
+* [JavaFX](https://openjfx.io/), [Jackson](https://github.com/FasterXML/jackson) and
+  [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) for the graphical interface,
+  JSON processing and CSV importing.
+* [JUnit 5](https://docs.junit.org/5.14.4/overview.html) for automated testing.
+* [MarkBind](https://markbind.org/) and [PlantUML](https://plantuml.com/) for generating the documentation
+  website and UML diagrams.
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -297,6 +306,30 @@ save-and-rollback flow. The status view is retained. Even an empty directory req
 and archived members, save-failure restoration, and startup recovery protection. `MainWindowTest` exercises the
 actual dialog, safe defaults, keyboard cancellation, window closure, and confirmed clearing.
 
+### Preventing duplicate records when adding members
+
+`Email` stores valid NUS email addresses in lowercase using `Locale.ROOT`, so `Alex@U.NUS.EDU` and
+`alex@u.nus.edu` identify the same member. Names and phone numbers do not determine identity.
+After parsing and validation, `AddCommand.execute` calls `Model.hasPerson` to check the candidate against the
+complete directory, including archived members and members hidden by the current search or status view.
+
+The activity diagram below gives a high-level overview of the duplicate-email decision when adding a member.
+It assumes the supplied details are valid and the application permits member changes. A duplicate email leads
+to rejection, while a unique email allows the member to be added. Parsing, validation and persistence are
+outside the diagram's scope.
+
+<puml src="diagrams/AddMemberActivityDiagram.puml" alt="Activity diagram with duplicate and unique email guards, rejection and addition paths, and a merge before the activity ends" />
+
+If the email already exists, the command locates the existing member and throws a `CommandException` with
+`Messages.formatDuplicatePerson`. The error identifies the existing member by email and, when available, name.
+No records or filters change, no save is attempted, and the records are never merged or overwritten.
+For example, adding `e/ALEX@U.NUS.EDU` is rejected when `alex@u.nus.edu` already belongs to an archived member.
+
+Otherwise, `Model.addPerson` adds the active member and clears the search while retaining the selected status
+view. `AddCommand` returns its result to `LogicManager`, which follows the shared
+[save/recovery flow](#saving-member-data-safely) before returning success to the UI. A save failure restores
+the previous directory and search filter. `AddCommandTest` covers the add and duplicate-error branches.
+
 ### Recalling submitted commands
 
 #### UI ownership and history state
@@ -306,12 +339,8 @@ plain Up/Down events, including boundary no-ops, before JavaFX moves the caret. 
 keys are not intercepted. The existing `CommandExecutor` remains the only path to execution; navigation
 never invokes it, updates the result display, or accesses `Logic`, `Model` or `Storage`.
 
-The partial class diagram shows the owned history helper, the saved input snapshot, and the separate execution
-callback. `CommandExecutor` is supplied by `MainWindow` as `this::executeCommand`; it is only called on submission.
+`CommandExecutor` is supplied by `MainWindow` as `this::executeCommand`; it is only called on submission.
 `InputState` is a nested immutable record used for navigation inputs and results as well as the saved draft.
-The diagram omits JavaFX controls, inherited UI members, and private helper methods.
-
-<puml src="diagrams/CommandHistoryClassDiagram.puml" width="700" alt="CommandBox owns one CommandHistory and separately references a CommandExecutor; history can retain one draft InputState" />
 
 The helper uses two `Deque<String>` collections backed by `ArrayDeque`: `commandsBeforeCursor` holds older entries
 and `commandsAfterCursor` holds the selected entry followed by newer entries. Both are ordered oldest first;
@@ -836,100 +865,6 @@ and disables saving after a partial or failed load; it is not the rollback mecha
 `ImportIntegrationTest` checks the same behavior for imports. See the
 [manual save-failure scenario](#recovering-from-a-failed-save) for the GUI check.
 
-### \[Proposed\] Undo/redo feature
-
-#### Proposed Implementation
-
-The proposed undo/redo mechanism is facilitated by `VersionedAddressBook`. It extends `AddressBook` with an undo/redo history, stored internally as an `addressBookStateList` and `currentStatePointer`. Additionally, it implements the following operations:
-
-* `VersionedAddressBook#commit()` -- Saves the current address book state in its history.
-* `VersionedAddressBook#undo()` -- Restores the previous address book state from its history.
-* `VersionedAddressBook#redo()` -- Restores a previously undone address book state from its history.
-
-These operations are exposed in the `Model` interface as `Model#commitAddressBook()`, `Model#undoAddressBook()` and `Model#redoAddressBook()` respectively.
-
-Given below is an example usage scenario and how the undo/redo mechanism behaves at each step.
-
-Step 1. The user launches the application for the first time. The `VersionedAddressBook` will be initialized with the initial address book state, and the `currentStatePointer` pointing to that single address book state.
-
-<puml src="diagrams/UndoRedoState0.puml" alt="UndoRedoState0" />
-
-Step 2. The user executes `delete 5` command to delete the 5th person in the address book. The `delete` command calls `Model#commitAddressBook()`, causing the modified state of the address book after the `delete 5` command executes to be saved in the `addressBookStateList`, and the `currentStatePointer` is shifted to the newly inserted address book state.
-
-<puml src="diagrams/UndoRedoState1.puml" alt="UndoRedoState1" />
-
-Step 3. The user executes `add n/David …​` to add a new person. The `add` command also calls `Model#commitAddressBook()`, causing another modified address book state to be saved into the `addressBookStateList`.
-
-<puml src="diagrams/UndoRedoState2.puml" alt="UndoRedoState2" />
-
-<box type="info" seamless>
-
-**Note:** If a command fails its execution, it will not call `Model#commitAddressBook()`, so the address book state will not be saved into the `addressBookStateList`.
-</box>
-
-Step 4. The user now decides that adding the person was a mistake, and decides to undo that action by executing the `undo` command. The `undo` command will call `Model#undoAddressBook()`, which will shift the `currentStatePointer` once to the left, pointing it to the previous address book state, and restores the address book to that state.
-
-<puml src="diagrams/UndoRedoState3.puml" alt="UndoRedoState3" />
-
-
-<box type="info" seamless>
-
-**Note:** If the `currentStatePointer` is at index 0, pointing to the initial AddressBook state, then there are no previous AddressBook states to restore. The `undo` command uses `Model#canUndoAddressBook()` to check if this is the case. If so, it will return an error to the user rather
-than attempting to perform the undo.
-</box>
-
-The following sequence diagram shows how an undo operation goes through the `Logic` component:
-
-<puml src="diagrams/UndoSequenceDiagram-Logic.puml" alt="UndoSequenceDiagram-Logic" />
-
-<box type="info" seamless>
-
-**Note:** The lifeline for `UndoCommand` should end at the destroy marker (X), but due to a limitation of PlantUML, it continues to the end of the diagram.
-</box>
-
-Similarly, how an undo operation goes through the `Model` component is shown below:
-
-<puml src="diagrams/UndoSequenceDiagram-Model.puml" alt="UndoSequenceDiagram-Model" />
-
-The `redo` command does the opposite — it calls `Model#redoAddressBook()`, which shifts the `currentStatePointer` once to the right, pointing to the previously undone state, and restores the address book to that state.
-
-<box type="info" seamless>
-
-**Note:** If the `currentStatePointer` is at index `addressBookStateList.size() - 1`, pointing to the latest address book state, then there are no undone AddressBook states to restore. The `redo` command uses `Model#canRedoAddressBook()` to check if this is the case. If so, it will return an error to the user rather than attempting to perform the redo.
-</box>
-
-Step 5. The user then decides to execute the command `list`. Commands that do not modify the address book, such as `list`, will usually not call `Model#commitAddressBook()`, `Model#undoAddressBook()` or `Model#redoAddressBook()`. Thus, the `addressBookStateList` remains unchanged.
-
-<puml src="diagrams/UndoRedoState4.puml" alt="UndoRedoState4" />
-
-Step 6. The user executes `clear`, which calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: It no longer makes sense to redo the `add n/David …` command. This is the behavior that most modern desktop applications follow.
-
-<puml src="diagrams/UndoRedoState5.puml" alt="UndoRedoState5" />
-
-The following activity diagram summarizes what happens when a user executes a new command:
-
-<puml src="diagrams/CommitActivityDiagram.puml" width="250" />
-
-#### Design considerations:
-
-**Aspect: How undo & redo execute:**
-
-* **Alternative 1 (current choice):** Saves the entire address book.
-  * Pros: Easy to implement.
-  * Cons: May have performance issues in terms of memory usage.
-
-* **Alternative 2:** Individual command knows how to undo/redo by
-  itself.
-  * Pros: Will use less memory (e.g. for `delete`, just save the person being deleted).
-  * Cons: We must ensure that the implementation of each individual command is correct.
-
-_{more aspects and alternatives to be added}_
-
-### \[Proposed\] Data archiving
-
-_{Explain here how the data archiving feature will be implemented}_
-
-
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Documentation, logging, testing, dev-ops**
@@ -962,30 +897,33 @@ Secretary of an NUS student society who
 
 Priorities: High (must have) - `* * *`, Medium (should have) - `* *`, Low (could have) - `*`
 
-| Priority | As a …                                                                | I want to …                                                                  | So that I can…                                                                                |
-|----------|------------------------------------------------------------------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
-| `* * *`  | secretary with an existing directory                                   | import existing contacts into NUSocietyDesk and review any rejected records  | adopt the product without manual re-entry or risking silent data loss                         |
-| `* * *`  | secretary                                                              | attach consistent society-related information to a member                    | organise contacts according to their place in the society                                     |
-| `* * *`  | secretary who remembers only part of a member’s information            | search across relevant contact fields                                        | locate the member without knowing their exact name                                            |
-| `* * *`  | secretary                                                              | combine name, phone, email and tag search conditions                          | find members by contact details, committee or role                                            |
-| `* * *`  | secretary                                                              | change selected member information without replacing unrelated details       | make corrections safely                                                                       |
-| `* * *`  | secretary                                                              | mark former members as archived without deleting their records              | retain their contact history                                                                   |
-| `* * *`  | secretary                                                              | activate a member who was archived                                           | correct an incorrect archive or record a returning member                                     |
-| `* * *`  | secretary                                                              | switch between all, active and archived members while searching             | focus on current members and still retrieve former members                                    |
-| `* * *`  | secretary dealing with members who have similar or duplicate names     | distinguish their records using additional information                       | avoid contacting or modifying the wrong member                                                |
-| `* * *`  | secretary                                                              | receive precise confirmation and error messages                              | know exactly what changed and how to correct a failed operation                               |
-| `* *`    | secretary who has to manage local and international members            | store phone numbers with country codes                                       | contact members who have international phone numbers                                          |
-| `* *`    | secretary with incomplete information                                  | record a member using a NUS email and any other available details             | capture the contact immediately and complete it later                                         |
-| `* *`    | secretary who only has a member’s NUS email                             | create an incomplete record using their NUS email                             | save the contact immediately and complete the remaining details later                         |
-| `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                         | spend less time on repetitive maintenance                                                     |
-| `* *`    | secretary                                                              | detect and resolve possible duplicate member records                         | prevent conflicting records for the same member in the directory                              |
-| `* *`    | secretary who made an incorrect change                                 | reverse a recent data-changing operation                                     | prevent a typing mistake from permanently damaging the directory                              |
-| `* *`    | secretary reviewing a long list of results                             | order the results predictably                                                | scan them efficiently                                                                          |
-| `* *`    | frequent user                                                          | repeat or adapt recent commands                                              | complete recurring work with less typing                                                      |
-| `* *`    | returning user                                                         | rediscover relevant command syntax without leaving my current task           | use the product occasionally without having to relearn it                                     |
-| `*`      | potential user exploring the product                                   | view representative sample member records                                    | understand the application before using real data                                             |
-| `*`      | expert user                                                            | use shorter alternatives for frequent commands                               | enter routine operations faster                                                               |
-| `*`      | secretary                                                              | view a concise summary of members by status or committee                     | spot obviously inconsistent records                                                           |
+Statuses describe current support and future plans: **Implemented** means the story is supported,
+**Planned for future iterations** means the feature is intended for a future iteration and is not currently available.
+
+| Priority | As a …                                                                  | I want to …                                                                 | So that I can…                                                        | Status                        |
+| -------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------- |
+| `* * *`  | secretary with an existing directory                                    | import existing contacts into NUSocietyDesk and review any rejected records | adopt the product without manual re-entry or risking silent data loss | Implemented                   |
+| `* * *`  | secretary                                                               | attach consistent society-related information to a member                   | organise contacts according to their place in the society             | Implemented                   |
+| `* * *`  | secretary who remembers only part of a member’s information             | search across relevant contact fields                                       | locate the member without knowing their exact name                    | Implemented                   |
+| `* * *`  | secretary                                                               | combine name, phone, email and tag search conditions                        | find members by contact details, committee or role                    | Implemented                   |
+| `* * *`  | secretary                                                               | change selected member information without replacing unrelated details      | make corrections safely                                               | Implemented                   |
+| `* * *`  | secretary                                                               | mark former members as archived without deleting their records              | retain their contact history                                          | Implemented                   |
+| `* * *`  | secretary                                                               | activate a member who was archived                                          | correct an incorrect archive or record a returning member             | Implemented                   |
+| `* * *`  | secretary                                                               | switch between all, active and archived members while searching             | focus on current members and still retrieve former members            | Implemented                   |
+| `* * *`  | secretary dealing with members who have similar or duplicate names      | distinguish their records using additional information                      | avoid contacting or modifying the wrong member                        | Implemented                   |
+| `* * *`  | secretary                                                               | receive precise confirmation and error messages                             | know exactly what changed and how to correct a failed operation       | Implemented                   |
+| `* *`    | secretary who has to manage local and international members             | store phone numbers with country codes                                      | contact members who have international phone numbers                  | Implemented                   |
+| `* *`    | secretary with incomplete information                                   | record a member using a NUS email and any other available details           | capture the contact immediately and complete it later                 | Implemented                   |
+| `* *`    | secretary who only has a member’s NUS email                             | create an incomplete record using their NUS email                           | save the contact immediately and complete the remaining details later | Implemented                   |
+| `* *`    | secretary processing the same organisational change for several members | update the relevant records together                                        | spend less time on repetitive maintenance                             | Planned for future iterations |
+| `* *`    | secretary                                                               | detect and resolve possible duplicate member records                        | prevent conflicting records for the same member in the directory      | Implemented                   |
+| `* *`    | secretary who made an incorrect change                                  | reverse a recent data-changing operation                                    | prevent a typing mistake from permanently damaging the directory      | Planned for future iterations |
+| `* *`    | secretary reviewing a long list of results                              | order the results predictably                                               | scan them efficiently                                                 | Planned for future iterations |
+| `* *`    | frequent user                                                           | repeat or adapt recent commands                                             | complete recurring work with less typing                              | Implemented                   |
+| `* *`    | returning user                                                          | rediscover relevant command syntax without leaving my current task          | use the product occasionally without having to relearn it             | Implemented                   |
+| `*`      | potential user exploring the product                                    | view representative sample member records                                   | understand the application before using real data                     | Implemented                   |
+| `*`      | expert user                                                             | use shorter alternatives for frequent commands                              | enter routine operations faster                                       | Planned for future iterations |
+| `*`      | secretary                                                               | view a concise summary of members by status or committee                    | spot obviously inconsistent records                                   | Planned for future iterations |
 
 ### Use cases
 
@@ -1169,8 +1107,6 @@ testers are expected to do more *exploratory* testing.
 
    1. Close the app, disconnect the second monitor, and relaunch it.<br>
       Expected: The window fits within the primary monitor's usable area.
-
-1. _{ more test cases … }_
 
 ### Viewing command help and the online guide
 
@@ -1725,8 +1661,6 @@ choosing **Delete all members** in its confirmation dialog.
 
    1. Other incorrect delete commands to try: `delete`, `delete x`, `...` (where x is larger than the list size)<br>
       Expected: Similar to previous.
-
-1. _{ more test cases … }_
 
 ### Tag identity and editing
 
