@@ -26,6 +26,44 @@ public class AddressBookRecoveryTest {
     public Path temporaryFolder;
 
     @Test
+    public void loadAddressBook_duplicateProperties_protectsOriginalFile() throws Exception {
+        List<String> invalidFiles = List.of(
+                "{\"persons\":[{\"email\":\"first@u.nus.edu\"}],"
+                        + "\"persons\":[{\"email\":\"second@u.nus.edu\"}]}",
+                "{\"persons\":[{\"email\":\"first@u.nus.edu\",\"email\":\"second@u.nus.edu\"}]}");
+        Path file = temporaryFolder.resolve("members.json");
+        for (String json : invalidFiles) {
+            Files.writeString(file, json);
+            byte[] original = Files.readAllBytes(file);
+            JsonAddressBookStorage storage = new JsonAddressBookStorage(file);
+
+            AddressBookLoadResult result = storage.loadAddressBook();
+
+            assertEquals(AddressBookLoadResult.Status.FAILURE, result.getStatus());
+            assertTrue(result.getErrors().getFirst().contains("Duplicate field"));
+            assertFalse(storage.isSaveAllowed());
+            assertThrows(IOException.class, () -> storage.saveAddressBook(new AddressBook()));
+            assertArrayEquals(original, Files.readAllBytes(file));
+        }
+    }
+
+    @Test
+    public void loadAddressBook_samePropertiesInDifferentRecords_loadsAndSaves() throws Exception {
+        Path file = temporaryFolder.resolve("members.json");
+        Files.writeString(file, "{\"persons\":[{\"email\":\"first@u.nus.edu\"},"
+                + "{\"email\":\"second@u.nus.edu\"}]}");
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(file);
+
+        AddressBookLoadResult result = storage.loadAddressBook();
+
+        assertEquals(AddressBookLoadResult.Status.SUCCESS, result.getStatus());
+        assertEquals(2, result.getAddressBook().getPersonList().size());
+        assertTrue(storage.isSaveAllowed());
+        storage.saveAddressBook(result.getAddressBook());
+        assertEquals(result.getAddressBook(), storage.readAddressBook().orElseThrow());
+    }
+
+    @Test
     public void loadAddressBook_unknownProperties_reportsAndProtectsRecoveredData() throws Exception {
         Path file = temporaryFolder.resolve("members.json");
         Files.writeString(file, """
