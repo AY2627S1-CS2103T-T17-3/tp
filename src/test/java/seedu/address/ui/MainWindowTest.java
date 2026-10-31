@@ -656,6 +656,8 @@ public class MainWindowTest {
                 TextField input = (TextField) stage.getScene().lookup("#commandTextField");
                 TextArea results = (TextArea) stage.getScene().lookup("#resultDisplay");
                 Button toggle = (Button) stage.getScene().lookup("#statusFilterButton");
+                String searchReminder = "\nAny existing search still applies. "
+                        + "Use list to clear the search in this view.";
                 @SuppressWarnings("unchecked")
                 ListView<Person> list = (ListView<Person>) stage.getScene().lookup("#personListView");
 
@@ -668,17 +670,17 @@ public class MainWindowTest {
 
                     toggle.fire();
                     assertEquals("ACTIVE", toggle.getText());
-                    assertEquals("Switched to active view.", results.getText());
+                    assertEquals("Showing active view." + searchReminder, results.getText());
                     assertEquals(List.of(active), list.getItems());
 
                     toggle.fire();
                     assertEquals("ARCHIVED", toggle.getText());
-                    assertEquals("Switched to archived view.", results.getText());
+                    assertEquals("Showing archived view." + searchReminder, results.getText());
                     assertEquals(List.of(), list.getItems());
 
                     toggle.fire();
                     assertEquals("ALL", toggle.getText());
-                    assertEquals("Switched to all view.", results.getText());
+                    assertEquals("Showing all view." + searchReminder, results.getText());
                     assertEquals(List.of(active), list.getItems());
                 }
             } finally {
