@@ -148,7 +148,8 @@ from the command box after a successful submission.
 
 **Retention:** History keeps at most **100 entries**, dropping the oldest when a new entry exceeds that limit.
 Consecutive exact duplicates use one entry, but every submission still executes. Spaces and letter case
-are preserved, so `list`, ` list ` and `LIST` are distinct entries. Non-consecutive duplicates remain.
+are preserved, so `list`, `␠list␠` and `LIST` are distinct entries (`␠` represents a space).
+Non-consecutive duplicates remain.
 Empty or whitespace-only submissions are ignored without changing the field, results or history;
 this uses Java whitespace rules (a non-breaking space is not considered blank).
 Ignored blanks and consecutive duplicates do not evict entries. The draft does not count toward the limit.
