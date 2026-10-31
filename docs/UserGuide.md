@@ -32,13 +32,11 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
    the member list changes to match the label.
    Some example commands you can try:
 
-   * `list` : Clears the search and lists members in the selected status view.
+   * `view active` : Shows active members without clearing the current search; also updates the status button.
 
-   * `view archived` : Shows archived members without clearing the current search; also updates the status button.
+   * `add e/mei.lin@u.nus.edu` : Adds a member whose other contact details can be filled in later.
 
-   * `add e/johnd@u.nus.edu` : Adds a member whose other contact details can be filled in later.
-
-   * `find e/johnd` : Finds members using part of an email address.
+   * `find e/mei.lin` : Finds members using part of an email address.
 
    * `edit 1 p/91234567` : Updates the phone number of the 1st displayed member.
 
@@ -49,6 +47,10 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
    * `delete 3` : Deletes the 3rd contact shown in the current list.
 
    * `archive 2` : Marks the 2nd displayed member as archived without deleting their record.
+
+   * `view all` : Shows both active and archived members.
+
+   * `list` : Clears the search and lists members in the selected status view.
 
    * `activate 2` : Marks the 2nd displayed member as active again.
 
@@ -62,9 +64,9 @@ When no data file exists, the app starts in All view with these eight fictional 
 Tags are displayed in lowercase.
 
 | All-view index | Member | Status | Tags | Contact details |
-| --- | --- | --- | --- | --- |
-| 1 | Alex Yeoh | Active | `president`, `exco` | Complete |
-| 2 | Bernice Yu | Active | `secretary`, `exco` | Complete |
+| --- | --- | --- | ------ | --- |
+| 1 | Alex Yeoh | Active | `exco`, `president` | Complete |
+| 2 | Bernice Yu | Active | `exco`, `secretary` | Complete |
 | 3 | Charlotte Oliveiro | Active | `publicity` | Complete |
 | 4 | David Li | Active | `logistics`, `volunteer` | Complete |
 | 5 | Irfan Ibrahim | Active | None | Phone and address absent |
@@ -90,13 +92,13 @@ directory, are loaded as they are.
 **Notes about the command format:**<br>
 
 * Words in `UPPER_CASE` are the parameters to be supplied by the user.<br>
-  For example, in `add n/NAME`, replace `NAME` with a value such as `John Doe`.
+  For example, in `add n/NAME`, replace `NAME` with a value such as `Mei Lin`.
 
 * Items in square brackets are optional.<br>
-  For example, `n/NAME [t/TAG]` can be used as `n/John Doe t/friend` or as `n/John Doe`.
+  For example, `n/NAME [t/TAG]` can be used as `n/Mei Lin t/Publicity` or as `n/Mei Lin`.
 
 * Items followed by `...` can appear zero or more times.<br>
-  For example, `[t/TAG]... ` may be omitted, or written as `t/friend` or `t/friend t/family`.
+  For example, `[t/TAG]...` may be omitted, or written as `t/Publicity` or `t/Publicity t/Volunteer`.
 
 * Prefixed fields can be in any order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
@@ -105,6 +107,10 @@ directory, are loaded as they are.
 
 * Extraneous parameters for `list` and `exit` are ignored.<br>
   For example, `list 123` is interpreted as `list`. The `help` and `clear` commands reject extra arguments.
+
+* Treat examples in different sections independently; some reuse email addresses.<br>
+  If an email already exists in your directory, another `add` using that email is rejected. Use a different valid
+  `@u.nus.edu` email to add another member, or use `edit` to update the existing member.
 
 * If you are using a PDF version of this document, be careful when copying and pasting commands that span multiple lines as space characters surrounding line-breaks may be omitted when copied over to the application.
 </box>
@@ -148,7 +154,8 @@ from the command box after a successful submission.
 
 **Retention:** History keeps at most **100 entries**, dropping the oldest when a new entry exceeds that limit.
 Consecutive exact duplicates use one entry, but every submission still executes. Spaces and letter case
-are preserved, so `list`, ` list ` and `LIST` are distinct entries. Non-consecutive duplicates remain.
+are preserved, so `list`, `␠list␠` and `LIST` are distinct entries (`␠` represents a space).
+Non-consecutive duplicates remain.
 Empty or whitespace-only submissions are ignored without changing the field, results or history;
 this uses Java whitespace rules (a non-breaking space is not considered blank).
 Ignored blanks and consecutive duplicates do not evict entries. The draft does not count toward the limit.
@@ -196,7 +203,6 @@ Command words remain case-sensitive, so `HELP` is not recognized.
 For the full online User Guide, use **Copy URL** at the top of the Help window and open the URL in your browser.
 Reading the website requires Internet access. **F1** and **Help → Help** open the same window with both the guide
 link and the offline reference, preserving an unsent command-box draft. The URL is not repeated in the reference.
-
 
 ### Adding a person: `add`
 
@@ -332,9 +338,10 @@ For example, adding a member with `t/Publicity t/publicity` gives that member on
 Loading saved records applies the same rule within each member's tag set.
 
 Examples:
+
 * `add e/newmember@u.nus.edu n/New Member t/Publicity`
-* `add n/John Doe p/98765432 e/johnd@u.nus.edu a/John street, block 123, #01-01`
-* `add n/Betsy Crowe t/friend e/betsycrowe@u.nus.edu a/Newgate Prison p/1234567 t/criminal`
+* `add n/Mei Lin p/98765432 e/mei.lin@u.nus.edu a/Kent Ridge Hall, #01-01`
+* `add n/Aisha Rahman t/Publicity e/aisha.rahman@u.nus.edu a/Tembusu College, #02-15 p/91234567 t/Volunteer`
 
 ### Importing member contacts from CSV: `import`
 
@@ -520,9 +527,12 @@ Format: `edit INDEX [n/NAME] [p/PHONE_NUMBER] [e/EMAIL] [a/ADDRESS]`
   address for reuse. The new email cannot belong to another member, including one outside the displayed list.
 
 Examples:
-*  `edit 1 p/91234567 e/johndoe@u.nus.edu` Edits the phone number and email address of the 1st person to be `91234567` and `johndoe@u.nus.edu` respectively.
-*  `edit 2 n/Betsy Crower` changes the 2nd displayed person's name to `Betsy Crower` and preserves their tags.
-*  `edit 2 t/` is rejected. The member's contact details and tags remain unchanged.
+
+* `edit 1 p/91234567 e/mei.lim@u.nus.edu` changes the 1st displayed member's phone number to `91234567`
+   and email address to `mei.lim@u.nus.edu`.
+* `edit 2 n/Aisha Rahman Lim` changes the 2nd displayed member's name to `Aisha Rahman Lim`
+   and preserves their tags.
+* `edit 2 t/` is rejected. The member's contact details and tags remain unchanged.
 
 To complete an email-only member, run `find e/newmember@u.nus.edu`, identify the member's displayed index,
 and use `edit INDEX n/New Member`. Search again or recheck the index before using `edit INDEX p/91234567`
@@ -688,7 +698,7 @@ Formats:
 
 Examples:
 
-* `find John` returns members named `john` and `John Doe`.
+* `find Mei` returns members named `mei` and `Mei Lin`.
 * `find n/alex` returns members whose names contain the whole word `alex`, ignoring case.
 * `find S/O` returns members whose names contain the complete word `S/O`, including `Ravi S/O Kumar`.
 * `find n/alex david` is rejected; use `find alex david` to match either name keyword.
@@ -772,8 +782,9 @@ Format: `delete INDEX`
 * The index **must be a positive integer** 1, 2, 3, ...
 
 Examples:
+
 * `list` followed by `delete 2` deletes the 2nd member in the selected status view.
-* `find Betsy` followed by `delete 1` deletes the 1st person in the results of the `find` command.
+* `find Aisha` followed by `delete 1` deletes the 1st person in the results of the `find` command.
 
 The deletion confirmation shows only the member's supplied details. For an email-only member with no tags,
 it reads `Deleted person: Email: bobby@u.nus.edu`.
