@@ -104,6 +104,7 @@ public class JsonAddressBookStorage {
             JsonNode root;
             try (Reader reader = Files.newBufferedReader(path);
                     JsonParser parser = treeMapper.getFactory().createParser(reader)) {
+                parser.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
                 root = treeMapper.readTree(parser);
                 if (parser.nextToken() != null) {
                     throw new IOException("Unexpected content after the address-book JSON object.");

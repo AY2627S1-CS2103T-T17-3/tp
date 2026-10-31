@@ -862,6 +862,9 @@ properties, its record number. Known fields in otherwise valid members remain av
 back up the file, correct or remove the unrecognized properties, and restart. For example, change `phoneNumber` to
 `phone`. Properties introduced by a newer app version may also trigger this protection in an older version.
 
+Duplicate property names anywhere in the JSON file also trigger protected recovery. The app displays an empty list,
+preserves the original file, and disables saving until the duplicates are corrected and the app is restarted.
+
 <box type="warning" seamless>
 
 **Caution:**
