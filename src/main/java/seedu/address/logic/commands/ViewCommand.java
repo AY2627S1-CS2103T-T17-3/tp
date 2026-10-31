@@ -15,7 +15,8 @@ public class ViewCommand extends Command {
     public static final String MESSAGE_USAGE = COMMAND_WORD + ": Selects which members are shown.\n"
             + "Format: " + COMMAND_WORD + " all|active|archived\n"
             + "Example: " + COMMAND_WORD + " archived";
-    public static final String MESSAGE_SUCCESS = "Switched to %s view.";
+    public static final String MESSAGE_SUCCESS = "Showing %s view.\n"
+            + "Any existing search still applies. Use list to clear the search in this view.";
 
     private final StatusFilter statusFilter;
 
