@@ -98,8 +98,10 @@ directory, are loaded as they are.
 * Items followed by `...` can appear zero or more times.<br>
   For example, `[t/TAG]... ` may be omitted, or written as `t/friend` or `t/friend t/family`.
 
-* Parameters can be in any order.<br>
+* Prefixed fields can be in any order.<br>
   For example, if the command specifies `n/NAME p/PHONE_NUMBER`, `p/PHONE_NUMBER n/NAME` is also acceptable.
+  For commands that require an index, the index must come before the prefixed fields:
+  use `tag 1 t/Volunteer`, not `tag t/Volunteer 1`.
 
 * Extraneous parameters for `list` and `exit` are ignored.<br>
   For example, `list 123` is interpreted as `list`. The `help` and `clear` commands reject extra arguments.
