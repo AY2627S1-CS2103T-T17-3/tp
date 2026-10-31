@@ -48,7 +48,7 @@ NUSocietyDesk is a desktop member directory for NUS society secretaries. It uses
 
    * `archive 2` : Marks the 2nd displayed member as archived without deleting their record.
 
-   * `view all` : Shows both active and archived members.
+   * `view all` : Shows matching active and archived members without clearing the current search.
 
    * `list` : Clears the search and lists members in the selected status view.
 
@@ -483,6 +483,8 @@ Showing archived view.
 Any existing search still applies. Use list to clear the search in this view.
 ```
 
+The reminder also appears when no search is active or you select the current view again.
+
 For example, after `find t/publicity`, use `view archived` to see archived matches, then `view active` to see
 active matches. Use `list` to clear the search while keeping the selected view.
 
@@ -696,6 +698,8 @@ Formats:
 * In a prefixed search, place the prefix before all search text. For example, `find Alice p/9123` is rejected.
 * If no members match, the list is empty and the result count is zero.
 * Each search checks the complete directory and replaces the previous search results.
+  The selected status view limits which matches appear and are counted. Switching views keeps the search;
+  use `list` to clear it in the selected view.
 * Rejected searches leave the displayed results, member records and saved data unchanged.
 * A member with no name cannot match a name search, and a member with no phone cannot match a phone search.
   Use `find e/EMAIL_SUBSTRING` or an assigned tag for members with incomplete contact details.

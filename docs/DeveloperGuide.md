@@ -441,8 +441,16 @@ The button in `MainWindow.fxml` starts at `ALL`. `MainWindow.handleStatusFilterB
 the same state directly. `LogicManager` passes both paths to `ModelManager`, the source of truth for the selected
 view. `MainWindow` reads the state to update the button text and colour after either path changes it.
 After a button click, `MainWindow` replaces the previous result feedback using `ViewCommand.MESSAGE_SUCCESS`,
-matching the typed command's confirmation.
-This is an in-memory setting and starts at All on each launch.
+matching the typed command's confirmation. Both paths show the selected view and remind the user that the
+search is preserved and can be cleared with `list`. For Archived view, the feedback is:
+
+```text
+Showing archived view.
+Any existing search still applies. Use list to clear the search in this view.
+```
+
+The reminder is always included, even when no search is active or the requested view is already selected.
+The selected status view is an in-memory setting and starts at All on each launch.
 
 `ViewCommandParser` accepts exactly one status, ignoring case. `ViewCommand` is read-only so it works during
 data recovery; it also skips the normal save because selecting a view does not change member records.
@@ -1138,12 +1146,19 @@ Use a disposable application folder with `data/nusocietydesk.json` containing `{
    Expected: The button reads `ALL`. Both members appear; the second has an `ARCHIVED` badge.
 1. Click the status button once, then again, then a third time.<br>
    Expected: Its text and list change together: `ACTIVE` shows only `active@u.nus.edu`, `ARCHIVED` shows only
-   `former@u.nus.edu`, and `ALL` shows both members.
+   `former@u.nus.edu`, and `ALL` shows both members. Each click replaces the previous feedback with
+   `Showing active view.`, `Showing archived view.`, or `Showing all view.`, respectively, followed by
+   `Any existing search still applies. Use list to clear the search in this view.` on a new line,
+   even though no search is active.
 1. Run `find e/active`, then click through Active and Archived.<br>
    Expected: Active shows the matching member, Archived shows an empty list, and the search remains in effect.
+   Each click replaces the search result count with the view confirmation and the same search reminder.
 1. Run `view active`, then `view archived`, then `view all`.<br>
    Expected: The button and list follow each command. The existing search remains in effect, so `view archived`
-   shows no matches and `view all` restores the active match. No member statuses change.
+   shows no matches and `view all` restores the active match. Each command shows the same two-line feedback
+   as the corresponding button selection. No member statuses change.
+1. Run `view all` again.<br>
+   Expected: The same `Showing all view.` confirmation and search reminder appear. The search and list are unchanged.
 1. Run `view archived`, then `list`.<br>
    Expected: The search clears, the button still reads `ARCHIVED`, and `former@u.nus.edu` appears at index 1.
 1. Run `edit 1 n/Former Member`, then `tag 1 t/Alumni`, followed by `untag 1 t/Alumni`.<br>
