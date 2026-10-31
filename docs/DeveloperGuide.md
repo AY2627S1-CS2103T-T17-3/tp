@@ -1257,7 +1257,9 @@ command-state preservation, CSV import, and protected storage behavior.
 
 Use a disposable application folder in All view. Copy `docs/samples/members.csv` into it as `member contacts.csv`.
 Keep a separate copy of the CSV for comparison. Start with neither `alex@u.nus.edu` nor `jamie@u.nus.edu` in the
-directory, and confirm startup has not disabled saving. Run `list` to ensure the JSON file exists, then back it up.
+directory, and confirm startup has not disabled saving. Ensure `import.setup@u.nus.edu` is also absent, then run
+`add e/import.setup@u.nus.edu` and confirm it succeeds. This creates `data/nusocietydesk.json` if it does not
+already exist. Close the app, back up the JSON file, and relaunch.
 For independent cases below, restore that starting state. Keep the app's launch folder fixed so relative paths resolve
 to the prepared CSV files. Inspect the full feedback message for rejection details.
 CSV record numbers count the header as 1 and the first member as 2; empty lines do not count.
@@ -1717,11 +1719,20 @@ choosing **Delete all members** in its confirmation dialog.
    1. Close the app in the disposable test directory and back up `data/nusocietydesk.json`.
       Set Tag Test's saved tags to `["Publicity", "publicity", "Exco"]`, leaving all other JSON unchanged.
 
-   1. Relaunch the app.<br>
-      Expected: The card displays only `exco` and `publicity`.
+   1. Relaunch the app, run `view all`, and note Tag Test's displayed index.<br>
+      Expected: The card displays only `exco` and `publicity`. Loading normalizes the tags in memory without
+      rewriting the JSON file, which still contains `["Publicity", "publicity", "Exco"]`.
 
    1. Execute `tag INDEX t/Exco` for Tag Test's displayed index and inspect the saved record.<br>
-      Expected: It contains exactly two tag names, `exco` and `publicity`, regardless of their order in the file.
+      Expected: The command is rejected because the member already has `exco`. The JSON file remains unchanged.
+
+   1. Execute `edit INDEX a/Updated Kent Ridge` for the same member and confirm it succeeds, then inspect the
+      saved record.<br>
+      Expected: The address is `Updated Kent Ridge`. The record contains exactly two tag names, `exco` and
+      `publicity`, regardless of their order in the file. The successful edit saves the normalized tags.
+
+   1. Close and reopen the app.<br>
+      Expected: Tag Test retains the updated address and exactly the two tags `exco` and `publicity`.
 
 ### Saving data
 
