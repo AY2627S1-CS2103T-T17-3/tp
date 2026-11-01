@@ -32,13 +32,13 @@ together {
 
 class "<<interface>>\njava.util.function.\nPredicate<Person>" as PersonPredicate #555555
 
-FindCommandParser ..> SearchParserUtil
-FindAllCommandParser ..> SearchParserUtil
-FindAnyCommandParser ..> SearchParserUtil
+FindCommandParser .up.> SearchParserUtil
+FindAllCommandParser .up.> SearchParserUtil
+FindAnyCommandParser .up.> SearchParserUtil
 
-FindCommandParser ..> FindCommand : <<create>>
-FindAllCommandParser ..> FindCommand : <<create>>
-FindAnyCommandParser ..> FindCommand : <<create>>
+FindCommandParser .down.> FindCommand : <<create>>\n
+FindAllCommandParser .down.> FindCommand : <<create>>\n
+FindAnyCommandParser .down.> FindCommand : <<create>>\n
 SearchParserUtil -[hidden]down-> FindCommand
 FindCommand -left-|> Command
 
