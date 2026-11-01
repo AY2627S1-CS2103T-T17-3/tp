@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.channels.FileChannel;
@@ -18,11 +19,14 @@ import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -46,42 +50,20 @@ public class MainTest {
 
     @Test
     public void main_directoryAlreadyOpen_rendersDialogInFreshJvmAndExitsWhenDismissed() throws Exception {
-        boolean isLinux = System.getProperty("os.name").startsWith("Linux");
-        assumeTrue(!isLinux || System.getenv("DISPLAY") != null, "JavaFX UI tests need a display");
         Process owner = startLockProcess(temporaryFolder.resolve(".nusocietydesk.lock"));
         try {
             assertEquals("LOCKED", readStatus(owner));
-            StringJoiner classPath = new StringJoiner(File.pathSeparator);
-            classPath.add(System.getProperty("java.class.path"));
-            for (ClassLoader loader = MainTest.class.getClassLoader(); loader != null; loader = loader.getParent()) {
-                if (loader instanceof URLClassLoader urlLoader) {
-                    for (URL url : urlLoader.getURLs()) {
-                        classPath.add(Path.of(url.toURI()).toString());
-                    }
-                }
-            }
-            Path errorLog = temporaryFolder.resolve("startup.err");
-            Process contender = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                    "-cp", classPath.toString(), StartupErrorProcess.class.getName())
-                    .directory(temporaryFolder.toFile()).redirectError(errorLog.toFile()).start();
-            try {
-                assertTrue(contender.waitFor(15, TimeUnit.SECONDS), "The dialog did not close on its own");
-                assertEquals(0, contender.exitValue(), () -> {
-                    try {
-                        return Files.readString(errorLog);
-                    } catch (IOException e) {
-                        return e.toString();
-                    }
-                });
-                assertEquals("RENDERED", readStatus(contender));
-                assertFalse(Files.exists(temporaryFolder.resolve("preferences.json")));
-                assertFalse(Files.exists(temporaryFolder.resolve("data")));
-            } finally {
-                stopProcess(contender);
-            }
+            assertStartupError("already open in another instance");
         } finally {
             stopProcess(owner);
         }
+    }
+
+    @Test
+    public void main_lockFileCannotBeOpened_rendersErrorWithoutLoadingData() throws Exception {
+        Files.createDirectory(temporaryFolder.resolve(".nusocietydesk.lock"));
+
+        assertStartupError("could not lock its application folder");
     }
 
     @Test
@@ -216,6 +198,56 @@ public class MainTest {
         }));
     }
 
+    private void assertStartupError(String expectedMessage) throws Exception {
+        boolean isLinux = System.getProperty("os.name").startsWith("Linux");
+        assumeTrue(!isLinux || System.getenv("DISPLAY") != null, "JavaFX UI tests need a display");
+        StringJoiner classPath = new StringJoiner(File.pathSeparator);
+        classPath.add(System.getProperty("java.class.path"));
+        for (ClassLoader loader = MainTest.class.getClassLoader(); loader != null; loader = loader.getParent()) {
+            if (loader instanceof URLClassLoader urlLoader) {
+                for (URL url : urlLoader.getURLs()) {
+                    classPath.add(Path.of(url.toURI()).toString());
+                }
+            }
+        }
+        List<String> command = new ArrayList<>();
+        command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        // Record child-JVM coverage in the same execution file that Gradle reports on.
+        ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
+                .filter(argument -> argument.startsWith("-javaagent:") && argument.contains("jacoco"))
+                .map(this::resolveCoverageDestination)
+                .forEach(command::add);
+        command.addAll(List.of("-cp", classPath.toString(), StartupErrorProcess.class.getName(), expectedMessage));
+        Path errorLog = temporaryFolder.resolve("startup.err");
+        Process contender = new ProcessBuilder(command).directory(temporaryFolder.toFile())
+                .redirectError(errorLog.toFile()).start();
+        try {
+            assertTrue(contender.waitFor(15, TimeUnit.SECONDS), "The dialog did not close on its own");
+            assertEquals(0, contender.exitValue(), () -> {
+                try {
+                    return Files.readString(errorLog);
+                } catch (IOException e) {
+                    return e.toString();
+                }
+            });
+            assertEquals("RENDERED", readStatus(contender));
+            assertFalse(Files.exists(temporaryFolder.resolve("preferences.json")));
+            assertFalse(Files.exists(temporaryFolder.resolve("data")));
+        } finally {
+            stopProcess(contender);
+        }
+    }
+
+    private String resolveCoverageDestination(String agentArgument) {
+        Matcher destination = Pattern.compile("destfile=([^,]+)").matcher(agentArgument);
+        if (destination.find()) {
+            // The child runs in a temporary folder, so resolve Gradle's output path in the parent JVM.
+            String absoluteDestination = "destfile=" + Path.of(destination.group(1)).toAbsolutePath();
+            return destination.replaceFirst(Matcher.quoteReplacement(absoluteDestination));
+        }
+        return agentArgument;
+    }
+
     private Process startLockProcess(Path lockFile) throws Exception {
         Path java = Path.of(System.getProperty("java.home"), "bin", "java");
         Path testClasses = Path.of(MainTest.class.getProtectionDomain().getCodeSource().getLocation().toURI());
@@ -261,7 +293,7 @@ public class MainTest {
                                         String message = dialog.getContentText();
                                         assertEquals(message, renderedText.getText());
                                         assertTrue(content.getHeight() >= content.prefHeight(content.getWidth()) - 1);
-                                        assertTrue(message.contains("already open in another instance"));
+                                        assertTrue(message.contains(args[0]));
                                         System.out.println("RENDERED");
                                         Button okButton = (Button) dialog.lookupButton(ButtonType.OK);
                                         okButton.fire();
