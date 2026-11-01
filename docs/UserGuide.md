@@ -826,6 +826,9 @@ Format: `exit`
 
 ### Saving the data
 
+Only one instance of NUSocietyDesk can run from the same application folder at a time. Opening it again shows an
+error explaining that the member directory is already open; close the existing instance before reopening it.
+
 NUSocietyDesk automatically saves data after successful commands that change member records, such as `add`, `edit`,
 `delete`, `clear`, `tag`, `untag`, `archive`, `activate`, and `import`. You do not need to save manually.
 `find`, `findall`, `findany`, `list`, `view`, `help`, and `exit` do not save member data. They remain available even if

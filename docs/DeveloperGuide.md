@@ -827,6 +827,15 @@ and record outcomes; `ImportIntegrationTest` checks persistence, source protecti
 
 ### Saving member data safely
 
+Before launching JavaFX, `Main` acquires an exclusive operating-system lock on `.nusocietydesk.lock` in the
+application folder. It holds the lock until `Application.launch` returns, including shutdown preference saving.
+A second process that cannot acquire the lock shows an error and exits before loading data or writing preferences.
+The error dialog is queued after JavaFX startup and shown without blocking; closing it exits that process.
+Failure to open or lock the file also prevents startup. The separate lock file is retained because deleting it
+could let later launches lock a different file; its presence alone does not block startup. The lock is released
+when launch returns or throws, or when the JVM terminates. This prevents simultaneous instances in the same
+application folder from overwriting each other's saved members.
+
 Saving protects both the in-memory directory and the existing JSON file. Commands that change member records return
 success to the UI only after persistence succeeds. Read-only commands (`find`, `findall`, `findany`, `list`, `view`,
 `help`, and `exit`) return `false` from `requiresSave()` and execute without attempting to save. They remain available
@@ -1070,6 +1079,26 @@ testers are expected to do more *exploratory* testing.
 </box>
 
 ### Launch and shutdown
+
+1. Preventing a second instance
+
+   1. Copy the current JAR into a disposable folder. Create `data/nusocietydesk.json` with `{"persons":[]}`.
+      Launch the JAR and run `add e/first@u.nus.edu`.
+   1. Keep that window open and launch the same JAR again, including from a different working directory.<br>
+      Expected: Only an error dialog opens, explaining that the directory is already open. Its full message
+      is visible immediately without maximizing or minimizing, wraps without an ellipsis, and the dialog can be resized.
+      Dismiss it;
+      the second process exits. The first window and saved member remain unchanged.
+   1. In the original window, run `add e/second@u.nus.edu`. Try opening the JAR again.<br>
+      Expected: The second launch is still blocked after a successful save.
+   1. Close the original window, then launch the JAR again.<br>
+      Expected: The directory opens with both members. The leftover `.nusocietydesk.lock` does not block startup.
+   1. In this disposable setup, forcibly terminate the running process, then launch the JAR again.<br>
+      Expected: Startup succeeds without deleting the lock file; both previously saved members remain.
+
+   `MainTest` checks cross-process exclusion and lock release after normal exit, startup failure, and forced
+   termination. It also checks the startup dialog in a fresh JVM on a normal layout pulse without forcing layout.
+   The packaged-JAR launch steps above require GUI verification.
 
 1. Initial launch
 
