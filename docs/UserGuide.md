@@ -374,7 +374,8 @@ Jamie Lee,98765432,jamie@u.nus.edu,Clementi,,archived
 
 Copy or download this file and replace the example members with your own data. Keep the lowercase header row
 unchanged and include all six columns in every member record, even when optional cells are blank.
-Surrounding whitespace is removed from member fields before validation.
+Surrounding ordinary spaces and tabs are removed from member fields before validation. See below for how
+quoting affects Unicode whitespace.
 
 Quote a name containing a comma, for example `"Tan, Alex"`, so it remains one CSV cell.
 
@@ -387,8 +388,14 @@ Quote a name containing a comma, for example `"Tan, Alex"`, so it remains one CS
 | `tags` | Optional. Separate tags of 1 to 30 alphanumeric characters with semicolons, e.g., `Publicity;Exco`. Case variants become one lowercase tag per member. |
 | `status` | Required. Exactly `active` or `archived`. |
 
-Whitespace-only name, phone, and address cells count as absent. An empty tags cell means no tags; empty tags
-inside a list, such as `publicity;`, are invalid.
+Empty name, phone, and address cells count as absent. Cells containing only ordinary spaces or tabs also count
+as absent, whether quoted or unquoted.
+
+Name and phone cells count as absent only if empty after trimming. For example, a quoted name or phone cell
+containing only one EM SPACE (U+2003) rejects that record with the field's constraints message, because that
+character is not trimmed from quoted cells. The same EM SPACE in an unquoted cell is trimmed and the field
+counts as absent. A name or phone cell containing only nonbreaking spaces (U+00A0) rejects the record whether
+quoted or unquoted, because those spaces are not trimmed in either case.
 
 Address cells containing only Unicode whitespace, including U+3000, U+2003, and nonbreaking spaces, also count
 as absent, whether quoted or unquoted. This differs from explicitly supplying a blank `a/` value to add/edit,
@@ -396,6 +403,8 @@ which is rejected. Imported missing addresses display `Address: -` and save as J
 The existing CSV trimming rules still apply: surrounding Java whitespace is removed from unquoted cells,
 and ordinary surrounding whitespace is trimmed from all member fields. Quoting can therefore affect whether
 Unicode spaces surrounding a nonblank address are preserved.
+
+An empty tags cell means no tags; empty tags inside a list, such as `publicity;`, are invalid.
 
 An email exceeding the local-part limit rejects only that record. For a 65-character local-part in record 3,
 the rejection detail is `CSV record 3: Email local-part must contain at most 64 characters; received 65.`
