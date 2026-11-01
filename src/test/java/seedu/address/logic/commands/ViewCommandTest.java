@@ -34,7 +34,9 @@ public class ViewCommandTest {
         model.updateFilteredPersonList(new EmailContainsSubstringPredicate("alex"));
 
         ViewCommand viewArchived = new ViewCommand(StatusFilter.ARCHIVED);
-        assertEquals(new CommandResult("Switched to archived view."), viewArchived.execute(model));
+        String expectedMessage = "Showing archived view.\n"
+                + "Any existing search still applies. Use list to clear the search in this view.";
+        assertEquals(new CommandResult(expectedMessage), viewArchived.execute(model));
         assertEquals(StatusFilter.ARCHIVED, model.getStatusFilter());
         assertEquals(List.of(archivedMatch), model.getFilteredPersonList());
 

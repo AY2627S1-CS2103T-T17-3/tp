@@ -209,13 +209,17 @@ public class LogicManagerTest {
         model.addPerson(person);
         Path savedFile = temporaryFolder.resolve("nusocietydesk.json");
 
-        assertEquals(new CommandResult("Switched to archived view."), logic.execute("view archived"));
+        String expectedArchivedMessage = "Showing archived view.\n"
+                + "Any existing search still applies. Use list to clear the search in this view.";
+        assertEquals(new CommandResult(expectedArchivedMessage), logic.execute("view archived"));
         assertEquals(StatusFilter.ARCHIVED, logic.getStatusFilter());
         assertEquals(List.of(), logic.getFilteredPersonList());
         assertEquals(List.of(person), model.getAddressBook().getPersonList());
         assertFalse(Files.exists(savedFile));
 
-        assertEquals(new CommandResult("Switched to all view."), logic.execute("view all"));
+        String expectedAllMessage = "Showing all view.\n"
+                + "Any existing search still applies. Use list to clear the search in this view.";
+        assertEquals(new CommandResult(expectedAllMessage), logic.execute("view all"));
         assertEquals(StatusFilter.ALL, logic.getStatusFilter());
         assertEquals(List.of(person), logic.getFilteredPersonList());
         assertFalse(Files.exists(savedFile));
@@ -232,7 +236,9 @@ public class LogicManagerTest {
         Logic readOnlyLogic = new LogicManager(model, new StorageManager(addressBookStorage,
                 new JsonUserPrefsStorage(temporaryFolder.resolve("recoveryUserPrefs.json"))));
 
-        assertEquals(new CommandResult("Switched to archived view."), readOnlyLogic.execute("view archived"));
+        String expectedMessage = "Showing archived view.\n"
+                + "Any existing search still applies. Use list to clear the search in this view.";
+        assertEquals(new CommandResult(expectedMessage), readOnlyLogic.execute("view archived"));
         assertEquals(StatusFilter.ARCHIVED, readOnlyLogic.getStatusFilter());
         assertEquals(List.of(), readOnlyLogic.getFilteredPersonList());
         assertEquals("invalid JSON", Files.readString(savedFile));
