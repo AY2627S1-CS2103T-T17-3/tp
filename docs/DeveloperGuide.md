@@ -736,6 +736,9 @@ Invalid conditions therefore reject even an OR search that could otherwise match
 This includes EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000), which `trim()` leaves intact. Non-breaking
 spaces such as U+00A0 are not blank under these rules. Trimming and splitting retain the `trim()` and `\s+` rules.
 
+In nonblank values, these Unicode spaces are retained even at the ends and do not separate arguments.
+They can cause zero name/email matches or phone/tag validation errors.
+
 All three parsers reuse the field predicates: names match whole words ignoring case, phones match consecutive
 ASCII digits, emails match literal substrings ignoring case, and tags match exactly ignoring case.
 `NameContainsKeywordsPredicate` first checks literal whitespace-separated words through the unchanged
@@ -1466,7 +1469,7 @@ add n/Alison Tan e/namealison@u.nus.edu
 ```
 
 1. Test cases: `find n/Alice`, `find n/aLiCe`, `find Alice` and `find n/ Alice `.<br>
-   Expected: Only Alice Tan is displayed; the count is one. Case and surrounding whitespace do not affect matching.
+   Expected: Only Alice Tan is displayed; the count is one. Case and surrounding ordinary spaces do not affect matching.
 1. Test cases: `find Alice Bob` and `find Bob ALICE`.<br>
    Expected: Alice Tan and Bob Lee are displayed; the count is two. Either keyword can match, in any order.
 1. Test cases: `find n/Ali` and `find Ali`.<br>
@@ -1550,7 +1553,7 @@ number, including the middle or end.
 
 1. Test cases: `find p/9123` and `find p/ 9123 `.<br>
    Expected: Alice Tan and Bob Lee are displayed; the count is two. A substring can occur anywhere in the phone
-   number, and surrounding whitespace is ignored. The member named 9123 Member has no phone and does not match.
+   number, and surrounding ordinary spaces are ignored. The member named 9123 Member has no phone and does not match.
 1. Test cases: `find p/91234567` and `find p/2345`.<br>
    Expected: Only Alice Tan is displayed; the count is one. Both full numbers and consecutive digit fragments match.
 1. Test cases: `find p/9` and `find p/89`.<br>
