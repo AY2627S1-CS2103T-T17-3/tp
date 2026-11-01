@@ -619,7 +619,7 @@ Formats:
   Alice OR Bob."
 * For multiple keywords, omit `n/`: `find Alice Bob` returns members whose names contain Alice or Bob.
   Previously accepted commands such as `find n/Alice Bob` must now be written as `find Alice Bob`.
-* Surrounding whitespace is ignored, including whitespace between `n/` and its keyword.
+* Surrounding ordinary spaces, tabs and line breaks are ignored, including between `n/` and its keyword.
 * Name matching is case-insensitive; for example, `hans` matches `Hans`.
 * In an unprefixed search, keyword order does not matter: `find Hans Bo` and `find Bo Hans` return the same results.
 * Unprefixed searches and `n/` searches consider only names.
@@ -649,7 +649,8 @@ Formats:
   `find p/abc`, `find p/+659123`, `find p/9123-4567` and `find p/９１２３`.
   The error is: "Phone searches accept digits (0-9) only. Example: find p/9123."
 * Leading zeros are preserved: `find p/001` searches for the exact sequence `001`.
-  Surrounding whitespace is ignored. Rejected searches leave the displayed member list and member records unchanged.
+  Surrounding ordinary spaces, tabs and line breaks are ignored.
+  Rejected searches leave the displayed member list and member records unchanged.
 * Include `p/` to search phone numbers: `find 9103` searches names, while `find p/9103` searches phone numbers.
 
 **Email searches**
@@ -682,17 +683,20 @@ Formats:
 
 **Rules for `find`**
 
-* When pasting a `find`, `findall` or `findany` command, runs of tabs and line breaks are converted to spaces.
-  Search values stay separated and follow the same validation rules as space-separated input.
+* For `find`, `findall` and `findany`, ordinary spaces, tabs and line breaks separate arguments.
+  When pasting, runs of tabs and line breaks become ordinary spaces.
+* Unicode spaces such as EM SPACE (U+2003) and IDEOGRAPHIC SPACE (U+3000) remain part of nonblank values,
+  even at the ends, and do not separate arguments. They can cause zero name/email matches or phone/tag validation
+  errors. Replace them with ordinary spaces in pasted searches.
 * Search one field per command. Combining fields, such as `find n/Alice p/9123`, `find e/alice n/Alice`
   or `find t/publicity e/alice`, is rejected.
 * Use lowercase prefixes: `n/`, `p/`, `e/` and `t/`. Uppercase prefixes such as `N/`, `P/`, `E/` and `T/`
   are rejected with: "Search prefixes must be lowercase. Use n/, p/, e/ or t/."
   This rule applies to prefixes; uppercase values such as `find n/ALICE`, `find e/ALICE` and `find t/PUBLICITY`
   remain valid.
-* A supported prefix, or its uppercase equivalent, at the start of an argument or after whitespace selects
-  prefixed syntax. This also applies when it appears after other text, so `find Alice n/Bob` is rejected.
-* When no supported prefix is present, all whitespace-separated arguments are literal name keywords.
+* A supported prefix (including uppercase forms) selects prefixed syntax when it begins an argument.
+  This also applies after other text, so `find Alice n/Bob` is rejected.
+* When no supported prefix is present, each argument is treated as a literal name keyword.
   Slash-containing keywords such as `find S/O`, `find D/O`, `find AN/NA` and `find G/value` are valid name searches.
 * In prefixed searches, other field prefixes remain unsupported. For example, `find n/Alice G/value`
   and `find G/value n/Alice` are rejected with "Unsupported search prefix: G/. Use n/, p/, e/ or t/."
@@ -743,7 +747,7 @@ findany PREFIX/VALUE [PREFIX/VALUE]...
 ```
 
 * Supply at least one condition. Every condition needs a lowercase `n/`, `p/`, `e/` or `t/` prefix
-  and one nonblank value. The same Java whitespace rules and field validation as `find` apply to every condition.
+  and one nonblank value. The whitespace and field validation rules for `find` apply.
 * Repeat a prefix to add another condition: use `n/John n/Tan`, not `n/John Tan`.
 * Every condition must be valid. For example, `findany n/Alice p/abc` is rejected even if Alice exists.
   Rejected searches preserve the previous results, member records and saved data.
