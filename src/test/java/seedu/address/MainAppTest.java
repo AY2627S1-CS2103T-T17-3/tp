@@ -77,6 +77,66 @@ public class MainAppTest {
     }
 
     @Test
+    public void init_nullPreferenceRoot_restoresDefaultsAndPreservesMembers() throws Exception {
+        assertPreferenceRecovery("null");
+    }
+
+    @Test
+    public void init_nullGuiSettings_restoresDefaultsAndPreservesMembers() throws Exception {
+        assertPreferenceRecovery("{\"guiSettings\":null}");
+    }
+
+    @Test
+    public void init_nullWindowCoordinates_preservesWindowDimensions() throws Exception {
+        Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
+        Files.writeString(temporaryFolder.resolve("preferences.json"), """
+                {"guiSettings":{"windowWidth":1000,"windowHeight":700,"windowCoordinates":null}}
+                """);
+        MainApp app = createApp(jarFile);
+
+        app.init();
+
+        assertEquals(1000, app.model.getGuiSettings().getWindowWidth());
+        assertEquals(700, app.model.getGuiSettings().getWindowHeight());
+        assertNull(app.model.getGuiSettings().getWindowCoordinates());
+        assertEquals(app.model.getUserPrefs(), app.storage.readUserPrefs().orElseThrow());
+        app.stop();
+    }
+
+    private void assertPreferenceRecovery(String json) throws Exception {
+        Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
+        Files.writeString(temporaryFolder.resolve("preferences.json"), json);
+        Path dataFolder = Files.createDirectory(temporaryFolder.resolve("data"));
+        Path membersFile = dataFolder.resolve("nusocietydesk.json");
+        Files.writeString(membersFile, "{\"persons\":[{\"email\":\"alex@u.nus.edu\"}]}");
+        byte[] originalMembers = Files.readAllBytes(membersFile);
+
+        for (int launch = 0; launch < 2; launch++) {
+            MainApp app = createApp(jarFile);
+            app.init();
+
+            assertEquals(new UserPrefs(), app.model.getUserPrefs());
+            assertEquals(new UserPrefs(), app.storage.readUserPrefs().orElseThrow());
+            assertNull(app.getDataLoadingWarning());
+            assertTrue(app.storage.isAddressBookSaveAllowed());
+            app.logic.execute("list");
+            assertEquals(List.of("alex@u.nus.edu"), app.logic.getFilteredPersonList().stream()
+                    .map(person -> person.getEmail().value).toList());
+            app.stop();
+            assertArrayEquals(originalMembers, Files.readAllBytes(membersFile));
+        }
+    }
+
+    private MainApp createApp(Path jarFile) {
+        return new MainApp() {
+            @Override
+            protected Path getApplicationLocation() {
+                return jarFile;
+            }
+        };
+    }
+
+    @Test
     public void getApplicationLocation_availableAndMissingCodeSource() throws Exception {
         Path jarFile = Files.createFile(temporaryFolder.resolve("NUSocietyDesk.jar"));
 

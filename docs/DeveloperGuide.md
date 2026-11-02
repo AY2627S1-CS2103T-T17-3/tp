@@ -215,6 +215,11 @@ The `Storage` component,
 these paths to storage, and the member data path to the UI. When running from compiled classes during
 development, or when the code source location is unavailable, both paths are relative to the working directory.
 
+Preference loading rejects a null JSON root in `JsonUtil` and null `guiSettings` in `JsonUserPrefsStorage`
+as `DataLoadingException`. `MainApp.initPrefs` then uses and saves default preferences through its existing
+recovery path, allowing startup to continue without changing member data. Missing GUI settings retain their
+defaults, while null `windowCoordinates` remains valid and preserves supplied window dimensions.
+
 The JSON root, property names and email string are unchanged. `JsonAdaptedPerson` writes absent name, phone and
 address fields as explicit `null` values. Missing properties and explicit nulls load as empty optionals; supplied
 strings still use the existing validators without trimming. Empty or whitespace-only strings are invalid.
@@ -1138,6 +1143,17 @@ testers are expected to do more *exploratory* testing.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
        Expected: The most recent window size and location are retained.
+
+1. Recovering from null preferences
+
+   1. Close the app in a disposable application folder containing saved members. Replace the complete contents
+      of `preferences.json` beside the JAR with `null`, then relaunch.<br>
+      Expected: The main window opens with default preferences, the existing members load, and the preference
+      file is rewritten with defaults. Closing and relaunching succeeds again.
+   1. Repeat with `{"guiSettings":null}`.<br>
+      Expected: The same recovery occurs without changing the member data file.
+   1. Repeat with `{"guiSettings":{"windowWidth":1000,"windowHeight":700,"windowCoordinates":null}}`.<br>
+      Expected: Startup succeeds and retains the supplied dimensions, subject to the normal display bounds.
 
 1. Compact display and saved monitor placement (manual check; requires two monitors for the second part)
 
