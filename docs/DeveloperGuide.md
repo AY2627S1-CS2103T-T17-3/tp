@@ -1003,7 +1003,8 @@ Statuses describe current support and future plans: **Implemented** means the st
 
 1. Secretary requests to find members using name, phone, email or tag criteria, choosing whether all or any
    criteria must match when combining conditions.
-2. NUSocietyDesk displays matching members with their available contact details, tags and the number of matches.
+2. NUSocietyDesk displays matching members in the selected status view, with their available contact details,
+   tags and the number of matches.
 3. Secretary inspects the displayed details to identify the intended members.
 
    Use case ends.
@@ -1017,7 +1018,7 @@ Statuses describe current support and future plans: **Implemented** means the st
 
     Use case ends.
 
-* 2a. No members match the search.
+* 2a. No members in the selected status view match the search.
 
   * 2a1. NUSocietyDesk displays an empty list and reports zero matches.
 
