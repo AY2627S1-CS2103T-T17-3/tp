@@ -46,4 +46,5 @@ For contributors, the [Developer Guide](DeveloperGuide.html) explains the applic
 
 ## Acknowledgements
 
-* Libraries used: [JavaFX](https://openjfx.io/), [Jackson](https://github.com/FasterXML/jackson), [JUnit5](https://github.com/junit-team/junit5)
+* Libraries used: [JavaFX](https://openjfx.io/), [Jackson](https://github.com/FasterXML/jackson),
+  [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/), [JUnit5](https://github.com/junit-team/junit5)
