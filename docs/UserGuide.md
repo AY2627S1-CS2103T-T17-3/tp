@@ -929,7 +929,10 @@ Back up the file before switching versions; incomplete records are not compatibl
 ## FAQ
 
 **Q**: How do I transfer my data to another computer?<br>
-**A**: Install the app on the other computer and overwrite the data file it creates with the data file from your previous AddressBook home folder.
+**A**: Close NUSocietyDesk on both computers. Copy `NUSocietyDesk.jar` to the other computer, then create a `data`
+folder beside the JAR if needed. Copy `data/nusocietydesk.json` from the old JAR's folder into that `data` folder,
+replacing an existing file if one is present. Launch the app after copying the file. A fresh launch does not create
+the data file until you make a change to the member directory.
 
 --------------------------------------------------------------------------------------------------------------------
 
