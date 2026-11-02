@@ -37,10 +37,14 @@ public class JsonUserPrefsStorage {
     /**
      * Similar to {@link #readUserPrefs()}
      * @param prefsFilePath location of the data. Cannot be null.
-     * @throws DataLoadingException if the file format is not as expected.
+     * @throws DataLoadingException if the file format is not as expected or the GUI settings are null.
      */
     public Optional<UserPrefs> readUserPrefs(Path prefsFilePath) throws DataLoadingException {
-        return JsonUtil.readJsonFile(prefsFilePath, UserPrefs.class);
+        Optional<UserPrefs> userPrefs = JsonUtil.readJsonFile(prefsFilePath, UserPrefs.class);
+        if (userPrefs.isPresent() && userPrefs.get().getGuiSettings() == null) {
+            throw new DataLoadingException(new IOException("GUI settings must not be null."));
+        }
+        return userPrefs;
     }
 
     /**
