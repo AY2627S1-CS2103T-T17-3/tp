@@ -226,6 +226,8 @@ Invalid records and later duplicate canonical emails are skipped. Error position
 one-based positions in the saved `persons` array, including skipped records; a duplicate reports both positions,
 for example `Record 3: email "alex@u.nus.edu" duplicates record 2.` Malformed JSON, trailing content, invalid
 roots, missing or non-array `persons` values, and read failures produce a failed load with no recovered records.
+Duplicate property names anywhere in the JSON file also produce a `FAILURE` with no recovered records,
+even if other member records are valid.
 The existing `readAddressBook` API remains strict and throws `DataLoadingException` on any loading error.
 
 `MainApp.initModelManager` uses recovered records and prepares a warning for `UiManager` to display after the
