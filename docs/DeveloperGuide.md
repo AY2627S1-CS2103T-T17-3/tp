@@ -24,6 +24,22 @@ NUSocietyDesk acknowledges the following open-source projects:
 * [MarkBind](https://markbind.org/) and [PlantUML](https://plantuml.com/) for generating the documentation
   website and UML diagrams.
 
+OpenAI Codex was used extensively across the team's work on NUSocietyDesk to generate and refine code, tests,
+and documentation. Notable uses include:
+
+* **Member management:** implementing email-based identity and duplicate detection, optional contact details,
+  input validation, tag management, and member archiving and activation.
+* **Search and command interaction:** implementing searches by name, phone, email and tag, combined search
+  conditions, status views, command history, the offline help reference, and confirmation before clearing the directory.
+* **Import and storage:** implementing CSV import and rejection feedback, safe saving and rollback, recovery
+  from invalid JSON data, preference loading, application file paths, and protection against concurrent launches.
+* **User interface:** refining member cards, contact labels, tag wrapping, status badges, command feedback,
+  tooltips, and window sizing for narrow windows and high-DPI displays.
+* **Testing and development:** generating and refining unit, integration and JavaFX UI tests, investigating
+  bugs, reviewing changes, and improving build configuration, assertions and coverage collection.
+* **Documentation:** drafting and refining the User Guide, Developer Guide, requirements, usage examples,
+  manual testing instructions, UML diagrams, and project website content.
+
 --------------------------------------------------------------------------------------------------------------------
 
 ## **Setting up, getting started**
