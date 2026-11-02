@@ -177,6 +177,34 @@ public class NameValidationIntegrationTest {
     }
 
     @Test
+    public void execute_overlongNameKeyword_returnsNoMatchesAcrossSearchCommands() throws Exception {
+        List<Person> members = addMembers("Alice Tan", "Bob Lee");
+        String keyword = "a-".repeat(16_000) + "a";
+        logic.execute("view active");
+
+        for (String command : List.of("find ", "find n/", "findall n/", "findany n/")) {
+            assertSearch("find n/Alice", List.of(members.getFirst()));
+            assertSearch(command + keyword, List.of());
+            assertEquals(StatusFilter.ACTIVE, model.getStatusFilter());
+        }
+        assertSearch("find n/Alice", List.of(members.getFirst()));
+    }
+
+    @Test
+    public void execute_overlongNameCondition_preservesAndOrMatching() throws Exception {
+        List<Person> members = addMembers("Alice Tan", "Bob Lee");
+        String keyword = "a-".repeat(16_000) + "a";
+
+        assertSearch("find " + keyword + " Alice", List.of(members.getFirst()));
+        assertSearch("find Alice " + keyword, List.of(members.getFirst()));
+        assertSearch("findall n/" + keyword + " n/Alice", List.of());
+        assertSearch("findall n/Alice n/" + keyword, List.of());
+        assertSearch("findany n/" + keyword + " n/Alice", List.of(members.getFirst()));
+        assertSearch("findany n/Alice n/" + keyword, List.of(members.getFirst()));
+        assertSearch("findany n/" + keyword + " e/member0@u.nus.edu", List.of(members.getFirst()));
+    }
+
+    @Test
     public void execute_invalidPunctuatedNameSearch_preservesStateAndSkipsSaving() throws Exception {
         addMembers("Tan(Alex)", "Ravi S/O Kumar");
         logic.execute("view active");

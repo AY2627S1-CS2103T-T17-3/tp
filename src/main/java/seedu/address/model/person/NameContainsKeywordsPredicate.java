@@ -37,7 +37,8 @@ public class NameContainsKeywordsPredicate implements Predicate<Person> {
             return true;
         }
         String trimmedKeyword = keyword.trim();
-        if (!NAME_COMPONENT.matcher(trimmedKeyword).matches()) {
+        if (trimmedKeyword.length() > name.length()
+                || !NAME_COMPONENT.matcher(trimmedKeyword).matches()) {
             return false;
         }
 
