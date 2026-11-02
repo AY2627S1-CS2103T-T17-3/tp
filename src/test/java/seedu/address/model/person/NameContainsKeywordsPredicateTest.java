@@ -181,6 +181,16 @@ public class NameContainsKeywordsPredicateTest {
     }
 
     @Test
+    public void test_overlongCompoundKeyword_returnsFalse() {
+        Person person = new PersonBuilder().withName("Alice Tan").build();
+        for (String joiner : List.of("-", "'", "/")) {
+            String keyword = ("a" + joiner).repeat(16_000) + "a";
+            NameContainsKeywordsPredicate predicate = new NameContainsKeywordsPredicate(List.of(keyword));
+            assertFalse(predicate.test(person), joiner);
+        }
+    }
+
+    @Test
     public void test_missingName_returnsFalse() {
         NameContainsKeywordsPredicate predicate = new NameContainsKeywordsPredicate(List.of("Alex", "@"));
         assertFalse(predicate.test(new PersonBuilder().withoutName().build()));

@@ -753,6 +753,8 @@ ASCII digits, emails match literal substrings ignoring case, and tags match exac
 matched by `[A-Za-z0-9]+(?:[-'/]+[A-Za-z0-9]+)*`. Commas, parentheses, periods and `@` separate components;
 leading and trailing punctuation is excluded. Internal hyphens, apostrophes and slashes remain part of the component.
 This matches `Alex` in `Tan(Alex)` and `O'Connor` in `Tan(O'Connor)` without matching `Connor` alone.
+Before checking the component pattern, keywords longer than the full stored name return false. This bounds regex input
+by the existing name-length limit and prevents stack overflow on long compound keywords.
 Keywords such as `(Alex)`, `tan,` and `@` retain only their literal whitespace-token behavior. Queries are never
 interpreted as regular expressions, and punctuation-only keywords cannot become empty matches or wildcards.
 Email substrings need not be complete addresses; tags are validated through `ParserUtil.parseTag`.
